@@ -166,6 +166,10 @@ Ayrıca şu üç durumda da DUR edilir:
 Rutin bir işin içine business değişikliği gizlenemez — örneğin "refactor" adı altında
 KDV formülünü sadeleştirmek §5.2'ye girer.
 
+> **Ayrıca:** §5.1 muafiyeti bir **branch kapsamı muafiyeti de değildir.** DUR gerektirmeyen
+> rutin bir iş bile, mevcut branch'in kapsamı dışındaysa ayrı branch ister —
+> bu ayrı bir workflow mekanizmasıdır: [`06-workflow-and-quality.md §4.3`](06-workflow-and-quality.md).
+
 ### 5.5 Rapor formatı
 
 ```text

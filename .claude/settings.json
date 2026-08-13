@@ -12,7 +12,9 @@
       "Bash(grep -rn \"image paketi\\\\|\\\\`image\\\\`\\\\|yeniden kodla\\\\|resize\" docs/21-image-storage.md)",
       "Bash(cd /Users/semih/EygulTurizm/flutter-canteen/canteen *)",
       "Bash(sed -n '/| Repository | Interface? |/,/Backup \\\\/ Image/p' .claude/rules/01-architecture.md)",
-      "Bash(sed -n '/| Repository | Interface? | Gerekçe |/,/Backup \\\\/ Image/p' docs/03-architecture.md)"
+      "Bash(sed -n '/| Repository | Interface? | Gerekçe |/,/Backup \\\\/ Image/p' docs/03-architecture.md)",
+      "Bash(sed 's/:.*|/ →/')",
+      "Bash(sed -n '/## 4. Git, branch/,/## 5. Faz/p' .claude/rules/06-workflow-and-quality.md)"
     ],
     "additionalDirectories": [
       "/tmp",

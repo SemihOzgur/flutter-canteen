@@ -101,29 +101,229 @@ Bir feature "tamamlandı" **sayılmaz** eğer:
 
 ---
 
-## 4. Git ve değişiklik yönetimi
+## 4. Git, branch izolasyonu ve merge
 
 > **Kaynak notu:** Bu bölümdeki Git/branch kuralları **proje sahibi çalışma talimatından** gelir;
 > `docs/` business source of truth kapsamında **değildir.** Bu nedenle `docs/` ile çelişme
 > durumu söz konusu olamaz — ancak business kuralı gibi de yorumlanmaz.
+>
+> **Branch stratejisi yalnızca geliştirme workflow'udur**; source-of-truth hiyerarşisinin
+> ([`00-source-of-truth.md §1`](00-source-of-truth.md)) üzerinde yeni bir otorite **değildir.**
 
+### 4.1 Temel kural — branch izolasyonu
 
-| Kural | |
-|---|---|
-| Doğrudan `main` | ❌ **Değiştirilmez** |
-| Her feature/bugfix | Ayrı branch |
-| Business-critical değişiklik | Testler **aynı branch içinde** |
+> **Her bağımsız geliştirme kapsamı ayrı bir branch'te geliştirilir.**
 
-### Branch adlandırma
+Bağımsız kapsam sayılanlar: feature · bugfix · kapsamlı/izole refactor · migration ·
+performance fix · test-only çalışma · dokümantasyon/rule değişikliği · ayrı bir faz veya faz alt fazı.
 
 ```text
-feature/<kısa-açıklama>      örn. feature/sale-transaction
-bugfix/<kısa-açıklama>       örn. bugfix/vat-rounding
-refactor/<kısa-açıklama>
-docs/<kısa-açıklama>
+main
+├── feature/faz-1-foundation
+├── feature/faz-2-database
+├── feature/faz-3a-auth
+├── feature/faz-3b-financial-lock
+├── bugfix/vat-calculation
+├── bugfix/stock-movement
+└── bugfix/recovery-code
 ```
 
-### Commit kuralları
+### 4.2 Aynı branch'te ne olabilir?
+
+> **Bağımsız kapsam = ayrı branch**
+> **Tek bir kapsamın doğal alt işleri = aynı branch**
+
+Aynı feature/faz kapsamının **birbirine bağlı** alt işleri aynı branch'te yapılır:
+
+```text
+feature/faz-1-foundation
+   ├── Riverpod kurulumu
+   ├── l10n kurulumu
+   ├── Money domain
+   ├── VAT hesaplama
+   └── ilgili unit testler        ← hepsi aynı kapsamın parçası
+```
+
+Aynı alt fazın doğal olarak birbirine bağlı işleri **gereksiz şekilde farklı branch'lere bölünmez.**
+
+### 4.3 Kapsam dışı iş ortaya çıkarsa — 🛑 KAPSAM DURDURMASI
+
+Mevcut branch'in kapsamı dışında bir iş ortaya çıkarsa:
+
+```text
+🛑 DUR
+   → Mevcut branch'e ekleme
+   → Yeni kapsam için ayrı branch OLUŞTURULMASINI ÖNER
+   → Onay bekle
+```
+
+**Örnek:** Faz 1 sırasında *"Ürün CRUD'u da yapalım"* denirse → bu Faz 2 kapsamıdır →
+`feature/faz-1-foundation` branch'ine **eklenmez.**
+
+> ⚠️ **Bu, business DUR'undan farklı bir mekanizmadır.**
+>
+> | | Tetikleyen | Çözüm |
+> |---|---|---|
+> | **Business DUR** ([`00 §5.2`](00-source-of-truth.md)) | Business/şema/para/güvenlik davranışı değişiyor | `docs/` protokolü + `OD-017+` |
+> | **Kapsam durdurması** (bu bölüm) | İş doğru ama **yanlış branch'te** | Yeni branch öner, onay bekle |
+>
+> [`00 §5.1`](00-source-of-truth.md) rutin teknik iş muafiyeti **bir branch kapsamı muafiyeti değildir.**
+> Bir refactor DUR gerektirmeyebilir; ancak mevcut branch'in kapsamı dışındaysa yine de ayrı branch ister.
+
+### 4.4 Branch oluşturma prosedürü
+
+Yeni geliştirmeye başlamadan önce sırasıyla:
+
+```text
+1. Repository durumunu kontrol et        (git status)
+2. Aktif branch'i kontrol et             (git branch --show-current)
+3. Working tree temiz mi?                (kirliyse DUR, raporla)
+4. Güncel main'i temel al
+5. Branch'i main üzerinden oluştur
+6. Branch KAPSAMINI AÇIKÇA TANIMLA       ← çalışma başlamadan önce
+7. Yalnızca o kapsam içinde çalış
+```
+
+### 4.5 Branch adlandırma
+
+```text
+feature/<kapsam>     feature/faz-1-foundation · feature/faz-3a-auth
+bugfix/<kapsam>      bugfix/vat-calculation · bugfix/recovery-code
+refactor/<kapsam>    refactor/domain-money
+docs/<kapsam>        docs/rules-workflow-update
+```
+
+**Kaçınılacak belirsiz adlar:** `work` · `test` · `temp` · `fix` · `new` · `changes`
+
+### 4.6 Branch scope lock
+
+Branch oluşturulduğunda kapsamı **çalışma başlamadan önce** belirlenir. Branch içinde yalnızca:
+
+- branch'in tanımlanmış feature/faz/bugfix kapsamı,
+- bu kapsamın **doğrudan gerekli** testleri,
+- bu kapsamın **doğrudan gerekli** teknik yardımcı değişiklikleri
+
+yapılabilir. Başka kapsamdan değişiklik tespit edilirse → §4.3.
+
+### 4.7 Bugfix kuralı
+
+Sonradan tespit edilen bug mevcut feature branch'ine **otomatik eklenmez.**
+
+| Durum | Branch |
+|---|---|
+| Bug, o feature'ın **henüz tamamlanmamış doğal parçası** | ✅ Aynı branch'te kalabilir |
+| Bug **bağımsız bir düzeltme** | 🛑 Ayrı `bugfix/*` branch'i |
+
+**Örnek:** `feature/faz-5-sales` geliştirilirken bağımsız bir VAT hesaplama bug'ı çıkarsa →
+`bugfix/vat-calculation` ayrı branch'i açılır.
+
+> Bu ayrım **Claude tarafından business kararına dönüştürülmez.**
+> Şüphe varsa → **DUR ve raporla.**
+
+### 4.8 Business kuralına dokunan değişiklik
+
+> **Branch açılmış olması business kararını değiştirme yetkisi vermez.**
+
+Branch sırasında business rule / schema / BR-* / REQ-* / OD-* değişmesi gerektiği ortaya çıkarsa,
+normal kodlamaya devam edilmez — [`00-source-of-truth.md §3`](00-source-of-truth.md) protokolü işletilir:
+
+```text
+DUR → raporla → (gerekirse OD-017+) → docs/ güncelle
+    → ilgili rules güncelle → doğrula → ancak sonra kodlamaya devam
+```
+
+### 4.9 main koruması
+
+`main` her zaman: **build edilebilir · test edilebilir · dokümantasyonla uyumlu ·
+yalnızca merge edilmiş ve onaylanmış işleri içerir.**
+
+| ❌ Kullanıcı açıkça istemedikçe yapılmaz |
+|---|
+| `main` üzerinde doğrudan feature geliştirme |
+| `main`'e doğrudan commit / push |
+| Kullanıcı onayı olmadan **merge** |
+| Branch **silme** |
+| Başka branch'e **cherry-pick** |
+| Kapsam dışı değişiklikleri **taşıma** |
+
+### 4.10 Merge akışı ve kullanıcı onayı
+
+```text
+BRANCH → IMPLEMENT → TEST → ANALYZE → REPORT → USER TEST → USER APPROVAL → MERGE
+                                          ▲
+                                    CLAUDE BURADA DURUR
+```
+
+- Kullanıcı testi gereken iş tamamlandığında Claude **durur.**
+- Kullanıcı test sonucu vermeden **sonraki branch/faz kapsamına geçilmez.**
+- Merge **yalnızca** açık kullanıcı onayıyla yapılır.
+
+### 4.11 Kapsam dışı değişiklik tespiti
+
+Branch tamamlanmadan önce **`git status` ve `git diff` kontrol edilir.**
+Beklenmeyen değişiklik varsa → 🛑 **DUR ve raporla.** Özellikle:
+
+| Tespit | |
+|---|---|
+| Başka feature'a ait dosya değişmiş | 🛑 |
+| Başka faza ait kod değişmiş | 🛑 |
+| `docs/` ile ilgisiz değişiklik oluşmuş | 🛑 |
+| Otomatik/generated dosya beklenmedik şekilde değişmiş | 🛑 |
+| Dependency değişmiş | 🛑 |
+| `pubspec.lock` kapsam dışı değişmiş | 🛑 |
+| Migration / schema değişmiş | 🛑 |
+| Test dışında business davranışı değişmiş | 🛑 |
+
+### 4.12 Branch tamamlanma kapısı
+
+**Önce §3 kalite kapısının tamamı sağlanır** (analyzer, format, testler, invariant'lar,
+acceptance criteria, doküman tutarlılığı). Buna **ek olarak** branch seviyesinde:
+
+- [ ] Kapsam analizi yapılmış
+- [ ] İlgili `docs/` okunmuş
+- [ ] İlgili `rules/` dosyaları okunmuş
+- [ ] **Branch scope dışında değişiklik yok** (§4.11)
+- [ ] `docs` ↔ kod izlenebilirliği kontrol edilmiş
+- [ ] `git diff` incelenmiş
+- [ ] Değişen dosyalar raporlanmış
+
+### 4.13 Branch tamamlanma raporu
+
+Tamamlandığında kullanıcıya şunlar raporlanır, **ardından DURULUR:**
+
+```text
+1. Branch adı
+2. Yapılan değişiklikler
+3. Değişen dosyalar
+4. Test sonuçları
+5. Analyzer sonucu
+6. Kapsam dışı değişiklik kontrolü
+7. Bilinen riskler
+8. Kullanıcının test etmesi gereken senaryolar
+```
+
+### 4.14 Fazlar ve branch ilişkisi
+
+Her faz otomatik olarak tek branch olmak zorunda **değildir.**
+Faz 3 (69 requirement) `docs/31 §3`'te 3a–3d'ye bölünmesi önerilmiştir:
+
+```text
+feature/faz-3a-auth
+feature/faz-3b-financial-lock
+feature/faz-3c-product
+feature/faz-3d-image-favorite
+```
+
+### 4.15 Docs / rules değişiklikleri
+
+Yalnızca workflow/rules/documentation değiştiren çalışmalar da **izole branch'te** yapılır
+(örn. `docs/rules-workflow-update`).
+
+`docs/` source-of-truth olduğu için, `docs/` değişikliği gerekiyorsa
+[`00-source-of-truth.md §3`](00-source-of-truth.md) protokolüne uyulur.
+**Rules dosyaları `docs/` ile çelişemez.**
+
+### 4.16 Commit kuralları
 
 - Anlamlı, kapsamı belirli commit'ler.
 - Şema değişikliği içeren commit **migration'ı da içerir.**

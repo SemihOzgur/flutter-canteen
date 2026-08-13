@@ -101,7 +101,7 @@ Bu listeden birine dokunman gerektiğini düşünüyorsan → **§5 DUR koşulla
 | Veritabanı, migration, yedek, import/export, görsel, audit | [`.claude/rules/03-data-and-persistence.md`](.claude/rules/03-data-and-persistence.md) |
 | Login, oturum, dashboard parolası, recovery code | [`.claude/rules/04-security-and-access.md`](.claude/rules/04-security-and-access.md) |
 | Ekran, kısayol, dashboard, rapor, Windows/macOS farkı | [`.claude/rules/05-ux-and-platform.md`](.claude/rules/05-ux-and-platform.md) |
-| Test yazma, branch açma, feature tamamlama | [`.claude/rules/06-workflow-and-quality.md`](.claude/rules/06-workflow-and-quality.md) |
+| Test yazma, **branch açma/kapsamı/merge**, feature tamamlama | [`.claude/rules/06-workflow-and-quality.md`](.claude/rules/06-workflow-and-quality.md) |
 
 ---
 
@@ -199,7 +199,38 @@ Business-critical mantık **testsiz tamamlanmış sayılmaz.**
 
 ---
 
-## 8. Bu dosyanın ve kuralların statüsü
+## 8. Branch disiplini
+
+> Detay: [`.claude/rules/06-workflow-and-quality.md §4`](.claude/rules/06-workflow-and-quality.md)
+
+| Kural | |
+|---|---|
+| **Bağımsız kapsam** (feature / bugfix / faz / alt faz / migration / docs-rules) | **Ayrı branch** |
+| Tek bir kapsamın **doğal alt işleri** | **Aynı branch** |
+| Kapsam **dışı** iş ortaya çıktı | 🛑 **DUR** — mevcut branch'e ekleme, yeni branch öner, onay bekle |
+| `main` üzerinde doğrudan geliştirme | ❌ **Yapılmaz** |
+| `main`'e commit / push | ❌ Kullanıcı açıkça istemedikçe yapılmaz |
+| **Merge · branch silme · cherry-pick** | ❌ **Kullanıcı onayı olmadan asla** |
+
+### Akış
+
+```text
+BRANCH → IMPLEMENT → TEST → ANALYZE → REPORT → USER TEST → USER APPROVAL → MERGE
+                                          ▲
+                                    CLAUDE BURADA DURUR
+```
+
+Kullanıcı test sonucu vermeden **sonraki branch/faz kapsamına geçilmez.**
+
+Branch tamamlanmadan önce `git status` + `git diff` ile **kapsam dışı değişiklik kontrolü** yapılır;
+beklenmeyen değişiklik varsa DUR. Branch kapsamı, iş başlamadan önce tanımlanır.
+
+> **Branch açılmış olması business kararını değiştirme yetkisi vermez** — §2'deki protokol
+> her koşulda geçerlidir. Branch stratejisi yalnızca workflow'dur; source-of-truth değildir.
+
+---
+
+## 9. Bu dosyanın ve kuralların statüsü
 
 - `CLAUDE.md` ve `.claude/rules/*` projenin **geliştirme anayasasıdır.**
 - `docs/` **ürün ve iş kurallarının source of truth'udur.**
