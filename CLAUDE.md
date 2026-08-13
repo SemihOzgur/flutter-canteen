@@ -1,0 +1,207 @@
+# Kantin Otomasyonu — Geliştirme Anayasası
+
+> Bu dosya projenin **değişmez çalışma kurallarının giriş noktasıdır.**
+> Kısa ve yönlendiricidir; ayrıntılı kurallar `.claude/rules/` altındadır.
+
+---
+
+## 1. Proje kimliği
+
+| | |
+|---|---|
+| Proje | Kantin Otomasyonu (POS + stok + raporlama) |
+| Framework | Flutter Desktop |
+| Production | **Windows** |
+| Development | macOS |
+| Backend / Server / Cloud | **YOK** |
+| Mimari | **Offline-first / Local-first** |
+| Veritabanı | **Drift + SQLite** |
+| State management | **Riverpod** |
+| Grafik | **fl_chart** |
+| Installer | **Inno Setup** |
+| Dil | **Türkçe** (V1 tek dil) |
+
+Bu satırların hiçbiri geliştirme sırasında tartışmaya açık değildir.
+Karar gerekçeleri: `docs/28-open-decisions.md`.
+
+---
+
+## 2. SOURCE OF TRUTH — karar hiyerarşisi
+
+```text
+1. docs/02-product-and-business-requirements.md   ← Business Rules (BR-*)
+        ↓
+2. docs/04-domain-model.md                        ← Entity'ler, invariant'lar
+        ↓
+3. docs/05-database-architecture.md               ← Fiziksel şema
+        ↓
+4. docs/25-functional-requirements.md             ← REQ-* + acceptance criteria
+        ↓
+5. Architecture / UX / Edge Cases (03, 23, 26)
+        ↓
+6. IMPLEMENTATION (kod)
+```
+
+> **Kod bu dokümanlara uyar. Doküman koda uydurulmaz.**
+
+### Kod ile doküman çeliştiğinde
+
+**KOD DEĞİŞTİRİLİR.** Dokümantasyon sessizce override edilmez.
+
+### Bir business kuralı gerçekten değişecekse — sıra budur
+
+```text
+1. İlgili docs/ dosyası güncellenir
+2. Business Rule (BR-*) / Requirement (REQ-*) güncellenir
+3. Gerekiyorsa OD-017+ formatında yeni karar kaydı oluşturulur
+4. Etkilenen tüm dokümanlar güncellenir (traceability korunur)
+5. ANCAK BUNDAN SONRA kod değiştirilir
+```
+
+**Claude kendi başına business kararı verip kod yazamaz.**
+
+---
+
+## 3. SESSİZCE DEĞİŞTİRİLEMEZ — business invariants
+
+Aşağıdakiler proje sahibinin kesinleştirdiği kararlardır. Bunları değiştiren, "iyileştiren",
+"daha doğrusunu yapan" veya yorumlayan kod **yazılamaz**:
+
+| # | Invariant |
+|---|---|
+| 1 | **Satış fiyatı KDV DAHİLDİR** — KDV fiyatın içinden çıkarılır, üzerine eklenmez |
+| 2 | **Para tam sayı kuruştur** — floating point ile para hesabı yasak |
+| 3 | **Satış miktarı pozitif tam sayıdır** — ondalık/tartılı satış yok |
+| 4 | **SaleItem 5 snapshot alanı taşır** — ad, satış fiyatı, alış fiyatı, KDV oranı, kategori |
+| 5 | **Stok bir defterdir** — `stock_movements` source of truth; `stock_quantity` türetilmiş özet |
+| 6 | **Negatif stok satışı engellemez** — kullanıcı uyarılır, "Devam Et" ile satar |
+| 7 | **Satış ve iade atomiktir** — yarım satış/iade oluşamaz |
+| 8 | **Satış kayıtları silinmez** — yalnızca durum değişir |
+| 9 | **Finansal erişim kilidi** — Dashboard + Raporlar ayrı parola ister |
+| 10 | **Recovery code tek kullanımlıktır** ve hash olarak saklanır |
+| 11 | **Düz metin parola/kurtarma kodu hiçbir yerde bulunamaz** |
+| 12 | **Yedek tek dosyadır** (`.canteenbackup`) ve restore öncesi doğrulanır |
+| 13 | **Local-first** — hiçbir temel işlev internete bağımlı olamaz |
+| 14 | **Rol/yetki sistemi yoktur** |
+
+Bu listeden birine dokunman gerektiğini düşünüyorsan → **§5 DUR koşulları.**
+
+---
+
+## 4. Kural dosyaları — hangi işten önce ne okunur
+
+> **Zorunlu:** Bir alana kod yazmadan önce ilgili kural dosyasını **oku**.
+> Bu bir öneri değil, ön koşuldur.
+
+| Yapacağın iş | Önce oku |
+|---|---|
+| Herhangi bir business-critical değişiklik | [`.claude/rules/00-source-of-truth.md`](.claude/rules/00-source-of-truth.md) |
+| Katman, klasör, soyutlama, paket ekleme | [`.claude/rules/01-architecture.md`](.claude/rules/01-architecture.md) |
+| Para, KDV, kâr, stok, satış, iade, ürün, barkod | [`.claude/rules/02-business-invariants.md`](.claude/rules/02-business-invariants.md) |
+| Veritabanı, migration, yedek, import/export, görsel, audit | [`.claude/rules/03-data-and-persistence.md`](.claude/rules/03-data-and-persistence.md) |
+| Login, oturum, dashboard parolası, recovery code | [`.claude/rules/04-security-and-access.md`](.claude/rules/04-security-and-access.md) |
+| Ekran, kısayol, dashboard, rapor, Windows/macOS farkı | [`.claude/rules/05-ux-and-platform.md`](.claude/rules/05-ux-and-platform.md) |
+| Test yazma, branch açma, feature tamamlama | [`.claude/rules/06-workflow-and-quality.md`](.claude/rules/06-workflow-and-quality.md) |
+
+---
+
+## 5. DUR koşulları — implementation'a devam etme
+
+### 5.1 Rutin teknik işler DUR gerektirmez
+
+Aşağıdaki işler **tek başına business kararına dokunmuyorsa** durmadan yapılır:
+
+- private helper oluşturma/değiştirme
+- saf iç refactor
+- değişken / metot / sınıf yeniden adlandırma
+- widget bölme / birleştirme
+- log mesajı düzeltme
+- test ekleme veya test refactor'ü
+- performans optimizasyonu — **mevcut davranış değişmiyorsa**
+- dead code temizleme
+- import düzenleme
+- format / lint düzeltmeleri
+- mevcut abstraction'ın teknik iyileştirilmesi
+
+### 5.2 DUR koşulları
+
+Yapılan değişiklik şunlardan **birini** etkiliyorsa kod yazmayı bırak, raporla, karar bekle:
+
+- **Business rule**
+- **Database schema**
+- **Para / stok hesaplama davranışı**
+- **Authentication / security davranışı**
+- **Persistence / migration / backup davranışı**
+- **Kullanıcıya görünen iş davranışı**
+- **Mevcut bir REQ / BR / OD kararının anlamı**
+
+Ek olarak: iki doküman çelişiyorsa, ilgili business rule dokümanda hiç yoksa veya
+§3'teki bir invariant'a dokunuluyorsa → **DUR.**
+
+### 5.3 Ayrım — aynı dosya, farklı sonuç
+
+| İş | Sonuç |
+|---|---|
+| `calculateTotal()` metodunu refactor etmek | ✅ DUR yok |
+| `calculateTotal()` metodunun **KDV davranışını** değiştirmek | 🛑 DUR |
+| Widget'ı iki dosyaya bölmek | ✅ DUR yok |
+| Widget'a **indirim alanı** eklemek | 🛑 DUR |
+| Repository kodunu optimize etmek | ✅ DUR yok |
+| **Yeni repository/interface** eklemek | 🛑 DUR — [`01-architecture.md §4`](.claude/rules/01-architecture.md) |
+
+> **Şüpheli durumda**, değişikliğin mevcut business davranışını değiştirme ihtimali varsa → **DUR.**
+>
+> Bu muafiyet bir **business kararı değiştirme serbestisi değildir.**
+
+**Raporlama biçimi:**
+
+```text
+DURDURULDU — <konu>
+
+Çelişki/belirsizlik: <ne>
+İlgili doküman(lar): <docs/... dosyaları, BR-*/REQ-* ID'leri>
+Etkilenen alan: <domain / şema / UI / migration>
+Seçenekler: <A / B / C ve sonuçları>
+Önerim: <biri> — <gerekçe>
+Gereken karar: <proje sahibinden ne isteniyor>
+```
+
+Gerekiyorsa `OD-017+` formatında yeni karar kaydı oluşturulmasını öner
+(`Decision / Options / Recommendation / Impact`).
+
+---
+
+## 6. Kod yazmadan önce (pre-flight)
+
+1. İlgili `docs/` dosyalarını bul ve oku
+2. Business Rules (BR-*) — hangi kurallar bağlayıcı?
+3. Functional Requirements (REQ-*) + acceptance criteria
+4. Domain etkisi — hangi hesaplama/invariant etkileniyor?
+5. Database etkisi — şema, migration, index gerekiyor mu?
+6. Edge cases (`docs/26-edge-cases.md`) — ilgili EC-* maddeleri
+7. Test planı — neyi nasıl doğrulayacaksın?
+
+Ancak bundan sonra implementation.
+
+---
+
+## 7. Feature "tamamlandı" sayılma koşulları
+
+- [ ] `flutter analyze` temiz
+- [ ] `dart format` uygulanmış
+- [ ] İlgili unit testler yazılmış ve geçiyor
+- [ ] Gerekiyorsa integration testler çalıştırılmış
+- [ ] §3'teki business invariant'lar doğrulanmış
+- [ ] İlgili acceptance criteria karşılanmış
+- [ ] Dokümantasyonla tutarlılık kontrol edilmiş
+
+Business-critical mantık **testsiz tamamlanmış sayılmaz.**
+
+---
+
+## 8. Bu dosyanın ve kuralların statüsü
+
+- `CLAUDE.md` ve `.claude/rules/*` projenin **geliştirme anayasasıdır.**
+- `docs/` **ürün ve iş kurallarının source of truth'udur.**
+- Çelişirlerse: `docs/` kazanır; kural dosyası düzeltilir.
+- Kural dosyaları proje sahibinin onayı olmadan gevşetilemez.

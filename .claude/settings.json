@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -oh ']\\(\\\\\\([0-9][0-9]-[a-z-]*\\\\.md\\\\\\)' *.md | sed 's/]\\(//' | sort -u > /tmp/refs.txt; ls -1 *.md > /tmp/files.txt; echo \"=== Referenced but MISSING ===\"; comm -23 /tmp/refs.txt /tmp/files.txt; echo \"=== Files never referenced ===\"; comm -13 /tmp/refs.txt /tmp/files.txt)",
+      "Bash(python3 -)",
+      "Bash(grep -oh ']\\(\\\\\\([0-9][0-9]-[a-z-]*\\\\.md\\\\\\)' *.md | sed 's/]\\(//' | sort -u > /tmp/r.txt; ls -1 *.md > /tmp/f.txt; echo \"=== Kırık link ===\"; comm -23 /tmp/r.txt /tmp/f.txt; echo \"=== OD tanımları \\(28\\) ===\"; grep -c \"^## OD-\" 28-open-decisions.md; grep -o \"^## OD-[0-9]*\" 28-open-decisions.md | tr '\\\\n' ' '; echo; echo \"=== Atıf yapılan OD'ler ===\"; grep -roh \"OD-0[0-9][0-9]\" *.md | sort -u | tr '\\\\n' ' '; echo; echo \"=== RSK tanımları ===\"; grep -o \"^## RSK-[0-9]*\" 29-risks.md | tr '\\\\n' ' ')",
+      "Bash(python3 - *)",
+      "Bash(awk '{print $6,$7,$8,$9}')",
+      "Bash(grep -E \"^  id +INTEGER PK|^[a-z_]+$\" docs/05-database-architecture.md)",
+      "Bash(sed -n '/Kararlaştırılmış bağımlılıklar/,/onay beklenir/p' .claude/rules/01-architecture.md)",
+      "Bash(grep -n \"excel\\\\` paketi\\\\|archive\\\\` paketi\\\\|fl_chart\\\\|csv\\\\` paketi\\\\|crypto\\\\` paketi\" docs/28-open-decisions.md)",
+      "Bash(grep -rn \"image paketi\\\\|\\\\`image\\\\`\\\\|yeniden kodla\\\\|resize\" docs/21-image-storage.md)",
+      "Bash(cd /Users/semih/EygulTurizm/flutter-canteen/canteen *)",
+      "Bash(sed -n '/| Repository | Interface? |/,/Backup \\\\/ Image/p' .claude/rules/01-architecture.md)",
+      "Bash(sed -n '/| Repository | Interface? | Gerekçe |/,/Backup \\\\/ Image/p' docs/03-architecture.md)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/private/tmp",
+      "/Users/semih/EygulTurizm/flutter-canteen/canteen/.claude/rules"
+    ]
+  }
+}
