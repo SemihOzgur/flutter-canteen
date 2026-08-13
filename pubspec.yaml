@@ -35,6 +35,12 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # State management / DI — OD-002 (.claude/rules/01-architecture.md §7)
+  flutter_riverpod: ^2.6.1
+
+  # Dosya yolu birleştirme — BR-DATA-001; elle string birleştirme yasak
+  path: ^1.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
