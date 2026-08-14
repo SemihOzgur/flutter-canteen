@@ -43,6 +43,12 @@ class AppPaths {
   /// Yedekler — `<root>/backups` (Faz 9'da kullanılır)
   String get backupsDir => p.join(rootPath, 'backups');
 
+  /// Otomatik (migration öncesi) yedekler — `<root>/backups/auto`
+  ///
+  /// docs/06 §3 adım 2:
+  /// `<veri dizini>/backups/auto/premigration_v<eski>_<timestamp>.sqlite`
+  String get autoBackupsDir => p.join(backupsDir, 'auto');
+
   /// Geçici dosyalar — `<root>/temp`
   String get tempDir => p.join(rootPath, 'temp');
 
@@ -115,6 +121,7 @@ class AppPaths {
       imagesDir,
       logsDir,
       backupsDir,
+      autoBackupsDir,
       tempDir,
     ]) {
       await Directory(dir).create(recursive: true);

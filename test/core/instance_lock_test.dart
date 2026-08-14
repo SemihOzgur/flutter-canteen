@@ -119,6 +119,18 @@ void main() {
   });
 
   group('çapraz-süreç dışlama — REQ-ARCH-005 / BR-GEN-005', () {
+    /// `dart run`, native asset içeren bağımlılıklar nedeniyle stdout'a
+    /// "Running build hooks..." yazabilir — üstelik satır sonu koymadan.
+    /// Bu nedenle sonuç, **satır sonundaki işaretten** okunur.
+    String lockResultOf(String stdout) {
+      for (final line in stdout.split(RegExp(r'[\r\n]+')).reversed) {
+        final trimmed = line.trim();
+        if (trimmed.endsWith('ALREADY_RUNNING')) return 'ALREADY_RUNNING';
+        if (trimmed.endsWith('ACQUIRED')) return 'ACQUIRED';
+      }
+      return stdout.trim();
+    }
+
     test('ikinci SÜREÇ kilidi alamaz', () async {
       // 1. süreç kilidi alır ve tutar
       final holder = await Process.start('dart', [
@@ -131,8 +143,14 @@ void main() {
       final holderOutput = holder.stdout
           .transform(utf8.decoder)
           .transform(const LineSplitter());
-      final firstLine = await holderOutput.first;
-      expect(firstLine.trim(), 'ACQUIRED', reason: '1. süreç kilidi almalıydı');
+      final acquired = await holderOutput.firstWhere(
+        (line) => line.trim().endsWith('ACQUIRED'),
+      );
+      expect(
+        lockResultOf(acquired),
+        'ACQUIRED',
+        reason: '1. süreç kilidi almalıydı',
+      );
 
       // 2. süreç aynı kilidi almayı dener → reddedilmeli
       final second = await Process.run('dart', [
@@ -142,7 +160,7 @@ void main() {
         'try',
       ]);
       expect(
-        second.stdout.toString().trim(),
+        lockResultOf(second.stdout.toString()),
         'ALREADY_RUNNING',
         reason: 'İkinci süreç kilidi ALMAMALIYDI — BR-GEN-005 ihlali!',
       );
@@ -158,7 +176,7 @@ void main() {
         'try',
       ]);
       expect(
-        third.stdout.toString().trim(),
+        lockResultOf(third.stdout.toString()),
         'ACQUIRED',
         reason: 'Kilit bırakıldıktan sonra yeniden alınabilmeliydi',
       );

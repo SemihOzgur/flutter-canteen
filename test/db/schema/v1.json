@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "entities": [
+    {
+      "type": "index",
+      "name": "ix_audit_date",
+      "sql": "CREATE INDEX ix_audit_date ON audit_logs (created_at)"
+    },
+    {
+      "type": "index",
+      "name": "ix_audit_entity",
+      "sql": "CREATE INDEX ix_audit_entity ON audit_logs (entity_type, entity_id)"
+    },
+    {
+      "type": "index",
+      "name": "ix_barcode_product",
+      "sql": "CREATE INDEX ix_barcode_product ON product_barcodes (product_id)"
+    },
+    {
+      "type": "index",
+      "name": "ix_movements_date",
+      "sql": "CREATE INDEX ix_movements_date ON stock_movements (created_at)"
+    },
+    {
+      "type": "index",
+      "name": "ix_movements_product_date",
+      "sql": "CREATE INDEX ix_movements_product_date ON stock_movements (product_id, created_at)"
+    },
+    {
+      "type": "index",
+      "name": "ix_movements_reference",
+      "sql": "CREATE INDEX ix_movements_reference ON stock_movements (reference_type, reference_id)"
+    },
+    {
+      "type": "index",
+      "name": "ix_products_active_name",
+      "sql": "CREATE INDEX ix_products_active_name ON products (is_active, name)"
+    },
+    {
+      "type": "index",
+      "name": "ix_products_category",
+      "sql": "CREATE INDEX ix_products_category ON products (category_id, is_active)"
+    },
+    {
+      "type": "index",
+      "name": "ix_products_favorite",
+      "sql": "CREATE INDEX ix_products_favorite ON products (is_favorite) WHERE is_favorite = 1"
+    },
+    {
+      "type": "index",
+      "name": "ix_products_lowstock",
+      "sql": "CREATE INDEX ix_products_lowstock ON products (minimum_stock, stock_quantity)"
+    },
+    {
+      "type": "index",
+      "name": "ix_products_supplier",
+      "sql": "CREATE INDEX ix_products_supplier ON products (supplier_id)"
+    },
+    {
+      "type": "index",
+      "name": "ix_sale_items_product",
+      "sql": "CREATE INDEX ix_sale_items_product ON sale_items (product_id)"
+    },
+    {
+      "type": "index",
+      "name": "ix_sale_items_sale",
+      "sql": "CREATE INDEX ix_sale_items_sale ON sale_items (sale_id)"
+    },
+    {
+      "type": "index",
+      "name": "ix_sales_completed_at",
+      "sql": "CREATE INDEX ix_sales_completed_at ON sales (completed_at)"
+    },
+    {
+      "type": "index",
+      "name": "ix_sales_status_date",
+      "sql": "CREATE INDEX ix_sales_status_date ON sales (status, completed_at)"
+    },
+    {
+      "type": "index",
+      "name": "ux_barcode",
+      "sql": "CREATE UNIQUE INDEX ux_barcode ON product_barcodes (barcode)"
+    },
+    {
+      "type": "index",
+      "name": "ux_carts_active",
+      "sql": "CREATE UNIQUE INDEX ux_carts_active ON carts (status) WHERE status = 'active'"
+    },
+    {
+      "type": "index",
+      "name": "ux_categories_name",
+      "sql": "CREATE UNIQUE INDEX ux_categories_name ON categories (name)"
+    },
+    {
+      "type": "index",
+      "name": "ux_sales_number",
+      "sql": "CREATE UNIQUE INDEX ux_sales_number ON sales (sale_number)"
+    },
+    {
+      "type": "index",
+      "name": "ux_users_username",
+      "sql": "CREATE UNIQUE INDEX ux_users_username ON users (username)"
+    },
+    {
+      "type": "table",
+      "name": "app_settings",
+      "sql": "CREATE TABLE \"app_settings\" (\"key\" TEXT NOT NULL, \"value\" TEXT NOT NULL, \"updated_at\" INTEGER NOT NULL, PRIMARY KEY (\"key\"))"
+    },
+    {
+      "type": "table",
+      "name": "audit_logs",
+      "sql": "CREATE TABLE \"audit_logs\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"created_at\" INTEGER NOT NULL, \"user_id\" INTEGER NULL REFERENCES users (id), \"action\" TEXT NOT NULL, \"entity_type\" TEXT NOT NULL, \"entity_id\" INTEGER NULL, \"old_value\" TEXT NULL, \"new_value\" TEXT NULL, \"metadata\" TEXT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "cart_items",
+      "sql": "CREATE TABLE \"cart_items\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"cart_id\" INTEGER NOT NULL REFERENCES carts (id) ON DELETE CASCADE, \"product_id\" INTEGER NOT NULL REFERENCES products (id), \"quantity\" INTEGER NOT NULL, \"unit_price_minor\" INTEGER NOT NULL, \"is_price_overridden\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_price_overridden\" IN (0, 1)), \"added_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, UNIQUE (\"cart_id\", \"product_id\", \"unit_price_minor\"), CHECK(quantity > 0))"
+    },
+    {
+      "type": "table",
+      "name": "carts",
+      "sql": "CREATE TABLE \"carts\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"status\" TEXT NOT NULL, \"user_id\" INTEGER NOT NULL REFERENCES users (id), \"note\" TEXT NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "categories",
+      "sql": "CREATE TABLE \"categories\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"name\" TEXT NOT NULL, \"sort_order\" INTEGER NOT NULL DEFAULT 0, \"is_system\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_system\" IN (0, 1)), \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "product_barcodes",
+      "sql": "CREATE TABLE \"product_barcodes\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"product_id\" INTEGER NOT NULL REFERENCES products (id), \"barcode\" TEXT NOT NULL, \"is_primary\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_primary\" IN (0, 1)), \"created_at\" INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "products",
+      "sql": "CREATE TABLE \"products\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"name\" TEXT NOT NULL, \"description\" TEXT NULL, \"category_id\" INTEGER NOT NULL REFERENCES categories (id), \"brand\" TEXT NULL, \"sales_unit\" TEXT NULL, \"net_weight_value\" INTEGER NULL, \"net_weight_unit\" TEXT NULL, \"purchase_price_minor\" INTEGER NOT NULL DEFAULT 0, \"sale_price_minor\" INTEGER NOT NULL, \"vat_rate_id\" INTEGER NULL REFERENCES vat_rates (id), \"stock_quantity\" INTEGER NOT NULL DEFAULT 0, \"minimum_stock\" INTEGER NOT NULL DEFAULT 0, \"supplier_id\" INTEGER NULL REFERENCES suppliers (id), \"shelf_location\" TEXT NULL, \"image_path\" TEXT NULL, \"is_favorite\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_favorite\" IN (0, 1)), \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, CHECK(purchase_price_minor >= 0), CHECK(sale_price_minor >= 0), CHECK(minimum_stock >= 0), CHECK((net_weight_value IS NULL) = (net_weight_unit IS NULL)))"
+    },
+    {
+      "type": "table",
+      "name": "return_items",
+      "sql": "CREATE TABLE \"return_items\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"return_id\" INTEGER NOT NULL REFERENCES returns (id), \"sale_item_id\" INTEGER NOT NULL REFERENCES sale_items (id), \"quantity\" INTEGER NOT NULL, \"unit_price_minor\" INTEGER NOT NULL, \"line_total_minor\" INTEGER NOT NULL, CHECK(quantity > 0))"
+    },
+    {
+      "type": "table",
+      "name": "returns",
+      "sql": "CREATE TABLE \"returns\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"sale_id\" INTEGER NOT NULL REFERENCES sales (id), \"type\" TEXT NOT NULL, \"total_minor\" INTEGER NOT NULL, \"reason\" TEXT NULL, \"user_id\" INTEGER NOT NULL REFERENCES users (id), \"created_at\" INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "sale_items",
+      "sql": "CREATE TABLE \"sale_items\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"sale_id\" INTEGER NOT NULL REFERENCES sales (id), \"product_id\" INTEGER NOT NULL REFERENCES products (id), \"product_name_snapshot\" TEXT NOT NULL, \"barcode_snapshot\" TEXT NULL, \"category_id_snapshot\" INTEGER NULL, \"quantity\" INTEGER NOT NULL, \"unit_price_minor\" INTEGER NOT NULL, \"original_unit_price_minor\" INTEGER NOT NULL, \"purchase_price_snapshot_minor\" INTEGER NOT NULL, \"vat_rate_snapshot_bp\" INTEGER NOT NULL, \"line_net_minor\" INTEGER NOT NULL, \"line_vat_minor\" INTEGER NOT NULL, \"line_total_minor\" INTEGER NOT NULL, \"returned_quantity\" INTEGER NOT NULL DEFAULT 0, CHECK(quantity > 0), CHECK(returned_quantity >= 0 AND returned_quantity <= quantity))"
+    },
+    {
+      "type": "table",
+      "name": "sales",
+      "sql": "CREATE TABLE \"sales\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"sale_number\" TEXT NOT NULL, \"status\" TEXT NOT NULL, \"subtotal_minor\" INTEGER NOT NULL, \"vat_total_minor\" INTEGER NOT NULL, \"discount_total_minor\" INTEGER NOT NULL DEFAULT 0, \"grand_total_minor\" INTEGER NOT NULL, \"cost_total_minor\" INTEGER NOT NULL, \"cash_received_minor\" INTEGER NULL, \"change_minor\" INTEGER NULL, \"item_count\" INTEGER NOT NULL, \"unit_count\" INTEGER NOT NULL, \"user_id\" INTEGER NOT NULL REFERENCES users (id), \"note\" TEXT NULL, \"completed_at\" INTEGER NOT NULL, \"cancelled_at\" INTEGER NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "stock_movements",
+      "sql": "CREATE TABLE \"stock_movements\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"product_id\" INTEGER NOT NULL REFERENCES products (id), \"type\" TEXT NOT NULL, \"quantity_delta\" INTEGER NOT NULL, \"resulting_stock\" INTEGER NOT NULL, \"unit_cost_minor\" INTEGER NULL, \"reference_type\" TEXT NULL, \"reference_id\" INTEGER NULL, \"supplier_id\" INTEGER NULL REFERENCES suppliers (id), \"note\" TEXT NULL, \"user_id\" INTEGER NOT NULL REFERENCES users (id), \"created_at\" INTEGER NOT NULL, CHECK(quantity_delta <> 0))"
+    },
+    {
+      "type": "table",
+      "name": "suppliers",
+      "sql": "CREATE TABLE \"suppliers\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"name\" TEXT NOT NULL, \"contact_name\" TEXT NULL, \"phone\" TEXT NULL, \"email\" TEXT NULL, \"address\" TEXT NULL, \"note\" TEXT NULL, \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "users",
+      "sql": "CREATE TABLE \"users\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"username\" TEXT NOT NULL, \"password_hash\" TEXT NOT NULL, \"password_salt\" TEXT NOT NULL, \"display_name\" TEXT NOT NULL, \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), \"last_login_at\" INTEGER NULL, \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "vat_rates",
+      "sql": "CREATE TABLE \"vat_rates\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"name\" TEXT NOT NULL, \"rate_basis_points\" INTEGER NOT NULL, \"is_default\" INTEGER NOT NULL DEFAULT 0 CHECK (\"is_default\" IN (0, 1)), \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), \"created_at\" INTEGER NOT NULL, \"updated_at\" INTEGER NOT NULL, CHECK(rate_basis_points >= 0))"
+    }
+  ]
+}
