@@ -1,17 +1,24 @@
 /// Uygulama giriş noktası ve bootstrap sırası.
 ///
-/// docs/03-architecture.md §6 — bootstrap sırası (Faz 1 kapsamındaki adımlar):
+/// docs/03-architecture.md §6 — bootstrap sırası:
 /// ```text
 /// 1. Flutter binding init
 /// 2. Veri dizinini çöz            [REQ-DATA-008 · REQ-ARCH-007]
-/// 3. Single-instance lock al      [REQ-ARCH-005 · REQ-DATA-005]
-/// 4. Loglama başlat               [REQ-SEC-007]
-/// 5. Uygulamayı başlat (Riverpod ProviderScope)
+/// 3. Loglama başlat               [REQ-SEC-007]
+/// 4. Single-instance lock al      [REQ-ARCH-005 · REQ-DATA-005]
+/// 5. Veritabanı: kurtarma kontrolü → aç → PRAGMA → migration → seed  [Faz 2]
+/// 6. Uygulamayı başlat (Riverpod ProviderScope)
 /// ```
 ///
-/// Faz 2+ adımları (migration, seed, session, sepet restore) bu fazın
-/// kapsamı dışındadır ve **eklenmemiştir.**
+/// **KRİTİK SIRA (rules/03 §5 · RSK-003):** Veritabanı, single-instance kilidi
+/// alındıktan **sonra** açılır. İkinci uygulama örneğinde veritabanı dosyasına
+/// hiç dokunulmaz.
+///
+/// Faz 3+ adımları (oturum, sepet restore, kurulum sihirbazı) bu fazın kapsamı
+/// dışındadır ve **eklenmemiştir.**
 library;
+
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +31,9 @@ import 'core/errors/app_exception.dart';
 import 'core/logging/app_logger.dart';
 import 'core/paths/app_paths.dart';
 import 'core/single_instance/instance_lock.dart';
+import 'data/db/canteen_database.dart';
+import 'data/db/database_bootstrap.dart';
+import 'data/db/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,8 +78,39 @@ Future<void> main() async {
 
   logger.info('Uygulama başlatıldı. Veri dizini: ${paths.rootPath}');
 
-  // 5. Riverpod (OD-002)
-  runApp(const ProviderScope(child: CanteenApp()));
+  // 5. Veritabanı — kilit ALINDIKTAN SONRA açılır (RSK-003).
+  final CanteenDatabase database;
+  try {
+    final result = await DatabaseBootstrap(paths: paths, logger: logger).open();
+    database = result.database;
+    logger.info('Veritabanı hazır (${result.kind.name}).');
+  } on AppException catch (e) {
+    // REQ-SEC-007: teknik detay log'a, kullanıcıya sade Türkçe mesaj.
+    logger.error('Veritabanı açılamadı', error: e.technicalDetail ?? e);
+    lock.release();
+    runApp(_StartupFailureApp(message: e.userMessage));
+    return;
+  }
+
+  // Kapanışta bağlantı düzgün kapatılır — Windows dosya kilidi katıdır
+  // (rules/05 §6) ve açık WAL dosyaları yedeklemeyi bozar.
+  AppLifecycleListener(
+    onExitRequested: () async {
+      await database.close();
+      lock.release();
+      logger.info('Uygulama kapatıldı.');
+      return AppExitResponse.exit;
+    },
+  );
+
+  // 6. Riverpod (OD-002) — bağlantı override ile enjekte edilir; global
+  // statik duruma dönüştürülmez.
+  runApp(
+    ProviderScope(
+      overrides: [canteenDatabaseProvider.overrideWithValue(database)],
+      child: const CanteenApp(),
+    ),
+  );
 }
 
 /// Bootstrap başarısız olduğunda gösterilen minimal ekran.
