@@ -6,7 +6,7 @@
 > **Tek tanım kuralı:** Bir business rule yalnızca burada tanımlanır. Diğer dokümanlar açıklar,
 > genişletir, ama **yeniden tanımlamaz.**
 
-**Toplam: 76 business rule.** (v3'te +5: finansal erişim kilidi kapsamı ve recovery code)
+**Toplam: 115 business rule.** (v3'te +5: finansal erişim kilidi kapsamı ve recovery code)
 
 ---
 

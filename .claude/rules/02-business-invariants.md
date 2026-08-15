@@ -345,7 +345,7 @@ BULUNAMADI  → "Yeni Ürün" ekranı açılır
 - V1'de **ayrı discount/indirim sistemi yoktur.**
 - `discounts` entity/tablosu **oluşturulmaz.**
 - İndirim UI'ı veya indirim workflow'u **eklenmez.**
-- Fiyat override mekanizması (bu dosya §6 · `docs/12 §4`) bu ihtiyacı karşılar.
+- Fiyat override mekanizması (bu dosya §12 · `docs/12 §4`) bu ihtiyacı karşılar.
 - `sales.discount_total_minor` alanı şemada mevcuttur ve **V1'de daima `0`**'dır.
 
 **Kaynak:** `docs/28-open-decisions.md` → **OD-007**

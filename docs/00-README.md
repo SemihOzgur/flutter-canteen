@@ -127,7 +127,7 @@ Bu dokümantasyonda dört ayrı numaralandırma kullanılır:
 | Önek | Anlamı | Nerede tanımlı |
 |---|---|---|
 | `REQ-<MODÜL>-NNN` | Functional requirement (285 adet) | [25-functional-requirements.md](25-functional-requirements.md) |
-| `BR-<MODÜL>-NNN` | Business rule (76 adet) | [02-product-and-business-requirements.md](02-product-and-business-requirements.md) |
+| `BR-<MODÜL>-NNN` | Business rule (115 adet) | [02-product-and-business-requirements.md](02-product-and-business-requirements.md) |
 | `EC-<MODÜL>-NNN` | Edge case | [26-edge-cases.md](26-edge-cases.md) |
 | `OD-NNN` | Karar kaydı (tümü kapalı) | [28-open-decisions.md](28-open-decisions.md) |
 | `RSK-NNN` | Risk (13 aktif) | [29-risks.md](29-risks.md) |
