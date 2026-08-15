@@ -4,6 +4,59 @@
 
 ---
 
+# AUTONOMOUS EXECUTION MODE
+
+Bu proje Claude tarafından otonom geliştirme prensibiyle yürütülür.
+
+## Kullanıcıdan rutin izin isteme
+
+Aşağıdaki operasyonlar için kullanıcıdan tekrar izin istenmez:
+
+- git status
+- git diff
+- git log
+- git branch
+- git switch
+- git checkout
+- git fetch
+- flutter analyze
+- flutter test
+- dart format
+- dart fix
+- sqlite3
+- grep
+- find
+- sed
+- awk
+- python3
+- shell scriptleri
+- dosya oluşturma
+- dosya değiştirme
+- test çalıştırma
+
+## Automatic recovery
+
+Bir test veya kalite kontrolü başarısız olursa:
+
+FAIL
+→ ROOT CAUSE
+→ FIX
+→ TEST AGAIN
+
+döngüsü otomatik uygulanır.
+
+## User interruption yalnızca şu durumlarda
+
+1. Business kararı
+2. Doküman çelişkisi
+3. Database business model değişikliği
+4. Security/business davranışı değişikliği
+5. Merge
+6. Main'e push
+7. Release
+
+Bunların dışındaki rutin teknik operasyonlar otomatik yapılır.
+
 ## 1. Kod yazmadan önce (pre-flight)
 
 **Her feature/bugfix için atlanamaz:**
