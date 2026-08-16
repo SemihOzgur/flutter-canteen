@@ -1,7 +1,10 @@
 # 00 — Source of Truth ve Değişiklik Protokolü
 
-> **Bu dosya diğer tüm kuralların üstündedir.** Bir kural dosyası ile bu dosya çelişirse bu dosya kazanır.
+> **Bu dosya diğer tüm KURAL dosyalarının üstündedir.** Bir kural dosyası ile bu dosya çelişirse bu dosya kazanır.
 > Bu dosya ile `docs/` çelişirse **`docs/` kazanır** ve bu dosya düzeltilir.
+>
+> Bu hiyerarşinin özeti kök [`CLAUDE.md §2`](../../CLAUDE.md) içindedir. **İkisi aynı hiyerarşidir;**
+> biri değişirse diğeri de aynı anda düzeltilir.
 
 ---
 
@@ -10,7 +13,7 @@
 ```text
 ┌────────────────────────────────────────────────────────────┐
 │ 1. docs/02-product-and-business-requirements.md            │
-│    Business Rules (BR-*) — 76 kural                        │  EN YÜKSEK
+│    Business Rules (BR-*) — 115 kural                       │  EN YÜKSEK
 ├────────────────────────────────────────────────────────────┤
 │ 2. docs/04-domain-model.md                                 │
 │    Entity'ler, alanlar, invariant'lar, durum makineleri    │
@@ -21,13 +24,28 @@
 │ 4. docs/25-functional-requirements.md                      │
 │    REQ-* (285 adet) + acceptance criteria                  │
 ├────────────────────────────────────────────────────────────┤
-│ 5. docs/03-architecture.md · 23-ux · 26-edge-cases         │
+│ 5. docs/03-architecture.md                                 │
+│    Katmanlar, soyutlama ve bağımlılık sınırları            │
 ├────────────────────────────────────────────────────────────┤
-│ 6. IMPLEMENTATION (lib/, test/)                            │  EN DÜŞÜK
+│ 6. docs/23-ux-requirements.md                              │
+│    Ekran ve etkileşim gereksinimleri                       │
+├────────────────────────────────────────────────────────────┤
+│ 7. docs/26-edge-cases.md                                   │
+│    EC-* uç durumlar                                        │
+├────────────────────────────────────────────────────────────┤
+│ 8. .claude/rules/*                                         │
+│    Çalışma kuralları — docs/'u AÇIKLAR ve UYGULATIR        │
+├────────────────────────────────────────────────────────────┤
+│ 9. IMPLEMENTATION (lib/, test/)                            │  EN DÜŞÜK
 └────────────────────────────────────────────────────────────┘
 ```
 
 **Üsttekiler alttakileri belirler. Alttakiler üsttekileri değiştiremez.**
+
+> `.claude/rules/*` hiçbir koşulda `docs/` üzerine **çıkamaz.** Rules yeni business kuralı
+> üretmez; `docs/` içinde zaten kararlaştırılmış olanı geliştirme sırasında uygulatır.
+> Diğer `docs/` dosyaları (`06`, `07`, `08`, `24`, `27`–`31` …) kendi konularında bağlayıcıdır
+> ve her biri `.claude/rules/*` üzerindedir.
 
 ---
 

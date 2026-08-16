@@ -9,6 +9,13 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Drift kod üretimi çıktısı (build_runner). Elle düzenlenmez, lint'lenmez.
+    # rules/06 §3 "flutter analyze uyarısız geçmeli" kapısı ÜRETİLEN koda değil,
+    # elle yazılan koda uygulanır.
+    - "**/*.g.dart"
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

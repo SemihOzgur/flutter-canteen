@@ -1,0 +1,25 @@
+# RELEASE WORKFLOW
+
+RELEASE CANDIDATE
+↓
+FULL TEST
+↓
+ANALYZE
+↓
+FORMAT
+↓
+DATABASE CHECK
+↓
+REGRESSION REVIEW
+↓
+SECOND PASS
+↓
+SCOPE AUDIT
+↓
+FINAL REPORT
+↓
+USER APPROVAL
+↓
+RELEASE
+
+Claude kullanıcı onayı olmadan merge/push/release yapmaz.

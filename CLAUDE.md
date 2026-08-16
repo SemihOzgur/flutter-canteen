@@ -1,7 +1,9 @@
 # Kantin Otomasyonu — Geliştirme Anayasası
 
-> Bu dosya projenin **değişmez çalışma kurallarının giriş noktasıdır.**
+> Bu dosya projenin **değişmez çalışma kurallarının TEK giriş noktasıdır.**
 > Kısa ve yönlendiricidir; ayrıntılı kurallar `.claude/rules/` altındadır.
+>
+> **Başka bir anayasa dosyası yoktur.** Otonom çalışma modu için → §10.
 
 ---
 
@@ -37,12 +39,27 @@ Karar gerekçeleri: `docs/28-open-decisions.md`.
         ↓
 4. docs/25-functional-requirements.md             ← REQ-* + acceptance criteria
         ↓
-5. Architecture / UX / Edge Cases (03, 23, 26)
+5. docs/03-architecture.md                        ← Katmanlar, soyutlama sınırları
         ↓
-6. IMPLEMENTATION (kod)
+6. docs/23-ux-requirements.md                     ← Ekran/etkileşim gereksinimleri
+        ↓
+7. docs/26-edge-cases.md                          ← EC-* uç durumlar
+        ↓
+8. .claude/rules/*                                ← ÇALIŞMA kuralları (docs'u enforce eder)
+        ↓
+9. IMPLEMENTATION (lib/, test/)
 ```
 
 > **Kod bu dokümanlara uyar. Doküman koda uydurulmaz.**
+
+| Kural | |
+|---|---|
+| `.claude/rules/*` hiçbir koşulda `docs/` üzerine **çıkamaz** | Rules, `docs/`'u açıklayan ve uygulatan çalışma kurallarıdır |
+| Kural dosyası ≠ `docs/` | **`docs/` kazanır**, kural dosyası düzeltilir |
+| Doküman ≠ doküman | **DUR** — karar bekle |
+
+Bu hiyerarşinin ayrıntılı hâli: [`.claude/rules/00-source-of-truth.md §1`](.claude/rules/00-source-of-truth.md).
+**İki dosya çelişemez; çelişirse bu dosya ile `rules/00` aynı anda düzeltilir.**
 
 ### Kod ile doküman çeliştiğinde
 
@@ -236,3 +253,50 @@ beklenmeyen değişiklik varsa DUR. Branch kapsamı, iş başlamadan önce tanı
 - `docs/` **ürün ve iş kurallarının source of truth'udur.**
 - Çelişirlerse: `docs/` kazanır; kural dosyası düzeltilir.
 - Kural dosyaları proje sahibinin onayı olmadan gevşetilemez.
+- **Anayasa yalnızca bu dosyadır.** `.claude/` altında ikinci bir `CLAUDE.md` tutulmaz.
+
+---
+
+## 10. Otonom çalışma modu
+
+> Ayrıntı: [`.claude/rules/06-workflow-and-quality.md`](.claude/rules/06-workflow-and-quality.md)
+> → *AUTONOMOUS EXECUTION MODE*. Buradaki özet o bölümle çelişemez.
+
+### Rutin teknik işlemler için izin istenmez
+
+`git status` · `git diff` · `git log` · `git branch` · `git switch` · `git checkout` · `git fetch` ·
+`flutter analyze` · `flutter test` · `dart format` · `dart fix` · `sqlite3` ·
+`grep` · `find` · `sed` · `awk` · `python3` · shell scriptleri ·
+dosya oluşturma/değiştirme · test çalıştırma
+
+> "Bu komutu çalıştırabilir miyim?" / "Testleri başlatayım mı?" / "Branch oluşturayım mı?"
+> gibi sorular rutin işlerde **sorulmaz** — iş doğrudan yapılır.
+
+### Otomatik kurtarma
+
+```text
+FAIL → ROOT CAUSE → FIX → RETEST
+```
+
+Teknik bir hata ise düzeltilir ve tekrar test edilir.
+**Business kararı gerekiyorsa döngü durur** (§5).
+
+### Kullanıcıya yalnızca şunlarda dönülür
+
+1. Business kararı
+2. Doküman çelişkisi
+3. Database business model değişikliği
+4. Security / business davranışı değişikliği
+5. Merge
+6. `main`'e push
+7. Release
+
+### Otomasyon dosyaları
+
+| Ne | Nerede |
+|---|---|
+| Kural dosyaları | `.claude/rules/*.md` — §4 |
+| Subagent tanımları | `.claude/agents/*.md` |
+| Slash komutları | `.claude/commands/*.md` |
+| Workflow şablonları | `.claude/workflows/*.md` |
+| Doğrulama scriptleri | `.claude/scripts/{verify,test,audit}.sh` |

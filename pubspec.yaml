@@ -35,6 +35,17 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # State management / DI — OD-002 (.claude/rules/01-architecture.md §7)
+  flutter_riverpod: ^2.6.1
+
+  # Dosya yolu birleştirme — BR-DATA-001; elle string birleştirme yasak
+  path: ^1.9.0
+
+  # Veritabanı — OD-001. Native SQLite kitaplığını `sqlite3` 3.x kendi
+  # `hook/build.dart` native-asset hook'u sağlar; ayrı bir platform paketi
+  # gerekmez (`sqlite3_flutter_libs` 0.6.0'da tamamen boşaltıldı).
+  drift: ^2.34.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -45,6 +56,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  drift_dev: ^2.34.0
+  build_runner: ^2.15.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
