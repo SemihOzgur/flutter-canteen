@@ -31,6 +31,22 @@ import 'tables/system_tables.dart';
 
 part 'canteen_database.g.dart';
 
+/// ### Neden 15 tablonun tamamında `AUTOINCREMENT` var
+///
+/// `docs/05 §2` yalnızca `users` için `INTEGER PK AUTOINCREMENT` yazar; kalan
+/// 14 tabloda sade `INTEGER PK` görünür. Bu bir ayrım **değildir:** aynı
+/// bölümün girişi *"Aşağıdaki tanımlar veri modeli dokümantasyonudur, üretim
+/// kodu değildir"* der — yani orada DDL değil, veri modeli anlatılır.
+/// `AUTOINCREMENT` listedeki **ilk** tabloda tam yazılmış, sonrakilerde
+/// kısaltılmıştır.
+///
+/// Implementasyon `AUTOINCREMENT`'i her integer PK'de kullanır, çünkü
+/// `AUTOINCREMENT` olmadan SQLite **silinmiş bir satırın rowid'ini yeniden
+/// kullanabilir.** Eski bir ürün id'sinin yeni bir ürüne düşmesi geçmiş
+/// referansları sessizce yanlış kayda bağlardı — BR-GEN-002 / BR-SALE-006
+/// (satış geçmişi silinmez, bozulmaz) bunu kaldırmaz.
+///
+/// Proje sahibi kararı (GAP-2-008): bu okuma doğrudur, şema değişmez.
 @DriftDatabase(
   tables: [
     Users,
