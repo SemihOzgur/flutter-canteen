@@ -185,7 +185,7 @@ bağımlılığın eklenmesi için tekrar gerekçe/onay gerekmez:
 
 | İşlev | Paket | Kaynak karar |
 |---|---|---|
-| Veritabanı | `drift` + `sqlite3_flutter_libs` | OD-001 |
+| Veritabanı | `drift` (native SQLite'ı `sqlite3` 3.x kendi build hook'uyla sağlar) | OD-001 |
 | State management / DI | `riverpod` | OD-002 |
 | Grafik | `fl_chart` | OD-014 |
 | Yedek arşivleme | `archive` | OD-012 |
