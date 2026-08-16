@@ -20,6 +20,7 @@ import 'package:canteen/core/errors/app_exception.dart';
 import 'package:canteen/data/db/canteen_database.dart';
 import 'package:canteen/data/db/database_bootstrap.dart';
 import 'package:canteen/data/db/database_opener.dart';
+import 'package:canteen/data/db/migrations/migration_plan.dart';
 import 'package:canteen/data/db/raw_sqlite_file.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -177,6 +178,41 @@ void main() {
       final db = result.database;
 
       expect(result.kind, DatabaseOpenKind.opened);
+      expect(await pragmaOf(db, 'journal_mode'), SqlitePragmas.journalModeWal);
+      expect(await pragmaOf(db, 'synchronous'), SqlitePragmas.synchronousFull);
+      expect(await pragmaOf(db, 'foreign_keys'), 1);
+      expect(await pragmaOf(db, 'busy_timeout'), SqlitePragmas.busyTimeoutMs);
+      expect(await pragmaOf(db, 'temp_store'), SqlitePragmas.tempStoreMemory);
+    });
+
+    test('migration sonrası (migrated) beş PRAGMA da uygulanır', () async {
+      final first = await DatabaseBootstrap(paths: temp.paths).open();
+      await first.database.close();
+
+      // v1 → v2: açılış `migrated` yolundan geçer.
+      final plan = MigrationPlan([
+        MigrationStep.sql(
+          from: 1,
+          to: 2,
+          statements: const [
+            'ALTER TABLE products ADD COLUMN shelf_note TEXT NULL;',
+          ],
+        ),
+      ]);
+
+      final result = await DatabaseBootstrap(
+        paths: temp.paths,
+        migrationPlan: plan,
+        supportedSchemaVersion: 2,
+      ).open();
+      addTearDown(result.database.close);
+      final db = result.database;
+
+      expect(
+        result.kind,
+        DatabaseOpenKind.migrated,
+        reason: 'Test yanlış yolu ölçüyorsa anlamsızdır.',
+      );
       expect(await pragmaOf(db, 'journal_mode'), SqlitePragmas.journalModeWal);
       expect(await pragmaOf(db, 'synchronous'), SqlitePragmas.synchronousFull);
       expect(await pragmaOf(db, 'foreign_keys'), 1);
@@ -416,7 +452,10 @@ void main() {
 
         expect(
           sw.elapsedMilliseconds,
-          lessThan(1000),
+          // Mutlak bir hız iddiası DEĞİL: kanıtlanan şey 5 sn'lik busy
+          // timeout'un DEVREYE GİRMEDİĞİdir. Yüklü makinede saniyelik
+          // duraklamalar olabildiği için eşik timeout'un yarısıdır.
+          lessThan(SqlitePragmas.busyTimeoutMs ~/ 2),
           reason:
               'Yapılandırmasız bağlantı beklemeden düşer — düzeltmenin '
               'kapattığı davranış budur. Ölçülen: ${sw.elapsedMilliseconds} ms.',
@@ -486,7 +525,10 @@ void main() {
         expect(version, 3);
         expect(
           sw.elapsedMilliseconds,
-          lessThan(1000),
+          // Mutlak bir hız iddiası DEĞİL: kanıtlanan şey 5 sn'lik busy
+          // timeout'un DEVREYE GİRMEDİĞİdir. Yüklü makinede saniyelik
+          // duraklamalar olabildiği için eşik timeout'un yarısıdır.
+          lessThan(SqlitePragmas.busyTimeoutMs ~/ 2),
           reason: 'Başlıktan okuma kilitten etkilenmez.',
         );
       },
@@ -531,6 +573,18 @@ void main() {
         RawSqliteFile(bad.path).readUserVersion(),
         throwsA(isA<DatabaseException>()),
       );
+    });
+
+    test('bozuk dosyada isIntegral FIRLATMAZ, false döner', () async {
+      // Sözleşme: "bozuk mu?" sorusunun yanıtı true/false olmalıdır. Kapanış
+      // hatası uçuştaki exception'ın yerine geçseydi burada fırlardı ve
+      // kurtarma akışı çökerdi.
+      final dir = Directory.systemTemp.createTempSync('canteen_int_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final bad = File(p.join(dir.path, 'garbage.sqlite'))
+        ..writeAsBytesSync(List<int>.filled(4096, 0x41));
+
+      expect(await RawSqliteFile(bad.path).isIntegral(), isFalse);
     });
 
     test('boş dosya 0 · olmayan dosya 0', () async {

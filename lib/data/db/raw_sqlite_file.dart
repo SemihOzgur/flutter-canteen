@@ -5,7 +5,11 @@
 ///
 /// - `user_version` — sürüm kapısı (REQ-MIG-005)
 /// - `integrity_check` — snapshot doğrulaması (REQ-MIG-002)
-/// - `foreign_key_check` — migration sonrası doğrulama (docs/06 §3 adım 6)
+///
+/// Migration sonrası `foreign_key_check` (docs/06 §3 adım 6) **buraya ait
+/// değildir:** o kontrol migration'ı çalıştıran bağlantıda yapılır
+/// (`DatabaseBootstrap`), çünkü doğrulanması gereken şey o transaction'ın
+/// bıraktığı durumdur.
 ///
 /// Bunlar için tam bir [CanteenDatabase] açmak **yanlış** olurdu: açılış
 /// migration + seed tetikler. Bu sınıf `enableMigrations: false` ile bağlanır.
@@ -64,7 +68,18 @@ class RawSqliteFile {
       await executor.ensureOpen(_InertExecutorUser());
       return await action(executor);
     } finally {
-      await executor.close();
+      // `close()` hatası uçuştaki exception'ın YERİNE GEÇMEMELİ. Geçseydi:
+      // `isIntegral()`'in "asla fırlatmaz" sözleşmesi (aşağıda) bozulur ve
+      // `readUserVersion()`'ın SqliteException → DatabaseException eşlemesi
+      // atlanarak ham SQLite metni yukarı sızardı (REQ-SEC-007).
+      //
+      // Tanı bağlantısı geçicidir ve hiçbir şey commit etmez; kapanışta
+      // yapılabilecek bir kurtarma yoktur.
+      try {
+        await executor.close();
+      } on Object {
+        // bilinçli olarak yutulur
+      }
     }
   }
 
@@ -178,12 +193,5 @@ class RawSqliteFile {
     } on SqliteException {
       return false;
     }
-  }
-
-  /// `PRAGMA foreign_key_check` — ihlal yoksa **boş** dönmelidir (docs/06 §6).
-  Future<List<Map<String, Object?>>> foreignKeyViolations() {
-    return _withExecutor((executor) async {
-      return executor.runSelect('PRAGMA foreign_key_check;', const []);
-    });
   }
 }
