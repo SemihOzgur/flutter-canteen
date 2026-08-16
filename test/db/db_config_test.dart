@@ -5,77 +5,348 @@
 /// WAL yalnızca **dosya tabanlı** veritabanında doğrulanabilir: in-memory
 /// veritabanları `journal_mode = memory` kullanır. Bu yüzden yapılandırma
 /// testleri gerçek bir dosya üzerinde çalışır.
+///
+/// Dosya üç katmanı ayrı ayrı doğrular:
+///
+/// 1. `openDatabaseFile()` — yardımcı factory
+/// 2. `DatabaseBootstrap.open()` — **gerçek üretim yolu** (GAP-2-016)
+/// 3. `buildDiagnosticSetup()` / `RawSqliteFile` — salt-okuma tanı bağlantısı
+///    (GAP-2-015)
 library;
 
 import 'dart:io';
 
+import 'package:canteen/core/errors/app_exception.dart';
 import 'package:canteen/data/db/canteen_database.dart';
+import 'package:canteen/data/db/database_bootstrap.dart';
 import 'package:canteen/data/db/database_opener.dart';
+import 'package:canteen/data/db/raw_sqlite_file.dart';
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_database.dart';
 
-void main() {
-  late Directory dir;
-  late CanteenDatabase db;
+/// Drift açılışta bir şema kullanıcısı ister; tanı bağlantısı için etkisizdir.
+class _InertExecutorUser extends QueryExecutorUser {
+  @override
+  int get schemaVersion => 1;
 
-  setUp(() async {
-    dir = Directory.systemTemp.createTempSync('canteen_cfg_');
-    db = fileDatabase(tempDbPath(dir));
-    await db.customStatement('SELECT 1;'); // bağlantıyı aç
-  });
+  @override
+  Future<void> beforeOpen(
+    QueryExecutor executor,
+    OpeningDetails details,
+  ) async {}
+}
 
-  tearDown(() async {
-    await db.close();
-    if (dir.existsSync()) dir.deleteSync(recursive: true);
-  });
-
-  Future<Object?> pragma(String name) async {
-    final row = await db.customSelect('PRAGMA $name;').getSingle();
-    return row.data.values.first;
+/// Verilen [setup] ile ham bir bağlantı açıp tek bir PRAGMA okur.
+///
+/// [setup] `null` bırakılırsa **yapılandırılmamış** bağlantı ölçülür — GAP-2-015
+/// öncesi davranışın referansı budur.
+Future<Object?> _rawPragma(
+  String dbPath,
+  String name, {
+  DatabaseSetup? setup,
+}) async {
+  final executor = NativeDatabase(
+    File(dbPath),
+    enableMigrations: false,
+    setup: setup,
+  );
+  try {
+    await executor.ensureOpen(_InertExecutorUser());
+    final rows = await executor.runSelect('PRAGMA $name;', const []);
+    return rows.isEmpty ? null : rows.first.values.first;
+  } finally {
+    await executor.close();
   }
+}
 
-  test('journal_mode = WAL — elektrik kesintisi dayanıklılığı', () async {
-    expect(await pragma('journal_mode'), SqlitePragmas.journalModeWal);
+void main() {
+  group('openDatabaseFile — yardımcı factory', () {
+    late Directory dir;
+    late CanteenDatabase db;
+
+    setUp(() async {
+      dir = Directory.systemTemp.createTempSync('canteen_cfg_');
+      db = fileDatabase(tempDbPath(dir));
+      await db.customStatement('SELECT 1;'); // bağlantıyı aç
+    });
+
+    tearDown(() async {
+      await db.close();
+      if (dir.existsSync()) dir.deleteSync(recursive: true);
+    });
+
+    Future<Object?> pragma(String name) async {
+      final row = await db.customSelect('PRAGMA $name;').getSingle();
+      return row.data.values.first;
+    }
+
+    test('journal_mode = WAL — elektrik kesintisi dayanıklılığı', () async {
+      expect(await pragma('journal_mode'), SqlitePragmas.journalModeWal);
+    });
+
+    test('synchronous = FULL — satış kaybı kabul edilemez', () async {
+      expect(await pragma('synchronous'), SqlitePragmas.synchronousFull);
+    });
+
+    test('foreign_keys = ON — referans bütünlüğü', () async {
+      expect(await pragma('foreign_keys'), 1);
+    });
+
+    test('busy_timeout = 5000 ms', () async {
+      expect(await pragma('busy_timeout'), SqlitePragmas.busyTimeoutMs);
+    });
+
+    test('temp_store = MEMORY — rapor aggregation hızı', () async {
+      expect(
+        await pragma('temp_store'),
+        SqlitePragmas.tempStoreMemory,
+        reason: 'rules/03 §1 — temp_store MEMORY olmalıdır.',
+      );
+    });
+
+    test('WAL gerçekten aktif — -wal yan dosyası oluşur', () async {
+      await insertTestUser(db);
+      final wal = File('${tempDbPath(dir)}-wal');
+      expect(
+        wal.existsSync(),
+        isTrue,
+        reason: 'WAL modunda yazma sonrası -wal dosyası bulunmalıdır.',
+      );
+    });
+
+    test('yeniden açılışta yapılandırma korunur', () async {
+      await db.close();
+      db = fileDatabase(tempDbPath(dir));
+      await db.customStatement('SELECT 1;');
+
+      expect(await pragma('journal_mode'), SqlitePragmas.journalModeWal);
+      expect(await pragma('foreign_keys'), 1);
+      expect(await pragma('temp_store'), SqlitePragmas.tempStoreMemory);
+    });
   });
 
-  test('synchronous = FULL — satış kaybı kabul edilemez', () async {
-    expect(await pragma('synchronous'), SqlitePragmas.synchronousFull);
+  // ---------------------------------------------------------------------------
+  // GAP-2-016 — gerçek üretim yolu
+  // ---------------------------------------------------------------------------
+
+  /// Yukarıdaki grup yalnızca `fileDatabase()` **yardımcısını** ölçer.
+  /// Üretimde bağlantı `DatabaseBootstrap.open()` üzerinden kurulur; asıl
+  /// doğrulanması gereken odur.
+  group('DatabaseBootstrap.open() — üretim bağlantısı (GAP-2-016)', () {
+    late TempAppPaths temp;
+
+    setUp(() async => temp = await TempAppPaths.create());
+    tearDown(() => temp.dispose());
+
+    Future<Object?> pragmaOf(CanteenDatabase db, String name) async {
+      final row = await db.customSelect('PRAGMA $name;').getSingle();
+      return row.data.values.first;
+    }
+
+    test('ilk açılışta (created) beş PRAGMA da uygulanır', () async {
+      final result = await DatabaseBootstrap(paths: temp.paths).open();
+      addTearDown(result.database.close);
+      final db = result.database;
+
+      expect(result.kind, DatabaseOpenKind.created);
+      expect(
+        await pragmaOf(db, 'journal_mode'),
+        SqlitePragmas.journalModeWal,
+        reason: 'REQ-DB-001: elektrik kesintisi dayanıklılığı.',
+      );
+      expect(
+        await pragmaOf(db, 'synchronous'),
+        SqlitePragmas.synchronousFull,
+        reason: 'REQ-DB-001: satış kaybı kabul edilemez.',
+      );
+      expect(await pragmaOf(db, 'foreign_keys'), 1);
+      expect(await pragmaOf(db, 'busy_timeout'), SqlitePragmas.busyTimeoutMs);
+      expect(await pragmaOf(db, 'temp_store'), SqlitePragmas.tempStoreMemory);
+    });
+
+    test('ikinci açılışta (opened) beş PRAGMA da uygulanır', () async {
+      final first = await DatabaseBootstrap(paths: temp.paths).open();
+      await first.database.close();
+
+      final result = await DatabaseBootstrap(paths: temp.paths).open();
+      addTearDown(result.database.close);
+      final db = result.database;
+
+      expect(result.kind, DatabaseOpenKind.opened);
+      expect(await pragmaOf(db, 'journal_mode'), SqlitePragmas.journalModeWal);
+      expect(await pragmaOf(db, 'synchronous'), SqlitePragmas.synchronousFull);
+      expect(await pragmaOf(db, 'foreign_keys'), 1);
+      expect(await pragmaOf(db, 'busy_timeout'), SqlitePragmas.busyTimeoutMs);
+      expect(await pragmaOf(db, 'temp_store'), SqlitePragmas.tempStoreMemory);
+    });
+
+    test('üretim veritabanı dosyası gerçekten WAL modunda', () async {
+      final result = await DatabaseBootstrap(paths: temp.paths).open();
+      addTearDown(result.database.close);
+
+      await insertTestUser(result.database);
+
+      expect(
+        File('${temp.paths.databaseFile}-wal').existsSync(),
+        isTrue,
+        reason:
+            'WAL yalnızca ayar değil, dosya davranışı olarak da aktif '
+            'olmalıdır.',
+      );
+    });
   });
 
-  test('foreign_keys = ON — referans bütünlüğü', () async {
-    expect(await pragma('foreign_keys'), 1);
-  });
+  // ---------------------------------------------------------------------------
+  // GAP-2-015 — salt-okuma tanı bağlantısı
+  // ---------------------------------------------------------------------------
 
-  test('busy_timeout = 5000 ms', () async {
-    expect(await pragma('busy_timeout'), SqlitePragmas.busyTimeoutMs);
-  });
+  group('buildDiagnosticSetup — tanı bağlantısı (GAP-2-015)', () {
+    late TempAppPaths temp;
 
-  test('temp_store = MEMORY — rapor aggregation hızı', () async {
-    expect(
-      await pragma('temp_store'),
-      SqlitePragmas.tempStoreMemory,
-      reason: 'rules/03 §1 — temp_store MEMORY olmalıdır.',
+    setUp(() async => temp = await TempAppPaths.create());
+    tearDown(() => temp.dispose());
+
+    /// Tanı sorgularının çalışabileceği gerçek bir veritabanı bırakır.
+    Future<void> seedDatabaseFile() async {
+      final result = await DatabaseBootstrap(paths: temp.paths).open();
+      await result.database.close();
+    }
+
+    test('yapılandırılmamış bağlantı KÖTÜ değerlerle açılır — regresyon '
+        'referansı', () async {
+      await seedDatabaseFile();
+      final path = temp.paths.databaseFile;
+
+      expect(
+        await _rawPragma(path, 'busy_timeout'),
+        0,
+        reason: 'setup verilmezse SQLite varsayılanı 0\'dır — GAP-2-015 buydu.',
+      );
+      expect(await _rawPragma(path, 'temp_store'), 0);
+    });
+
+    test('buildDiagnosticSetup busy_timeout ve temp_store uygular', () async {
+      await seedDatabaseFile();
+      final path = temp.paths.databaseFile;
+      final setup = buildDiagnosticSetup();
+
+      expect(
+        await _rawPragma(path, 'busy_timeout', setup: setup),
+        SqlitePragmas.busyTimeoutMs,
+        reason: 'Kilit tutulurken anında SQLITE_BUSY ile düşmemeli.',
+      );
+      expect(
+        await _rawPragma(path, 'temp_store', setup: setup),
+        SqlitePragmas.tempStoreMemory,
+        reason: 'integrity_check geçici dosyaları diske taşmamalı.',
+      );
+    });
+
+    test('buildDiagnosticSetup journal_mode\'a DOKUNMAZ', () async {
+      // Taze, WAL olmayan bir dosya: tanı bağlantısı onu WAL\'a çevirmemeli.
+      final plain = File('${temp.paths.databaseFile}.plain');
+      final seed = NativeDatabase(plain, enableMigrations: false);
+      await seed.ensureOpen(_InertExecutorUser());
+      await seed.runCustom('CREATE TABLE t (id INTEGER);', const []);
+      await seed.close();
+
+      final before = await _rawPragma(plain.path, 'journal_mode');
+      expect(before, isNot(SqlitePragmas.journalModeWal));
+
+      await _rawPragma(
+        plain.path,
+        'user_version',
+        setup: buildDiagnosticSetup(),
+      );
+
+      expect(
+        await _rawPragma(plain.path, 'journal_mode'),
+        before,
+        reason:
+            'journal_mode dosyaya YAZILIR; tanı bağlantısı onu '
+            'değiştiremez.',
+      );
+      expect(File('${plain.path}-wal').existsSync(), isFalse);
+      expect(File('${plain.path}-shm').existsSync(), isFalse);
+    });
+
+    test(
+      'sürüm kapısı UYGULANMAZ — readUserVersion 99 döner, fırlatmaz',
+      () async {
+        final first = await DatabaseBootstrap(paths: temp.paths).open();
+        await first.database.customStatement('PRAGMA user_version = 99;');
+        await first.database.close();
+
+        // REQ-MIG-005 tespiti buna dayanır: saptamak için OKUYABİLMELİ.
+        expect(
+          await RawSqliteFile(temp.paths.databaseFile).readUserVersion(),
+          99,
+          reason: 'buildDatabaseSetup bağlansaydı burada exception fırlardı.',
+        );
+
+        // Kapı, üretim yolunda (bootstrap) hâlâ çalışıyor olmalı.
+        await expectLater(
+          DatabaseBootstrap(paths: temp.paths).open(),
+          throwsA(isA<SchemaVersionException>()),
+        );
+      },
     );
+
+    test('snapshot doğrulaması snapshot dosyasını DEĞİŞTİRMEZ', () async {
+      final bootstrap = DatabaseBootstrap(paths: temp.paths);
+      final result = await bootstrap.open();
+      addTearDown(result.database.close);
+      await insertTestUser(result.database);
+
+      final snapshot = await bootstrap.coordinator.createSnapshot(
+        result.database,
+        fromVersion: 1,
+      );
+      final sizeBefore = snapshot.lengthSync();
+      final journalBefore = await _rawPragma(snapshot.path, 'journal_mode');
+
+      // Üretimdeki doğrulama yolu — RawSqliteFile.isIntegral() kullanır.
+      expect(await bootstrap.coordinator.verifySnapshot(snapshot), isTrue);
+
+      expect(
+        File('${snapshot.path}-wal').existsSync(),
+        isFalse,
+        reason: 'Doğrulama, doğruladığı snapshot\'ın yanına -wal bırakamaz.',
+      );
+      expect(File('${snapshot.path}-shm').existsSync(), isFalse);
+      expect(await _rawPragma(snapshot.path, 'journal_mode'), journalBefore);
+      expect(snapshot.lengthSync(), sizeBefore);
+    });
   });
 
-  test('WAL gerçekten aktif — -wal yan dosyası oluşur', () async {
-    await insertTestUser(db);
-    final wal = File('${tempDbPath(dir)}-wal');
-    expect(
-      wal.existsSync(),
-      isTrue,
-      reason: 'WAL modunda yazma sonrası -wal dosyası bulunmalıdır.',
-    );
-  });
+  // ---------------------------------------------------------------------------
+  // Kaynak seviyesinde koruma — yanlış setup\'ın geri sızmasını engeller
+  // ---------------------------------------------------------------------------
 
-  test('yeniden açılışta yapılandırma korunur', () async {
-    await db.close();
-    db = fileDatabase(tempDbPath(dir));
-    await db.customStatement('SELECT 1;');
+  group('RawSqliteFile bağlantı kurulumu — kaynak koruması', () {
+    test('buildDiagnosticSetup bağlanır, buildDatabaseSetup BAĞLANMAZ', () {
+      final source = File(
+        'lib/data/db/raw_sqlite_file.dart',
+      ).readAsStringSync();
 
-    expect(await pragma('journal_mode'), SqlitePragmas.journalModeWal);
-    expect(await pragma('foreign_keys'), 1);
-    expect(await pragma('temp_store'), SqlitePragmas.tempStoreMemory);
+      expect(
+        source,
+        contains('setup: buildDiagnosticSetup()'),
+        reason: 'GAP-2-015: tanı bağlantısı yapılandırılmadan açılmamalı.',
+      );
+      // Yalnızca `setup:` bağlanışına bakılır — açıklayıcı yorumda adının
+      // geçmesi serbesttir.
+      expect(
+        source,
+        isNot(contains('setup: buildDatabaseSetup(')),
+        reason:
+            'buildDatabaseSetup REQ-MIG-005 kapısını ve WAL\'ı taşır; '
+            'RawSqliteFile\'a bağlanırsa sürüm tespiti ve snapshot '
+            'doğrulaması bozulur.',
+      );
+    });
   });
 }

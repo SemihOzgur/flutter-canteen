@@ -20,6 +20,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 
 import '../../core/errors/app_exception.dart';
+import 'database_opener.dart';
 
 /// Drift, açılış sırasında şema yönetimi için bir [QueryExecutorUser] ister.
 /// Migration'lar kapalı olduğundan bu uygulama hiçbir şey yapmaz.
@@ -43,7 +44,19 @@ class RawSqliteFile {
   Future<T> _withExecutor<T>(
     Future<T> Function(QueryExecutor executor) action,
   ) async {
-    final executor = NativeDatabase(File(path), enableMigrations: false);
+    // Tanı bağlantısı da yapılandırılır: `busy_timeout` varsayılanı `0`'dır ve
+    // bu sınıf üretimde her açılışta gerçek veritabanına bağlanır
+    // (`DatabaseBootstrap.open`). Yapılandırmasız bir bağlantı, başka biri
+    // kilit tuttuğu anda `SQLITE_BUSY` ile düşer ve kullanıcıya asılsız bir
+    // "veritabanı bozuk" hatası gösterilirdi.
+    //
+    // `buildDatabaseSetup()` BURAYA BAĞLANAMAZ — gerekçesi
+    // [buildDiagnosticSetup] dokümantasyonunda.
+    final executor = NativeDatabase(
+      File(path),
+      enableMigrations: false,
+      setup: buildDiagnosticSetup(),
+    );
     try {
       await executor.ensureOpen(_InertExecutorUser());
       return await action(executor);

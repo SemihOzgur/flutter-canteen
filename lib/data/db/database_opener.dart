@@ -36,6 +36,22 @@ abstract final class SqlitePragmas {
   static const int busyTimeoutMs = 5000;
 }
 
+/// **Her** bağlantıda uygulanan PRAGMA'lar — yazan da, salt-okuyan da.
+///
+/// İkisi de yalnızca bağlantı ömrü boyunca geçerlidir; veritabanı dosyasına
+/// yazılmazlar. Bu yüzden salt-okuma tanı bağlantısına da güvenle uygulanır
+/// ([buildDiagnosticSetup]).
+final List<String> _sharedPragmas = [
+  'PRAGMA busy_timeout = ${SqlitePragmas.busyTimeoutMs};',
+  'PRAGMA temp_store = MEMORY;',
+];
+
+/// Yalnızca **yazan** bağlantılarda anlamlı olan PRAGMA'lar.
+const List<String> _writeConnectionPragmas = [
+  'PRAGMA synchronous = FULL;',
+  'PRAGMA foreign_keys = ON;',
+];
+
 /// Bağlantı kurulum adımlarını üretir.
 ///
 /// [useWal] yalnızca dosya tabanlı veritabanları için anlamlıdır; in-memory
@@ -48,10 +64,12 @@ DatabaseSetup buildDatabaseSetup({
     if (useWal) {
       rawDb.execute('PRAGMA journal_mode = WAL;');
     }
-    rawDb.execute('PRAGMA synchronous = FULL;');
-    rawDb.execute('PRAGMA foreign_keys = ON;');
-    rawDb.execute('PRAGMA busy_timeout = ${SqlitePragmas.busyTimeoutMs};');
-    rawDb.execute('PRAGMA temp_store = MEMORY;');
+    for (final pragma in _writeConnectionPragmas) {
+      rawDb.execute(pragma);
+    }
+    for (final pragma in _sharedPragmas) {
+      rawDb.execute(pragma);
+    }
 
     // REQ-MIG-005 — kendi desteklediğinden yeni bir şemayı açmayı reddet.
     final rows = rawDb.select('PRAGMA user_version;');
@@ -66,6 +84,30 @@ DatabaseSetup buildDatabaseSetup({
         technicalDetail:
             'user_version=$version > supported=$supportedSchemaVersion',
       );
+    }
+  };
+}
+
+/// Salt-okuma **tanı** bağlantısı için kurulum — `RawSqliteFile`.
+///
+/// Bu bağlantı yalnızca `user_version`, `integrity_check` ve
+/// `foreign_key_check` çalıştırır; hiçbir şey yazmaz. Bu yüzden
+/// [buildDatabaseSetup]'ın tamamı **bilinçli olarak** uygulanmaz:
+///
+/// | Uygulanmayan | Neden |
+/// |---|---|
+/// | `journal_mode = WAL` | WAL, dosya **başlığına yazılır** ve `-wal`/`-shm` yan dosyaları üretir. Bu bağlantı `VACUUM INTO` snapshot'larını **doğrulamak** için kullanılıyor (`MigrationCoordinator.verifySnapshot`); doğruladığı dosyayı değiştiremez. |
+/// | REQ-MIG-005 sürüm kapısı | `readUserVersion()` "çok yeni şema"yı tam olarak **saptamak** için var. Kapı burada da uygulansaydı, saptaması gereken durumda exception fırlatır ve `DatabaseBootstrap`'in açık kontrolünü imkânsız kılardı. |
+/// | `synchronous` · `foreign_keys` | Bu bağlantı yazmadığı için ikisi de etkisizdir; `foreign_key_check` zaten `foreign_keys` ayarından bağımsız çalışır. Simetri uğruna eklenmez. |
+///
+/// Uygulanan ikisi ise gerçek birer güvenilirlik gereksinimidir:
+/// `busy_timeout` (varsayılan `0` — başka bir bağlantı kilit tutarken anında
+/// `SQLITE_BUSY`) ve `temp_store = MEMORY` (büyük veritabanında
+/// `integrity_check` geçici dosyaları diske taşar).
+DatabaseSetup buildDiagnosticSetup() {
+  return (rawDb) {
+    for (final pragma in _sharedPragmas) {
+      rawDb.execute(pragma);
     }
   };
 }
