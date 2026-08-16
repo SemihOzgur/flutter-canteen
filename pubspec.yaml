@@ -40,8 +40,11 @@ dependencies:
 
   # Dosya yolu birleştirme — BR-DATA-001; elle string birleştirme yasak
   path: ^1.9.0
+
+  # Veritabanı — OD-001. Native SQLite kitaplığını `sqlite3` 3.x kendi
+  # `hook/build.dart` native-asset hook'u sağlar; ayrı bir platform paketi
+  # gerekmez (`sqlite3_flutter_libs` 0.6.0'da tamamen boşaltıldı).
   drift: ^2.34.3
-  sqlite3_flutter_libs: ^0.6.0+eol
 
 dev_dependencies:
   flutter_test:
