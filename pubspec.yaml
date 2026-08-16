@@ -46,6 +46,10 @@ dependencies:
   # gerekmez (`sqlite3_flutter_libs` 0.6.0'da tamamen boşaltıldı).
   drift: ^2.34.3
 
+  # Parola / recovery code hash'leme — OD-003 (salt'lı SHA-256).
+  # rules/01 §7 karar kapsamı: ayrıca onay gerekmez.
+  crypto: ^3.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
