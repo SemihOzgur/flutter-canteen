@@ -146,7 +146,11 @@ Kâr **daima KDV hariç matrah** üzerinden hesaplanır (KDV işletmenin geliri 
 
 ### Hareket tipleri
 
-`initial` · `stockEntry` · `sale` · `saleCancellation` · `return` · `waste` · `adjustment` · `importAdjustment`
+`initial` · `stockEntry` · `sale` · `saleCancellation` · `return` · `waste` · `adjustment` ·
+`importAdjustment` · `restoreBaseline`
+
+> **Kaynak: [`docs/13-stock-system.md` §2](../../docs/13-stock-system.md).** Liste oradaki
+> tabloyla birebir aynıdır; çelişki hâlinde `docs/13` geçerlidir.
 
 ### Sebep/referans zorunluluğu
 
