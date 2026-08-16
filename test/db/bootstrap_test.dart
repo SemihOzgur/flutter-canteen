@@ -271,11 +271,38 @@ void main() {
       );
     });
 
-    test('lib/application/ oluşturulmadı — Faz 2 kapsamı dışı', () {
+    // `lib/application/` Faz 3a'da gerçek ihtiyaçla açıldı (AuthService,
+    // SessionService — docs/03 §3). Faz 2'deki "henüz açılmadı" kontrolünün
+    // yerini katmanın KENDİ sınırlarını koruyan bu kontrol aldı.
+    test('application/ altında widget ve ham SQL YOK', () {
+      final applicationDir = Directory('lib/application');
+      if (!applicationDir.existsSync()) return;
+
+      final offenders = <String>[];
+
+      for (final entity in applicationDir.listSync(recursive: true)) {
+        if (entity is! File || !entity.path.endsWith('.dart')) continue;
+        final source = entity.readAsStringSync();
+        for (final banned in const [
+          "import 'package:flutter/",
+          "import 'package:flutter_test/",
+          '../presentation/',
+          // rules/01 §1: application katmanı ham SQL detayı içermez.
+          'customSelect(',
+          'customStatement(',
+        ]) {
+          if (source.contains(banned)) {
+            offenders.add('${entity.path} → $banned');
+          }
+        }
+      }
+
       expect(
-        Directory('lib/application').existsSync(),
-        isFalse,
-        reason: 'rules/01 §3: gerçek ihtiyaç doğmadan katman açılmaz.',
+        offenders,
+        isEmpty,
+        reason:
+            'rules/01 §1: application katmanı widget bilgisi ve ham SQL '
+            'içermez → $offenders',
       );
     });
   });

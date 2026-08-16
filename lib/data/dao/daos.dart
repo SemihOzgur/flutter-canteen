@@ -49,6 +49,13 @@ class UsersDao extends DatabaseAccessor<CanteenDatabase> with _$UsersDaoMixin {
   Future<List<User>> listActive() =>
       (select(users)..where((u) => u.isActive.equals(true))).get();
 
+  /// **Pasifler dâhil** tüm kullanıcılar — kullanıcı yönetimi ekranı için
+  /// (docs/17 §11). Kullanıcı silinmez, yalnızca pasifleşir (BR-AUTH-006);
+  /// bu yüzden pasif kayıtlar da listelenebilmelidir.
+  Future<List<User>> listAll() => (select(
+    users,
+  )..orderBy([(u) => OrderingTerm(expression: u.username)])).get();
+
   Future<int> insertUser(UsersCompanion user) => into(users).insert(user);
 
   /// BR-AUTH-006 — en az bir aktif kullanıcı bulunmalıdır.
@@ -61,6 +68,61 @@ class UsersDao extends DatabaseAccessor<CanteenDatabase> with _$UsersDaoMixin {
             .getSingle();
     return row.read(count) ?? 0;
   }
+
+  /// EC-AUTH-008 / REQ-AUTH-002 — hiç kullanıcı yoksa kurulum sihirbazı açılır.
+  /// Pasif kullanıcılar da sayılır: pasif bir kullanıcı varken sistem "yeni
+  /// kurulum" değildir.
+  Future<int> countAll() async {
+    final count = users.id.count();
+    final row = await (selectOnly(users)..addColumns([count])).getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  /// Başarılı giriş sonrası son giriş zamanı (docs/04 §3.1).
+  ///
+  /// [at] UTC'ye çevrilerek yazılır (rules/03 §1 — tüm zaman alanları UTC).
+  Future<int> touchLastLogin(int id, DateTime at) =>
+      (update(users)..where((u) => u.id.equals(id))).write(
+        UsersCompanion(
+          lastLoginAt: Value(at.toUtc()),
+          updatedAt: Value(_now()),
+        ),
+      );
+
+  /// Parola değişikliği — **yalnızca** hash ve salt yazılır.
+  ///
+  /// BR-SEC-001: düz metin parola hiçbir kolona yazılmaz; bu metot düz metni
+  /// hiç görmez.
+  Future<int> updatePassword(
+    int id, {
+    required String passwordHash,
+    required String passwordSalt,
+  }) => (update(users)..where((u) => u.id.equals(id))).write(
+    UsersCompanion(
+      passwordHash: Value(passwordHash),
+      passwordSalt: Value(passwordSalt),
+      updatedAt: Value(_now()),
+    ),
+  );
+
+  /// BR-AUTH-006 — kullanıcı **silinmez**, yalnızca pasifleştirilir.
+  ///
+  /// "Son aktif kullanıcı" kontrolü bir iş kuralıdır ve application
+  /// katmanındadır (rules/01 §1 — DAO iş kararı içermez).
+  Future<int> setActive(int id, bool isActive) =>
+      (update(users)..where((u) => u.id.equals(id))).write(
+        UsersCompanion(isActive: Value(isActive), updatedAt: Value(_now())),
+      );
+
+  Future<int> updateDisplayName(int id, String displayName) =>
+      (update(users)..where((u) => u.id.equals(id))).write(
+        UsersCompanion(
+          displayName: Value(displayName),
+          updatedAt: Value(_now()),
+        ),
+      );
+
+  DateTime _now() => attachedDatabase.clock().toUtc();
 }
 
 // ---------------------------------------------------------------------------
