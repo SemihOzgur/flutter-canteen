@@ -36,21 +36,35 @@ abstract final class SqlitePragmas {
   static const int busyTimeoutMs = 5000;
 }
 
-/// **Her** bağlantıda uygulanan PRAGMA'lar — yazan da, salt-okuyan da.
+/// **Her** bağlantıda uygulanan PRAGMA'lar — tanı bağlantısı dâhil.
 ///
-/// İkisi de yalnızca bağlantı ömrü boyunca geçerlidir; veritabanı dosyasına
-/// yazılmazlar. Bu yüzden salt-okuma tanı bağlantısına da güvenle uygulanır
-/// ([buildDiagnosticSetup]).
-final List<String> _sharedPragmas = [
+/// `synchronous` buraya aittir, çünkü **"yalnızca PRAGMA okuyan" bir bağlantı
+/// da diske yazabilir:** WAL modunda son bağlantı kapanırken checkpoint
+/// çalışır ve WAL çerçevelerini ana dosyaya taşır. Çökme sonrası açılışta
+/// (`DatabaseBootstrap.open` → `RawSqliteFile.readUserVersion`) tam olarak bu
+/// olur. Ölçüm: 4 KB'lik ana dosya, hiçbir DML çalıştırılmadan 52 KB'ye çıkar.
+///
+/// Ayrıca `synchronous` varsayılanı sabit değildir — WAL dosyasında `NORMAL`
+/// (1), rollback-journal dosyasında `FULL` (2) ölçülür. Açıkça yazılmazsa
+/// üretim veritabanı `docs/05 §1`'in gerektirdiği `FULL`'de **olmaz**.
+/// **SIRA KRİTİKTİR — `busy_timeout` daima ilk sıradadır.**
+///
+/// Bağlantının ilk ifadesi veritabanı başlığını okumak için paylaşımlı kilit
+/// ister. Başka biri kilidi tutuyorsa, `busy_timeout` o ana kadar
+/// uygulanmadıysa SQLite bekleme yapmadan `SQLITE_BUSY` döner. Ölçüldü:
+/// `synchronous` başa alındığında kilitli veritabanında açılış **4 ms**'de
+/// düşüyor; `busy_timeout` başa alındığında beklemeye geçiyor.
+const List<String> _sharedPragmas = [
   'PRAGMA busy_timeout = ${SqlitePragmas.busyTimeoutMs};',
+  'PRAGMA synchronous = FULL;',
   'PRAGMA temp_store = MEMORY;',
 ];
 
 /// Yalnızca **yazan** bağlantılarda anlamlı olan PRAGMA'lar.
-const List<String> _writeConnectionPragmas = [
-  'PRAGMA synchronous = FULL;',
-  'PRAGMA foreign_keys = ON;',
-];
+///
+/// `foreign_key_check` bu ayardan bağımsız çalışır (ölçüldü: `foreign_keys=0`
+/// iken de ihlalleri raporlar), bu yüzden tanı bağlantısına uygulanmaz.
+const List<String> _writeConnectionPragmas = ['PRAGMA foreign_keys = ON;'];
 
 /// Bağlantı kurulum adımlarını üretir.
 ///
@@ -61,13 +75,15 @@ DatabaseSetup buildDatabaseSetup({
   int supportedSchemaVersion = kSupportedSchemaVersion,
 }) {
   return (rawDb) {
+    // Ortak PRAGMA'lar ÖNCE — `busy_timeout` başta olmalı, çünkü hemen
+    // ardından gelen `journal_mode = WAL` kilit bekleyebilir.
+    for (final pragma in _sharedPragmas) {
+      rawDb.execute(pragma);
+    }
     if (useWal) {
       rawDb.execute('PRAGMA journal_mode = WAL;');
     }
     for (final pragma in _writeConnectionPragmas) {
-      rawDb.execute(pragma);
-    }
-    for (final pragma in _sharedPragmas) {
       rawDb.execute(pragma);
     }
 
@@ -88,22 +104,21 @@ DatabaseSetup buildDatabaseSetup({
   };
 }
 
-/// Salt-okuma **tanı** bağlantısı için kurulum — `RawSqliteFile`.
+/// **Tanı** bağlantısı için kurulum — `RawSqliteFile`.
 ///
 /// Bu bağlantı yalnızca `user_version`, `integrity_check` ve
-/// `foreign_key_check` çalıştırır; hiçbir şey yazmaz. Bu yüzden
-/// [buildDatabaseSetup]'ın tamamı **bilinçli olarak** uygulanmaz:
+/// `foreign_key_check` çalıştırır — ama bu onu *salt-okuma* yapmaz: WAL
+/// checkpoint'i nedeniyle ana dosyayı yine de değiştirebilir
+/// (bkz. [_sharedPragmas]). Bu yüzden `synchronous` dâhil ortak PRAGMA'ların
+/// tamamını alır.
+///
+/// [buildDatabaseSetup]'ın kalan iki parçası ise **bilinçli olarak** dışarıda
+/// bırakılır:
 ///
 /// | Uygulanmayan | Neden |
 /// |---|---|
-/// | `journal_mode = WAL` | WAL, dosya **başlığına yazılır** ve `-wal`/`-shm` yan dosyaları üretir. Bu bağlantı `VACUUM INTO` snapshot'larını **doğrulamak** için kullanılıyor (`MigrationCoordinator.verifySnapshot`); doğruladığı dosyayı değiştiremez. |
+/// | `journal_mode = WAL` | WAL, dosya **başlığına yazılır** ve `-wal`/`-shm` yan dosyaları üretir. Bu bağlantı `VACUUM INTO` snapshot'larını **doğrulamak** için kullanılıyor (`MigrationCoordinator.verifySnapshot`); doğruladığı dosyayı WAL'a çeviremez. |
 /// | REQ-MIG-005 sürüm kapısı | `readUserVersion()` "çok yeni şema"yı tam olarak **saptamak** için var. Kapı burada da uygulansaydı, saptaması gereken durumda exception fırlatır ve `DatabaseBootstrap`'in açık kontrolünü imkânsız kılardı. |
-/// | `synchronous` · `foreign_keys` | Bu bağlantı yazmadığı için ikisi de etkisizdir; `foreign_key_check` zaten `foreign_keys` ayarından bağımsız çalışır. Simetri uğruna eklenmez. |
-///
-/// Uygulanan ikisi ise gerçek birer güvenilirlik gereksinimidir:
-/// `busy_timeout` (varsayılan `0` — başka bir bağlantı kilit tutarken anında
-/// `SQLITE_BUSY`) ve `temp_store = MEMORY` (büyük veritabanında
-/// `integrity_check` geçici dosyaları diske taşar).
 DatabaseSetup buildDiagnosticSetup() {
   return (rawDb) {
     for (final pragma in _sharedPragmas) {

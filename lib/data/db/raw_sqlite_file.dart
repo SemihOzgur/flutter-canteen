@@ -44,11 +44,14 @@ class RawSqliteFile {
   Future<T> _withExecutor<T>(
     Future<T> Function(QueryExecutor executor) action,
   ) async {
-    // Tanı bağlantısı da yapılandırılır: `busy_timeout` varsayılanı `0`'dır ve
-    // bu sınıf üretimde her açılışta gerçek veritabanına bağlanır
-    // (`DatabaseBootstrap.open`). Yapılandırmasız bir bağlantı, başka biri
-    // kilit tuttuğu anda `SQLITE_BUSY` ile düşer ve kullanıcıya asılsız bir
-    // "veritabanı bozuk" hatası gösterilirdi.
+    // Tanı bağlantısı da yapılandırılır. İki gerekçe:
+    //
+    // 1. `busy_timeout` varsayılanı `0`'dır; bu sınıf üretimde her açılışta
+    //    gerçek veritabanına bağlanır (`DatabaseBootstrap.open`). Kilit tutan
+    //    başka biri varsa anında `SQLITE_BUSY` ile düşer ve kullanıcıya
+    //    asılsız bir "veritabanı bozuk" hatası gösterilirdi.
+    // 2. Bu bağlantı **yazabilir**: WAL modunda son bağlantı kapanırken
+    //    checkpoint çalışır. Bu yüzden `synchronous = FULL` de gerekir.
     //
     // `buildDatabaseSetup()` BURAYA BAĞLANAMAZ — gerekçesi
     // [buildDiagnosticSetup] dokümantasyonunda.

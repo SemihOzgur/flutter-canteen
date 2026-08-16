@@ -24,6 +24,7 @@ import 'package:canteen/data/db/raw_sqlite_file.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 import '../support/test_database.dart';
 
@@ -228,7 +229,7 @@ void main() {
       expect(await _rawPragma(path, 'temp_store'), 0);
     });
 
-    test('buildDiagnosticSetup busy_timeout ve temp_store uygular', () async {
+    test('buildDiagnosticSetup ortak PRAGMA\'ların üçünü de uygular', () async {
       await seedDatabaseFile();
       final path = temp.paths.databaseFile;
       final setup = buildDiagnosticSetup();
@@ -242,6 +243,14 @@ void main() {
         await _rawPragma(path, 'temp_store', setup: setup),
         SqlitePragmas.tempStoreMemory,
         reason: 'integrity_check geçici dosyaları diske taşmamalı.',
+      );
+      expect(
+        await _rawPragma(path, 'synchronous', setup: setup),
+        SqlitePragmas.synchronousFull,
+        reason:
+            'Bu bağlantı WAL checkpoint\'i ile ana dosyaya YAZABİLİR; '
+            'docs/05 §1 FULL gerektirir. WAL dosyasında varsayılan NORMAL(1) '
+            'olduğu için açıkça yazılmazsa sağlanmaz.',
       );
     });
 
@@ -305,8 +314,12 @@ void main() {
         result.database,
         fromVersion: 1,
       );
-      final sizeBefore = snapshot.lengthSync();
+      final bytesBefore = snapshot.readAsBytesSync();
       final journalBefore = await _rawPragma(snapshot.path, 'journal_mode');
+      // mtime taşıyıcı bir alandır: pruneSnapshots ve latestSnapshot
+      // snapshot'ları `statSync().modified`'a göre SIRALAR. Doğrulama mtime'ı
+      // değiştirirse kurtarma adayı sırası bozulur.
+      final modifiedBefore = snapshot.statSync().modified;
 
       // Üretimdeki doğrulama yolu — RawSqliteFile.isIntegral() kullanır.
       expect(await bootstrap.coordinator.verifySnapshot(snapshot), isTrue);
@@ -318,35 +331,100 @@ void main() {
       );
       expect(File('${snapshot.path}-shm').existsSync(), isFalse);
       expect(await _rawPragma(snapshot.path, 'journal_mode'), journalBefore);
-      expect(snapshot.lengthSync(), sizeBefore);
+      expect(
+        snapshot.readAsBytesSync(),
+        orderedEquals(bytesBefore),
+        reason: 'Snapshot içeriği bit düzeyinde AYNI kalmalı.',
+      );
+      expect(snapshot.statSync().modified, modifiedBefore);
     });
   });
 
   // ---------------------------------------------------------------------------
-  // Kaynak seviyesinde koruma — yanlış setup\'ın geri sızmasını engeller
+  // GAP-2-015 — wiring'in DAVRANIŞSAL kanıtı
   // ---------------------------------------------------------------------------
 
-  group('RawSqliteFile bağlantı kurulumu — kaynak koruması', () {
-    test('buildDiagnosticSetup bağlanır, buildDatabaseSetup BAĞLANMAZ', () {
-      final source = File(
-        'lib/data/db/raw_sqlite_file.dart',
-      ).readAsStringSync();
+  /// Yukarıdaki grup `buildDiagnosticSetup()`'ı ölçer; bu grup onun
+  /// `RawSqliteFile`'a **gerçekten bağlandığını** kanıtlar. Kaynak metnine
+  /// bakan bir guard bunu kanıtlayamaz: çağrı yorum içinde de durabilir,
+  /// biçimlendirme değişince de kırılır.
+  group('RawSqliteFile busy_timeout — uçtan uca kilit çekişmesi', () {
+    late Directory dir;
 
-      expect(
-        source,
-        contains('setup: buildDiagnosticSetup()'),
-        reason: 'GAP-2-015: tanı bağlantısı yapılandırılmadan açılmamalı.',
-      );
-      // Yalnızca `setup:` bağlanışına bakılır — açıklayıcı yorumda adının
-      // geçmesi serbesttir.
-      expect(
-        source,
-        isNot(contains('setup: buildDatabaseSetup(')),
-        reason:
-            'buildDatabaseSetup REQ-MIG-005 kapısını ve WAL\'ı taşır; '
-            'RawSqliteFile\'a bağlanırsa sürüm tespiti ve snapshot '
-            'doğrulaması bozulur.',
-      );
+    setUp(() => dir = Directory.systemTemp.createTempSync('canteen_busy_'));
+    tearDown(() {
+      if (dir.existsSync()) dir.deleteSync(recursive: true);
     });
+
+    /// Üzerinde ÖZEL kilit tutulan, rollback-journal bir veritabanı bırakır.
+    ///
+    /// WAL **kullanılamaz**: WAL'da okurlar yazarı beklemez, dolayısıyla
+    /// çekişme hiç oluşmazdı.
+    Future<QueryExecutor> lockedDatabase(String path) async {
+      final holder = NativeDatabase(File(path), enableMigrations: false);
+      await holder.ensureOpen(_InertExecutorUser());
+      await holder.runCustom('PRAGMA journal_mode = DELETE;', const []);
+      await holder.runCustom('CREATE TABLE t (id INTEGER);', const []);
+      await holder.runCustom('BEGIN EXCLUSIVE;', const []);
+      return holder;
+    }
+
+    test(
+      'kilit tutulurken ANINDA düşmez — beklemeye geçer',
+      () async {
+        final path = p.join(dir.path, 'locked.sqlite');
+        final holder = await lockedDatabase(path);
+
+        final sw = Stopwatch()..start();
+        try {
+          await RawSqliteFile(path).readUserVersion();
+        } on Object {
+          // Sonuçta zaman aşımına uğraması beklenir; ölçtüğümüz SÜRE.
+        }
+        sw.stop();
+
+        await holder.runCustom('ROLLBACK;', const []);
+        await holder.close();
+
+        expect(
+          sw.elapsedMilliseconds,
+          greaterThan(1000),
+          reason:
+              'GAP-2-015: busy_timeout bağlanmamışsa 0 ms\'de SQLITE_BUSY ile '
+              'düşer ve kullanıcıya asılsız "veritabanı bozuk" hatası '
+              'gösterilir. Ölçülen: ${sw.elapsedMilliseconds} ms.',
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
+
+    test(
+      'yapılandırmasız bağlantı AYNI kilitte anında düşer — kontrast',
+      () async {
+        final path = p.join(dir.path, 'contrast.sqlite');
+        final holder = await lockedDatabase(path);
+
+        final sw = Stopwatch()..start();
+        try {
+          // setup: null → GAP-2-015 öncesi davranış.
+          await _rawPragma(path, 'user_version');
+        } on Object {
+          // Beklenen: beklemeden SQLITE_BUSY.
+        }
+        sw.stop();
+
+        await holder.runCustom('ROLLBACK;', const []);
+        await holder.close();
+
+        expect(
+          sw.elapsedMilliseconds,
+          lessThan(1000),
+          reason:
+              'Yapılandırmasız bağlantı beklemeden düşer — düzeltmenin '
+              'kapattığı davranış budur. Ölçülen: ${sw.elapsedMilliseconds} ms.',
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
   });
 }
