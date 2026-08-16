@@ -311,6 +311,26 @@ void main() {
       expect((await auth.login('kasa', password)).isOk, isTrue);
     });
 
+    test('bekleme dolduktan SONRA tek hata yeniden kilitlemez', () async {
+      // Yukarıdaki test sayacın sıfırlandığını KANITLAMAZ: başarılı giriş
+      // zaten `reset` çağırır, bu yüzden sayaç sıfırlanmasa da geçer.
+      // Gerçek kanıt, beklemeden sonra tek bir hatanın yeniden kilitlememesi.
+      await createUser();
+      await failTimes(5);
+
+      clock.advance(const Duration(seconds: 30));
+      await failTimes(1); // beklemenin ardından ilk hata
+
+      final result = await auth.login('kasa', password);
+      expect(
+        result.isOk,
+        isTrue,
+        reason:
+            'EC-AUTH-002: bekleme bitince sayaç sıfırlanır. Sıfırlanmazsa '
+            'kullanıcı tek yazım hatasında 30 sn daha kilitlenir.',
+      );
+    });
+
     test('bekleme dolmadan önce hâlâ engellidir', () async {
       await createUser();
       await failTimes(5);

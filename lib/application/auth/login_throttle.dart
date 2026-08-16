@@ -21,7 +21,26 @@ class LoginThrottle {
   /// Eşik aşıldığında uygulanan bekleme (docs/17 §3).
   static const Duration lockDuration = Duration(seconds: 30);
 
+  /// Eşiğe ulaşmamış bir kaydın bellekte tutulma süresi.
+  ///
+  /// Anahtar **kullanıcı girdisidir** ve var olmayan bir kullanıcı adı da kayıt
+  /// açar (EC-AUTH-001 gereği bilinmeyen kullanıcı da hata sayılır). Temizlik
+  /// olmasaydı map, girilen her farklı ad için büyürdü.
+  static const Duration idleRetention = Duration(minutes: 5);
+
   final Map<String, _AttemptState> _states = <String, _AttemptState>{};
+
+  /// Ne kilitli ne de yakın zamanda dokunulmuş kayıtları atar.
+  void _prune(DateTime now) {
+    _states.removeWhere((_, state) {
+      final lockedUntil = state.lockedUntil;
+      if (lockedUntil != null) return !now.isBefore(lockedUntil);
+      return now.difference(state.lastFailureAt) > idleRetention;
+    });
+  }
+
+  /// Yalnızca test ve tanı için — bellekte tutulan kayıt sayısı.
+  int get trackedKeyCount => _states.length;
 
   /// Anahtar için kalan bekleme süresi; bekleme yoksa `null`.
   ///
@@ -41,8 +60,11 @@ class LoginThrottle {
 
   /// Hatalı denemeyi kaydeder; eşiğe ulaşıldıysa beklemeyi başlatır.
   void registerFailure(String key, DateTime now) {
-    final state = _states.putIfAbsent(key, _AttemptState.new);
+    _prune(now);
+
+    final state = _states.putIfAbsent(key, () => _AttemptState(now));
     state.failures++;
+    state.lastFailureAt = now;
     if (state.failures >= maxAttempts) {
       state.lockedUntil = now.add(lockDuration);
     }
@@ -53,6 +75,9 @@ class LoginThrottle {
 }
 
 class _AttemptState {
+  _AttemptState(this.lastFailureAt);
+
   int failures = 0;
   DateTime? lockedUntil;
+  DateTime lastFailureAt;
 }
