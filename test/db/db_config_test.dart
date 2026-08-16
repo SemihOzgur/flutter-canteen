@@ -375,12 +375,10 @@ void main() {
         final path = p.join(dir.path, 'locked.sqlite');
         final holder = await lockedDatabase(path);
 
+        // `isIntegral()` gerçekten bağlantı açar; `readUserVersion()` artık
+        // başlıktan okuduğu için kilide hiç takılmaz (aşağıdaki ayrı test).
         final sw = Stopwatch()..start();
-        try {
-          await RawSqliteFile(path).readUserVersion();
-        } on Object {
-          // Sonuçta zaman aşımına uğraması beklenir; ölçtüğümüz SÜRE.
-        }
+        await RawSqliteFile(path).isIntegral();
         sw.stop();
 
         await holder.runCustom('ROLLBACK;', const []);
@@ -426,5 +424,125 @@ void main() {
       },
       timeout: const Timeout(Duration(seconds: 30)),
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // rules/03 §3 kural 9 — desteklenmeyen şema AÇILMADAN reddedilir
+  // ---------------------------------------------------------------------------
+
+  group('readUserVersion — veritabanını AÇMADAN okur', () {
+    late TempAppPaths temp;
+
+    setUp(() async => temp = await TempAppPaths.create());
+    tearDown(() => temp.dispose());
+
+    test('daha yeni şemalı veritabanı OKUNURKEN DEĞİŞTİRİLMEZ', () async {
+      final first = await DatabaseBootstrap(paths: temp.paths).open();
+      await first.database.customStatement('PRAGMA user_version = 99;');
+      await first.database.close();
+
+      final file = File(temp.paths.databaseFile);
+      final bytesBefore = file.readAsBytesSync();
+      final modifiedBefore = file.statSync().modified;
+
+      expect(
+        await RawSqliteFile(temp.paths.databaseFile).readUserVersion(),
+        99,
+      );
+
+      expect(
+        file.readAsBytesSync(),
+        orderedEquals(bytesBefore),
+        reason:
+            'rules/03 §3 kural 9: desteklenmeyen şema versiyonu REDDEDİLİR. '
+            'Reddetmeden önce dosyaya dokunulamaz.',
+      );
+      expect(file.statSync().modified, modifiedBefore);
+      expect(File('${temp.paths.databaseFile}-wal').existsSync(), isFalse);
+      expect(File('${temp.paths.databaseFile}-shm').existsSync(), isFalse);
+    });
+
+    test(
+      'kilitli veritabanında bile beklemeden döner — bağlantı açmıyor',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('canteen_hdr_');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        final path = p.join(dir.path, 'locked.sqlite');
+
+        final holder = NativeDatabase(File(path), enableMigrations: false);
+        await holder.ensureOpen(_InertExecutorUser());
+        await holder.runCustom('PRAGMA journal_mode = DELETE;', const []);
+        await holder.runCustom('PRAGMA user_version = 3;', const []);
+        await holder.runCustom('CREATE TABLE t (id INTEGER);', const []);
+        await holder.runCustom('BEGIN EXCLUSIVE;', const []);
+
+        final sw = Stopwatch()..start();
+        final version = await RawSqliteFile(path).readUserVersion();
+        sw.stop();
+
+        await holder.runCustom('ROLLBACK;', const []);
+        await holder.close();
+
+        expect(version, 3);
+        expect(
+          sw.elapsedMilliseconds,
+          lessThan(1000),
+          reason: 'Başlıktan okuma kilitten etkilenmez.',
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
+
+    test(
+      'WAL\'da checkpoint\'lenmemiş çerçeve varsa SQLite\'a düşer',
+      () async {
+        // Başlık bu durumda BAYATTIR (ölçüldü: başlık 0, gerçek 7). Yanlış `0`
+        // "yeni kurulum" sayılıp mevcut veritabanının üzerine şema kurdururdu.
+        final result = await DatabaseBootstrap(paths: temp.paths).open();
+        final db = result.database;
+        await db.customStatement('PRAGMA wal_autocheckpoint = 0;');
+        await db.customStatement('PRAGMA user_version = 7;');
+        await insertTestUser(db);
+
+        final wal = File('${temp.paths.databaseFile}-wal');
+        expect(
+          wal.existsSync() && wal.lengthSync() > 0,
+          isTrue,
+          reason: 'Senaryo kurulamadıysa test anlamsızdır.',
+        );
+
+        expect(
+          await RawSqliteFile(temp.paths.databaseFile).readUserVersion(),
+          7,
+          reason: 'Bayat başlık değil, GERÇEK sürüm dönmelidir.',
+        );
+
+        await db.close();
+      },
+    );
+
+    test('bozuk dosya DatabaseException — SQLite açılmadan', () async {
+      final dir = Directory.systemTemp.createTempSync('canteen_bad_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final bad = File(p.join(dir.path, 'garbage.sqlite'))
+        ..writeAsBytesSync(List<int>.filled(200, 0x41));
+
+      await expectLater(
+        RawSqliteFile(bad.path).readUserVersion(),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('boş dosya 0 · olmayan dosya 0', () async {
+      final dir = Directory.systemTemp.createTempSync('canteen_empty_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final empty = File(p.join(dir.path, 'empty.sqlite'))..createSync();
+
+      expect(await RawSqliteFile(empty.path).readUserVersion(), 0);
+      expect(
+        await RawSqliteFile(p.join(dir.path, 'yok.sqlite')).readUserVersion(),
+        0,
+      );
+    });
   });
 }

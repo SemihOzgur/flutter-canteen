@@ -68,12 +68,80 @@ class RawSqliteFile {
     }
   }
 
-  /// `PRAGMA user_version` — dosya yoksa `0`.
+  /// SQLite dosya başlığındaki sabit alanlar (docs: SQLite File Format §1.3).
+  static const List<int> _magic = [
+    0x53, 0x51, 0x4C, 0x69, 0x74, 0x65, 0x20, 0x66, // "SQLite f"
+    0x6F, 0x72, 0x6D, 0x61, 0x74, 0x20, 0x33, 0x00, // "ormat 3\0"
+  ];
+  static const int _headerLength = 100;
+  static const int _userVersionOffset = 60;
+
+  /// `user_version`'ı **veritabanını açmadan**, dosya başlığından okur.
+  ///
+  /// Başlık bayat olabiliyorsa `null` döner ve çağıran SQLite'a düşer.
+  ///
+  /// Neden bu yol var: `DatabaseBootstrap.open`, sürüm kapısı devreye girmeden
+  /// **önce** bu değeri okumak zorundadır. Bağlantı açmak masum değildir —
+  /// WAL modunda son bağlantı kapanırken checkpoint çalışır ve dosyayı
+  /// değiştirir. `rules/03 §3` kural 9 ise uygulamanın desteklemediği bir şema
+  /// versiyonunu **açmayı reddetmesini** ister. Başlıktan okumak bu çelişkiyi
+  /// yan etkisiz çözer.
+  int? _readUserVersionFromHeader(File file) {
+    // WAL'da çerçeve varsa başlıktaki değer BAYATTIR: ölçüldü — başlık 0
+    // gösterirken gerçek değer 7'ydi. `0` "yeni kurulum" anlamına geldiği için
+    // bu sessizce mevcut veritabanının üzerine şema kurulmasına yol açardı.
+    final wal = File('$path-wal');
+    if (wal.existsSync() && wal.lengthSync() > 0) return null;
+
+    final length = file.lengthSync();
+    // 0 baytlık dosya SQLite için boş/yeni veritabanıdır.
+    if (length == 0) return 0;
+    if (length < _headerLength) {
+      throw _unreadable('dosya $length bayt — başlık için yetersiz.');
+    }
+
+    final handle = file.openSync();
+    final List<int> header;
+    try {
+      header = handle.readSync(_headerLength);
+    } finally {
+      handle.closeSync();
+    }
+
+    for (var i = 0; i < _magic.length; i++) {
+      if (header[i] != _magic[i]) {
+        throw _unreadable('SQLite başlık imzası eşleşmedi.');
+      }
+    }
+
+    return (header[_userVersionOffset] << 24) |
+        (header[_userVersionOffset + 1] << 16) |
+        (header[_userVersionOffset + 2] << 8) |
+        header[_userVersionOffset + 3];
+  }
+
+  DatabaseException _unreadable(String detail) => DatabaseException(
+    userMessage:
+        'Veritabanı dosyası okunamadı veya bozuk. '
+        'Yedekten geri yükleme gerekebilir.',
+    technicalDetail: detail,
+  );
+
+  /// `user_version` — dosya yoksa `0`.
+  ///
+  /// Önce dosya başlığından **yan etkisiz** okunur; yalnızca WAL'da
+  /// checkpoint'lenmemiş çerçeve varsa veritabanı açılır
+  /// (bkz. [_readUserVersionFromHeader]).
   ///
   /// Dosya okunabilir bir SQLite veritabanı değilse [DatabaseException] fırlatır;
   /// ham SQLite metni kullanıcıya sızdırılmaz (REQ-SEC-007).
   Future<int> readUserVersion() async {
-    if (!File(path).existsSync()) return 0;
+    final file = File(path);
+    if (!file.existsSync()) return 0;
+
+    final fromHeader = _readUserVersionFromHeader(file);
+    if (fromHeader != null) return fromHeader;
+
     try {
       return await _withExecutor((executor) async {
         final rows = await executor.runSelect('PRAGMA user_version;', const []);
