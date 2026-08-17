@@ -267,6 +267,14 @@ class AuthService {
       }
 
       await _users.setActive(userId, isActive);
+
+      // EC-AUTH-003: pasifleştirilen kullanıcının oturumu **anında** düşer.
+      // `SessionService.load` bunu zaten elerdi, ama o tembel bir kontroldür —
+      // kullanıcıyı bellekte tutan bir ekran açık kalmaya devam ederdi.
+      if (!isActive) {
+        await _session.clearIfUser(userId);
+      }
+
       return const Ok<void>(null);
     });
   }

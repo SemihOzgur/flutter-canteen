@@ -85,6 +85,23 @@ class SessionService {
   /// Oturumu siler. Logout ve geçersiz oturum temizliği bunu kullanır.
   Future<void> clear() => _settings.remove(AppSettingKeys.session);
 
+  /// Oturum [userId]'ye aitse siler; değilse dokunmaz.
+  ///
+  /// Kullanıcı pasifleştirildiğinde çağrılır. [load] zaten pasif kullanıcıyı
+  /// eleyip oturumu temizler, ama bu **tembel** bir kontroldür: bir ekran
+  /// kullanıcıyı bellekte tutuyorsa pasifleştirilen kişi açık oturumda
+  /// çalışmaya devam ederdi.
+  ///
+  /// `docs/17 §6` oturumun `app_settings` içinde tutulma gerekçelerinden birini
+  /// açıkça bu diye yazar: kullanıcı pasifleşince **aynı transaction içinde**
+  /// geçersizleştirilebilmesi.
+  Future<void> clearIfUser(int userId) async {
+    final raw = await _settings.read(AppSettingKeys.session);
+    if (raw == null) return;
+    if (_readUserId(raw) != userId) return;
+    await clear();
+  }
+
   /// Ham oturum kaydından `userId`'yi çıkarır; okunamıyorsa `null`.
   ///
   /// EC-AUTH-004: burada **hiçbir hata yukarı taşınmaz.** Eksik alan, yanlış
