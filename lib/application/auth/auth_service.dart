@@ -55,10 +55,56 @@ class AuthService {
 
   /// Kullanıcı adı normalizasyonu — REQ-AUTH-012 · EC-AUTH-006.
   ///
-  /// Kullanıcı adı büyük/küçük harf duyarsızdır; veritabanına **daima küçük
-  /// harfle** yazılır (docs/04 §3.1).
-  static String normalizeUsername(String username) =>
-      username.trim().toLowerCase();
+  /// Kullanıcı adı büyük/küçük harf duyarsızdır; veritabanına **daima
+  /// normalize edilmiş** hâliyle yazılır (docs/04 §3.1).
+  ///
+  /// ## Neden `toLowerCase()` yetmiyor
+  ///
+  /// Dart'ın `toLowerCase()`'i locale bağımsızdır ve Türkçe'nin noktalı/noktasız
+  /// `i` ayrımını bozar:
+  ///
+  /// ```text
+  /// 'IŞIL'.toLowerCase()   → işil    ≠  ışıl
+  /// 'KISMET'.toLowerCase() → kismet  ≠  kısmet
+  /// ```
+  ///
+  /// Türkçe-Q klavyede `ı` tuşu **Caps Lock açıkken `I` üretir**. Bu haliyle
+  /// `ışıl` veya `kısmet` adlı bir kasiyer kasada giriş yapamaz ve EC-AUTH-001
+  /// gereği nedenini de göremezdi.
+  ///
+  /// ## Seçilen kural
+  ///
+  /// `I` · `ı` · `İ` · `i` **tek bir karaktere** (`i`) indirgenir; kalan
+  /// karakterler locale bağımsız küçük harfe çevrilir. Böylece kullanıcı adı
+  /// hangi klavye düzeni ve Caps Lock durumuyla yazılırsa yazılsın aynı hesaba
+  /// çözülür.
+  ///
+  /// Bedeli: yalnızca noktalı/noktasız `i` ile ayrışan iki ad (`ıra` ↔ `ira`)
+  /// **aynı hesap** sayılır ve ikisi bir arada var olamaz. Proje sahibi kararı:
+  /// kantinde bir kasiyerin Caps Lock yüzünden kilitlenmesi, böyle bir ad
+  /// çiftinin aynı kantinde bulunmasından çok daha olasıdır.
+  static String normalizeUsername(String username) {
+    final buffer = StringBuffer();
+
+    for (final rune in username.trim().runes) {
+      switch (rune) {
+        // I (U+0049) · ı (U+0131) · İ (U+0130) · i (U+0069)
+        case 0x0049:
+        case 0x0131:
+        case 0x0130:
+        case 0x0069:
+          buffer.write('i');
+        // Birleşik nokta (U+0307) — `'İ'.toLowerCase()` bunu üretir; yukarıda
+        // `İ` zaten `i`'ye indiği için burada kalanı atılır.
+        case 0x0307:
+          break;
+        default:
+          buffer.write(String.fromCharCode(rune).toLowerCase());
+      }
+    }
+
+    return buffer.toString();
+  }
 
   // --- Kurulum ------------------------------------------------------------
 

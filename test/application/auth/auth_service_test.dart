@@ -129,6 +129,44 @@ void main() {
       expect((await usersDao.findById(id))!.username, 'kasa');
     });
 
+    test('Türkçe I ı İ i tek karaktere indirgenir', () async {
+      const cases = {
+        'IŞIL': 'işil',
+        'ışıl': 'işil',
+        'Işıl': 'işil',
+        'KISMET': 'kismet',
+        'kısmet': 'kismet',
+        'İSMAİL': 'ismail',
+        'ismail': 'ismail',
+      };
+
+      cases.forEach((input, expected) {
+        expect(
+          AuthService.normalizeUsername(input),
+          expected,
+          reason: '"$input" normalize edilince "$expected" olmalı.',
+        );
+      });
+    });
+
+    test('kabul edilen bedel — ıra ile ira AYNI hesaptır', () async {
+      // Seçilen katlamanın bilinçli sonucu: yalnızca noktalı/noktasız i ile
+      // ayrışan iki ad aynı hesaba çözülür ve ikisi bir arada var olamaz.
+      await createUser(username: 'ıra');
+
+      final result = await auth.createUser(
+        username: 'ira',
+        password: password,
+        displayName: 'İkinci',
+      );
+
+      expect(
+        result.isErr,
+        isTrue,
+        reason: 'Aynı normalize ada iki hesap açılamaz.',
+      );
+    });
+
     test('kullanıcı adı benzersizdir — anlamlı Türkçe hata', () async {
       await createUser(username: 'kasa');
       final again = await auth.createUser(
@@ -217,6 +255,36 @@ void main() {
 
       expect((await auth.login('KASA', password)).isOk, isTrue);
       expect((await auth.login('  Kasa ', password)).isOk, isTrue);
+    });
+
+    test('EC-AUTH-006 — TÜRKÇE ı/I: Caps Lock kilitleme YAPMAZ', () async {
+      // Türkçe-Q klavyede `ı` tuşu Caps Lock açıkken `I` üretir.
+      // `toLowerCase()` ile 'IŞIL' → 'işil' olur ve 'ışıl' ile eşleşmezdi.
+      await createUser(username: 'ışıl');
+
+      for (final typed in const ['IŞIL', 'Işıl', 'ışıl', 'IŞIl', 'işil']) {
+        expect(
+          (await auth.login(typed, password)).isOk,
+          isTrue,
+          reason: 'Kasiyer "$typed" yazarak giriş yapabilmeli.',
+        );
+      }
+    });
+
+    test('EC-AUTH-006 — TÜRKÇE: kısmet / KISMET aynı hesap', () async {
+      await createUser(username: 'kısmet');
+
+      expect((await auth.login('KISMET', password)).isOk, isTrue);
+      expect((await auth.login('Kısmet', password)).isOk, isTrue);
+    });
+
+    test('büyük harfle OLUŞTURULAN Türkçe ad geri okunabilir', () async {
+      // Kayıt yönündeki simetri: 'IŞIL' diye açılan hesap, kullanıcı adını
+      // doğru yazdığında da açılmalı.
+      await createUser(username: 'IŞIL');
+
+      expect((await auth.login('ışıl', password)).isOk, isTrue);
+      expect((await auth.login('IŞIL', password)).isOk, isTrue);
     });
 
     test(

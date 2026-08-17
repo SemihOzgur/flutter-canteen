@@ -40,9 +40,14 @@ class UsersDao extends DatabaseAccessor<CanteenDatabase> with _$UsersDaoMixin {
   Future<User?> findById(int id) =>
       (select(users)..where((u) => u.id.equals(id))).getSingleOrNull();
 
-  Future<User?> findByUsername(String username) =>
+  /// **Ham** eşleşme — çağıran normalize edilmiş adı verir.
+  ///
+  /// Büyük/küçük harf duyarsızlığı bir **iş kuralıdır** (REQ-AUTH-012) ve
+  /// Türkçe `ı/I` katlaması gerektirir; `rules/01 §1` gereği bu karar data
+  /// katmanında yaşayamaz. Tek kaynak: `AuthService.normalizeUsername`.
+  Future<User?> findByUsername(String normalizedUsername) =>
       (select(users)
-            ..where((u) => u.username.equals(username.toLowerCase()))
+            ..where((u) => u.username.equals(normalizedUsername))
             ..limit(1))
           .getSingleOrNull();
 
