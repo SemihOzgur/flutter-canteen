@@ -57,7 +57,23 @@ import '../../application/auth/providers.dart';
 import '../../application/auth/setup_service.dart';
 import '../../core/result/result.dart';
 import '../common/form_message.dart';
+import 'package:file_selector/file_selector.dart' as file_selector;
+
+import '../../data/files/text_file_writer.dart';
 import '../common/submit_button.dart';
+
+/// Kullanıcıya kayıt konumu sorar; iptal edilirse `null`.
+///
+/// Enjekte edilebilir: widget testi gerçek işletim sistemi dialogu açmaz.
+typedef SaveLocationPicker = Future<String?> Function(String suggestedName);
+
+/// Üretim uygulaması — yerel kayıt dialogu.
+Future<String?> pickSaveLocation(String suggestedName) async {
+  final location = await file_selector.getSaveLocation(
+    suggestedName: suggestedName,
+  );
+  return location?.path;
+}
 
 class SetupWizardScreen extends ConsumerWidget {
   /// Test ve odak doğrulaması için sabit anahtarlar.
@@ -74,11 +90,20 @@ class SetupWizardScreen extends ConsumerWidget {
   static const Key recoveryCodeTextKey = Key('setup_recovery_code_text');
   static const Key recoveryCodeSavedCheckboxKey = Key('setup_recovery_saved');
   static const Key recoveryCodeCopyButtonKey = Key('setup_recovery_copy');
+  static const Key recoveryCodeSaveButtonKey = Key('setup_recovery_save');
 
   /// Her adımın **tek** birincil butonu; aynı anda yalnızca biri ekrandadır.
   static const Key submitButtonKey = Key('setup_submit_button');
 
-  const SetupWizardScreen({super.key});
+  /// REQ-AUTH-022 — kod dosyaya kaydedilebilir. İkisi de testte enjekte edilir.
+  final SaveLocationPicker savePicker;
+  final TextFileWriter fileWriter;
+
+  const SetupWizardScreen({
+    super.key,
+    this.savePicker = pickSaveLocation,
+    this.fileWriter = writeTextFile,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -101,7 +126,11 @@ class SetupWizardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 setupState.when(
-                  data: (state) => _SetupWizardFlow(initialStep: state),
+                  data: (state) => _SetupWizardFlow(
+                    initialStep: state,
+                    savePicker: savePicker,
+                    fileWriter: fileWriter,
+                  ),
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   // REQ-SEC-007: teknik detay kullanıcıya gösterilmez.
@@ -124,8 +153,14 @@ class SetupWizardScreen extends ConsumerWidget {
 /// sorgulamak gerekmez (ve sorgulanırsa ekran gereksiz yere yeniden kurulurdu).
 class _SetupWizardFlow extends ConsumerStatefulWidget {
   final SetupState initialStep;
+  final SaveLocationPicker savePicker;
+  final TextFileWriter fileWriter;
 
-  const _SetupWizardFlow({required this.initialStep});
+  const _SetupWizardFlow({
+    required this.initialStep,
+    required this.savePicker,
+    required this.fileWriter,
+  });
 
   @override
   ConsumerState<_SetupWizardFlow> createState() => _SetupWizardFlowState();
@@ -160,7 +195,11 @@ class _SetupWizardFlowState extends ConsumerState<_SetupWizardFlow> {
       SetupState.needsDashboardPassword => _DashboardPasswordStep(
         onCompleted: () => _goTo(SetupState.needsRecoveryCode),
       ),
-      SetupState.needsRecoveryCode => _RecoveryCodeStep(onCompleted: _finish),
+      SetupState.needsRecoveryCode => _RecoveryCodeStep(
+        onCompleted: _finish,
+        savePicker: widget.savePicker,
+        fileWriter: widget.fileWriter,
+      ),
       SetupState.complete => _CompletedStep(onCompleted: _finish),
     };
   }
@@ -491,8 +530,14 @@ class _DashboardPasswordStepState
 
 class _RecoveryCodeStep extends ConsumerStatefulWidget {
   final Future<void> Function() onCompleted;
+  final SaveLocationPicker savePicker;
+  final TextFileWriter fileWriter;
 
-  const _RecoveryCodeStep({required this.onCompleted});
+  const _RecoveryCodeStep({
+    required this.onCompleted,
+    required this.savePicker,
+    required this.fileWriter,
+  });
 
   @override
   ConsumerState<_RecoveryCodeStep> createState() => _RecoveryCodeStepState();
@@ -551,6 +596,46 @@ class _RecoveryCodeStepState extends ConsumerState<_RecoveryCodeStep> {
     );
   }
 
+  /// REQ-AUTH-022 — kodu kullanıcının seçtiği bir dosyaya yazar.
+  ///
+  /// Konumu **kullanıcı** seçer: uygulama düz metin kurtarma kodunu kendi veri
+  /// dizinine yazmaz (BR-SEC-001 · rules/04 §5). Yazma işini data katmanı yapar
+  /// — presentation dosya sistemine dokunmaz (rules/01 §1).
+  ///
+  /// Bu işlem **"Kodu kaydettim" onayının yerine geçmez** (REQ-AUTH-024):
+  /// dosyaya yazmak kullanıcının kodu gördüğünü ve sakladığını kanıtlamaz.
+  Future<void> _saveToFile() async {
+    final code = _code;
+    if (code == null) return;
+
+    final path = await widget.savePicker(
+      AppStringsTr.setupRecoveryCodeSaveFileName,
+    );
+    // Kullanıcı vazgeçti — sessizce dönülür, hata gösterilmez.
+    if (path == null) return;
+
+    String message;
+    try {
+      await widget.fileWriter(
+        path,
+        AppStringsTr.recoveryCodeFileContents(code),
+      );
+      message = AppStringsTr.setupRecoveryCodeSaved;
+    } on Object catch (error) {
+      // rules/04 §7: dosya yolu ve teknik hata kullanıcıya sızdırılmaz.
+      // Kod da loglanmaz (rules/04 §8) — yalnızca hatanın kendisi.
+      ref
+          .read(appLoggerProvider)
+          ?.error('Kurtarma kodu dosyaya yazılamadı', error: error);
+      message = AppStringsTr.setupRecoveryCodeSaveFailed;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -595,14 +680,24 @@ class _RecoveryCodeStepState extends ConsumerState<_RecoveryCodeStep> {
             kind: FormMessageKind.warning,
           ),
           const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              key: SetupWizardScreen.recoveryCodeCopyButtonKey,
-              onPressed: _copy,
-              icon: const Icon(Icons.copy_outlined),
-              label: const Text(AppStringsTr.setupRecoveryCodeCopy),
-            ),
+          // REQ-AUTH-022: kopyalama VE dosyaya kaydetme seçenekleri sunulur.
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                key: SetupWizardScreen.recoveryCodeCopyButtonKey,
+                onPressed: _copy,
+                icon: const Icon(Icons.copy_outlined),
+                label: const Text(AppStringsTr.setupRecoveryCodeCopy),
+              ),
+              OutlinedButton.icon(
+                key: SetupWizardScreen.recoveryCodeSaveButtonKey,
+                onPressed: _saveToFile,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text(AppStringsTr.setupRecoveryCodeSaveToFile),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           CheckboxListTile(

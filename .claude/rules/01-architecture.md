@@ -192,6 +192,7 @@ bağımlılığın eklenmesi için tekrar gerekçe/onay gerekmez:
 | CSV okuma/yazma (**birincil**) | `csv` | OD-009 |
 | **Excel `.xlsx` (ikincil)** | `excel` | **OD-009** — CSV birincil, Excel **ayrı abstraction arkasından** |
 | Parola/kod hash'leme | `crypto` | OD-003 (salt'lı SHA-256) |
+| **Dosya kaydetme dialogu** (kurtarma kodu) | `file_selector` | **REQ-AUTH-022** — proje sahibi onayı |
 | Dosya yolu çözümleme | `path` / `path_provider` | BR-DATA-001 |
 | **Görsel işleme** (yeniden boyutlandırma + yeniden kodlama) | **image processing dependency — REQ-IMG-003 kapsamında** | **BR-IMG-002 / REQ-IMG-003 / OD-016** |
 

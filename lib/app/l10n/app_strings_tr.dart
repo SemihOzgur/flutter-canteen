@@ -65,6 +65,26 @@ class AppStringsTr {
       'Bu kod bir daha gösterilmeyecek. Güvenli bir yere kaydedin.';
   static const String setupRecoveryCodeSavedConfirm = 'Kodu kaydettim';
   static const String setupRecoveryCodeCopy = 'Kopyala';
+  static const String setupRecoveryCodeSaveToFile = 'Dosyaya Kaydet';
+  static const String setupRecoveryCodeSaveFileName =
+      'kantin-kurtarma-kodu.txt';
+  static const String setupRecoveryCodeSaved =
+      'Kurtarma kodu dosyaya kaydedildi.';
+
+  /// rules/04 §7: dosya yolu ve teknik hata kullanıcıya sızdırılmaz.
+  static const String setupRecoveryCodeSaveFailed =
+      'Kurtarma kodu kaydedilemedi. Farklı bir klasör seçip tekrar deneyin; '
+      'kodu kopyalayıp güvenli bir yere de yazabilirsiniz.';
+
+  /// Dosyanın içeriği — kodun ne olduğunu kullanıcıya hatırlatır.
+  static String recoveryCodeFileContents(String code) =>
+      'Kantin Otomasyonu — Dashboard kurtarma kodu\n'
+      '\n'
+      '$code\n'
+      '\n'
+      'Bu kodu Dashboard parolanızı unutursanız kullanacaksınız.\n'
+      'Kod TEK KULLANIMLIKTIR; kullanıldığında yerine yenisi üretilir.\n'
+      'Bu dosyayı güvenli bir yerde saklayın.\n';
   static const String setupRecoveryCodeCopied =
       'Kurtarma kodu panoya kopyalandı.';
   static const String setupRecoveryCodeUnavailable =

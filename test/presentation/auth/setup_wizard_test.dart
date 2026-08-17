@@ -16,6 +16,8 @@
 /// Golden (piksel) testi **yazılmaz** (docs/27 §4).
 library;
 
+import 'dart:io';
+
 import 'package:canteen/app/app.dart';
 import 'package:canteen/app/l10n/app_strings_tr.dart';
 import 'package:canteen/app/router.dart';
@@ -24,6 +26,7 @@ import 'package:canteen/application/auth/setup_service.dart';
 import 'package:canteen/data/db/canteen_database.dart'
     hide Product, Sale, SaleItem, StockMovement;
 import 'package:canteen/data/db/providers.dart';
+import 'package:canteen/data/files/text_file_writer.dart';
 import 'package:canteen/presentation/auth/setup_wizard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -372,5 +375,140 @@ void main() {
         reason: 'Ekranda teknik detay görünüyor: $forbidden → $visibleText',
       );
     }
+  });
+  // --- REQ-AUTH-022 — "Dosyaya Kaydet" -------------------------------------
+  //
+  // Yol seçici ve dosya yazıcı enjekte edilir: gerçek işletim sistemi dialogu
+  // açılmaz, diske dokunulmaz.
+  group('Adım 3 — dosyaya kaydetme (REQ-AUTH-022)', () {
+    /// Adım 3'ü doğrudan kurar; picker/writer enjekte edilebilsin diye
+    /// `CanteenApp` yerine ekranın kendisi pump edilir.
+    Future<void> pumpStep3(
+      WidgetTester tester, {
+      required SaveLocationPicker picker,
+      required TextFileWriter writer,
+    }) async {
+      await createUser();
+      await setDashboardPassword();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [canteenDatabaseProvider.overrideWithValue(db)],
+          child: MaterialApp(
+            home: SetupWizardScreen(savePicker: picker, fileWriter: writer),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(SetupWizardScreen.recoveryCodeSaveButtonKey),
+        findsOneWidget,
+      );
+    }
+
+    Future<void> tapSave(WidgetTester tester) async {
+      await tester.ensureVisible(
+        find.byKey(SetupWizardScreen.recoveryCodeSaveButtonKey),
+      );
+      await tester.tap(find.byKey(SetupWizardScreen.recoveryCodeSaveButtonKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'kullanıcı iptal ederse hiçbir şey yazılmaz, hata gösterilmez',
+      (tester) async {
+        var writeCount = 0;
+        await pumpStep3(
+          tester,
+          picker: (_) async => null, // iptal
+          writer: (path, contents) async => writeCount++,
+        );
+
+        await tapSave(tester);
+
+        expect(writeCount, 0, reason: 'İptal edilen kayıt yazma yapmamalı.');
+        expect(
+          find.text(AppStringsTr.setupRecoveryCodeSaveFailed),
+          findsNothing,
+        );
+        expect(find.text(AppStringsTr.setupRecoveryCodeSaved), findsNothing);
+      },
+    );
+
+    testWidgets('başarılı kayıt — dosya içeriği kodu taşır', (tester) async {
+      String? writtenPath;
+      String? written;
+      await pumpStep3(
+        tester,
+        picker: (suggested) async => '/tmp/$suggested',
+        writer: (path, contents) async {
+          writtenPath = path;
+          written = contents;
+        },
+      );
+
+      final code = tester
+          .widget<SelectableText>(
+            find.byKey(SetupWizardScreen.recoveryCodeTextKey),
+          )
+          .data!;
+
+      await tapSave(tester);
+
+      expect(
+        writtenPath,
+        contains(AppStringsTr.setupRecoveryCodeSaveFileName),
+        reason: 'Önerilen dosya adı kullanıcıya sunulmalı.',
+      );
+      expect(written, contains(code));
+      expect(find.text(AppStringsTr.setupRecoveryCodeSaved), findsOneWidget);
+    });
+
+    testWidgets('yazma hatası — Türkçe mesaj, teknik detay YOK', (
+      tester,
+    ) async {
+      await pumpStep3(
+        tester,
+        picker: (suggested) async => '/kok-dizin-yazilamaz/$suggested',
+        writer: (path, contents) async =>
+            throw const FileSystemException('permission denied'),
+      );
+
+      await tapSave(tester);
+
+      expect(
+        find.text(AppStringsTr.setupRecoveryCodeSaveFailed),
+        findsOneWidget,
+      );
+
+      // rules/04 §7: dosya yolu ve teknik hata kullanıcıya sızdırılmaz.
+      final shown = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((t) => t.data ?? '')
+          .join(' | ');
+      expect(shown, isNot(contains('permission denied')));
+      expect(shown, isNot(contains('kok-dizin-yazilamaz')));
+      expect(shown, isNot(contains('FileSystemException')));
+    });
+
+    testWidgets('dosyaya kaydetmek "Kodu kaydettim" onayının YERİNE GEÇMEZ', (
+      tester,
+    ) async {
+      await pumpStep3(
+        tester,
+        picker: (suggested) async => '/tmp/$suggested',
+        writer: (path, contents) async {},
+      );
+
+      await tapSave(tester);
+
+      expect(
+        submitButton(tester).onPressed,
+        isNull,
+        reason:
+            'REQ-AUTH-024 · EC-REC-006: dosyaya yazmak, kullanıcının kodu '
+            'sakladığını onaylaması demek değildir.',
+      );
+    });
   });
 }
