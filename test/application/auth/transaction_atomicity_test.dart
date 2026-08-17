@@ -47,7 +47,7 @@ class _FailingSessionService extends SessionService {
   }
 
   @override
-  Future<void> clearIfUser(int userId) async {
+  Future<bool> clearIfUser(int userId) async {
     if (failOnClearIfUser) throw const _InjectedFailure();
     return super.clearIfUser(userId);
   }

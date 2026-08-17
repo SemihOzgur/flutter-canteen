@@ -613,6 +613,61 @@ void main() {
       expect(await auth.login('kasa', 'kantin-2026'), isA<Ok>());
     }
 
+    test('BR-AUTH-016 — kilit BAŞKA kullanıcıya DEVREDİLMEZ', () async {
+      // Kilit oturum kapsamlıdır. Oturum logout dışı bir yolla düşerse
+      // (pasifleştirme, bozuk oturum, Faz 9 restore) kilidin açık kalması
+      // sıradaki kullanıcıya parolasız Dashboard verirdi.
+      final usersDao = UsersDao(db);
+      expect(
+        await auth.createUser(
+          username: 'a',
+          password: 'parola-a',
+          displayName: 'A',
+        ),
+        isA<Ok<int>>(),
+      );
+      expect(
+        await auth.createUser(
+          username: 'b',
+          password: 'parola-b',
+          displayName: 'B',
+        ),
+        isA<Ok<int>>(),
+      );
+      expect(await usersDao.countActive(), 2);
+      await configure();
+
+      await auth.login('a', 'parola-a');
+      expect((await access.unlock(dashboardPassword)).isOk, isTrue);
+      expect(access.isUnlocked, isTrue);
+
+      // A kendini pasifleştirir — logout YOK, son aktif kullanıcı da değil.
+      final aId = (await usersDao.findByUsername('a'))!.id;
+      expect((await auth.setActive(aId, false)).isOk, isTrue);
+      expect(
+        access.isUnlocked,
+        isFalse,
+        reason: 'Oturum düştüğü anda kilit de kapanmalı.',
+      );
+
+      // B giriş yapar — kilit yine kapalı olmalı.
+      expect((await auth.login('b', 'parola-b')).isOk, isTrue);
+      expect(
+        access.isUnlocked,
+        isFalse,
+        reason:
+            'BR-AUTH-012/016: B dashboard parolasını girmeden finansal veri '
+            'göremez.',
+      );
+
+      final leaked = await access.guard(() async => 'ciro');
+      expect(
+        leaked.isErr,
+        isTrue,
+        reason: 'Sorgu çalışmamalı — kilit devredilemez.',
+      );
+    });
+
     test('logout finansal kilidi kapatır ve oturumu temizler', () async {
       await configure();
       await createAndLogin();

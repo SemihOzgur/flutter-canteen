@@ -95,11 +95,14 @@ class SessionService {
   /// `docs/17 §6` oturumun `app_settings` içinde tutulma gerekçelerinden birini
   /// açıkça bu diye yazar: kullanıcı pasifleşince **aynı transaction içinde**
   /// geçersizleştirilebilmesi.
-  Future<void> clearIfUser(int userId) async {
+  /// Oturum gerçekten silindiyse `true` döner — çağıran, oturumla birlikte
+  /// düşmesi gereken bellek durumunu (finansal kilit) buna göre kapatır.
+  Future<bool> clearIfUser(int userId) async {
     final raw = await _settings.read(AppSettingKeys.session);
-    if (raw == null) return;
-    if (_readUserId(raw) != userId) return;
+    if (raw == null) return false;
+    if (_readUserId(raw) != userId) return false;
     await clear();
+    return true;
   }
 
   /// Ham oturum kaydından `userId`'yi çıkarır; okunamıyorsa `null`.

@@ -157,6 +157,17 @@ class AuthService {
 
     _throttle.reset(key);
 
+    // BR-AUTH-016 · REQ-AUTH-021: kilit **oturum kapsamlıdır.** Yeni bir oturum
+    // başlıyorsa kilit kapalı başlamalıdır.
+    //
+    // `logout()` tek başına yetmez: oturum logout dışı yollarla da düşebilir —
+    // kullanıcı pasifleştirilir (EC-AUTH-003), oturum verisi bozulur
+    // (EC-AUTH-004), Faz 9'da restore yapılır. O yollardan biriyle oturumu
+    // düşen kullanıcının açtığı kilit, sıradaki kullanıcıya devredilirdi:
+    // A kilidi açar → A pasifleşir → B giriş yapar → B parolasız Dashboard
+    // görürdü.
+    _financialAccess?.lock();
+
     // Son giriş zamanı ve oturum birlikte yazılır; yarım bir giriş durumu
     // oluşmaz (rules/01 §5 — transaction sınırı application katmanındadır).
     await _db.transaction(() async {
@@ -289,7 +300,10 @@ class AuthService {
       // `SessionService.load` bunu zaten elerdi, ama o tembel bir kontroldür —
       // kullanıcıyı bellekte tutan bir ekran açık kalmaya devam ederdi.
       if (!isActive) {
-        await _session.clearIfUser(userId);
+        final hadSession = await _session.clearIfUser(userId);
+        // Oturumu düşen kullanıcının açtığı kilit onunla birlikte kapanır;
+        // login'deki savunma ile birlikte iki katman (BR-AUTH-016).
+        if (hadSession) _financialAccess?.lock();
       }
 
       return const Ok<void>(null);
