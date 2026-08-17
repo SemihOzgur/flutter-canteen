@@ -375,6 +375,36 @@ class AuditLogsDao extends DatabaseAccessor<CanteenDatabase>
 
   Future<int> insertLog(AuditLogsCompanion log) => into(auditLogs).insert(log);
 
+  /// Alan bazlı kayıt — çağıranın Drift `Value`/companion tiplerine ihtiyacı
+  /// olmasın diye vardır (rules/01 §1: Drift ayrıntısı `data/` içinde kalır).
+  ///
+  /// [oldValue] / [newValue] / [metadata] **hazır JSON metnidir**; bu DAO
+  /// serileştirme yapmaz. ⚠️ Parola, recovery code, hash ve salt bu alanların
+  /// hiçbirine yazılmaz (REQ-AUDIT-004 · rules/04 §8).
+  Future<int> record({
+    required DateTime createdAt,
+    required String action,
+    required String entityType,
+    int? userId,
+    int? entityId,
+    String? oldValue,
+    String? newValue,
+    String? metadata,
+  }) {
+    return insertLog(
+      AuditLogsCompanion.insert(
+        createdAt: createdAt,
+        action: action,
+        entityType: entityType,
+        userId: Value(userId),
+        entityId: Value(entityId),
+        oldValue: Value(oldValue),
+        newValue: Value(newValue),
+        metadata: Value(metadata),
+      ),
+    );
+  }
+
   Future<List<AuditLog>> listRecent({int limit = 100, int offset = 0}) =>
       (select(auditLogs)
             ..orderBy([

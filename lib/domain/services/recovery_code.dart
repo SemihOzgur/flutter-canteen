@@ -47,12 +47,19 @@ abstract final class RecoveryCode {
   /// Yeni bir kod üretir ve **gösterim biçiminde** döndürür.
   ///
   /// Üretimde [Random.secure] geçilmelidir; test tohumlu [Random] kullanır.
-  static String generate(Random random) {
+  static String generate(Random random) => format(generateCanonical(random));
+
+  /// Yeni bir kod üretir ve **kanonik** (tiresiz) biçimde döndürür.
+  ///
+  /// Hash'leme daima kanonik form üzerinden yapılır (EC-REC-011) — çağıranın
+  /// üretilen kodu tekrar [normalize] edip `null` olasılığını ele almasına
+  /// gerek kalmasın diye ayrı sunulur. Gösterim biçimi için [format].
+  static String generateCanonical(Random random) {
     final buffer = StringBuffer();
     for (var i = 0; i < length; i++) {
       buffer.write(alphabet[random.nextInt(alphabet.length)]);
     }
-    return format(buffer.toString());
+    return buffer.toString();
   }
 
   /// Kanonik kodu `XXXX-XXXX-XXXX-XXXX` biçimine sokar.

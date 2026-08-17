@@ -42,6 +42,13 @@ class LoginThrottle {
   /// Yalnızca test ve tanı için — bellekte tutulan kayıt sayısı.
   int get trackedKeyCount => _states.length;
 
+  /// Anahtar için **ardışık** hatalı deneme sayısı; kayıt yoksa `0`.
+  ///
+  /// Audit metadata'sı bu sayıyı ister (docs/18 §3 — `dashboardUnlockFailed` /
+  /// `dashboardRecoveryFailed`: *"ardışık deneme sayısı"*). Salt okumadır;
+  /// sayacı değiştirmez.
+  int failureCount(String key) => _states[key]?.failures ?? 0;
+
   /// Anahtar için kalan bekleme süresi; bekleme yoksa `null`.
   ///
   /// Süre dolmuşsa sayaç **sıfırlanır** — bekleme sonrası kullanıcı yeniden

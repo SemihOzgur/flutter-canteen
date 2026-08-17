@@ -32,15 +32,20 @@
 ///
 /// ## Kapsam sınırı
 ///
-/// Recovery code akışı (docs/17 §8) bu dosyaya **ait değildir**; ayrı bir
-/// servistir. Dashboard/Rapor **ekranları** Faz 8 kapsamındadır
-/// (`docs/31` — "servis Faz 3'te hazır").
+/// Recovery code akışı (docs/17 §8) bu dosyaya **ait değildir**;
+/// `RecoveryCodeService`'e aittir — ona yalnızca üç kanca verilir:
+/// [verifyPassword], [applyRecoveredPassword], [unlockAfterRecovery].
+/// Bağımlılık tek yönlüdür (bu servis recovery servisini tanımaz), böylece
+/// döngüsel bağımlılık oluşmaz. Dashboard/Rapor **ekranları** Faz 8
+/// kapsamındadır (`docs/31` — "servis Faz 3'te hazır").
 ///
-/// Kilit olaylarının audit log'a yazılması (REQ-AUTH-020) audit altyapısıyla
-/// birlikte gelir (`docs/31` Faz 6); `AuthService` de aynı nedenle henüz audit
-/// yazmaz. Bu servis o zaman audit çağrısı **ekleyecek** şekilde tasarlanmıştır:
-/// tüm kilit geçişleri tek noktadan ([unlock], [lock], [setPassword],
-/// [changePassword]) geçer.
+/// **Bu serviste henüz audit yazımı yoktur.** REQ-AUTH-020 (`docs/25` — Faz 3)
+/// kilit açılışlarının ve başarısız denemelerin de yazılmasını ister
+/// (`dashboardUnlocked` / `dashboardUnlockFailed` / `dashboardPasswordChanged`
+/// — docs/18 §3); recovery olayları `RecoveryCodeService` tarafından **yazılır**,
+/// kilit olayları henüz yazılmaz. Bu servis audit çağrısı **eklenecek** şekilde
+/// tasarlanmıştır: tüm kilit geçişleri tek noktadan ([unlock], [lock],
+/// [setPassword], [changePassword]) geçer.
 ///
 /// ## Transaction sınırı
 ///
@@ -98,6 +103,23 @@ class FinancialAccessService {
   /// Logout bunu çağırır (REQ-AUTH-004 · BR-AUTH-004 · EC-DASH-005); kullanıcı
   /// tekrar giriş yaptığında parola yeniden sorulur.
   void lock() => _unlocked = false;
+
+  /// Recovery akışının **son adımı** — docs/17 §8: *"Finansal erişim kilidi
+  /// AÇILIR (kullanıcı zaten doğruladı)"*.
+  ///
+  /// Yalnızca `RecoveryCodeService` çağırır ve **yalnızca** kodu doğrulayıp
+  /// parolayı sıfırlayan transaction commit olduktan sonra: kilit bellekte
+  /// tutulduğu için (BR-AUTH-016) rollback onu geri alamazdı — transaction
+  /// içinde açılsaydı EC-REC-005'te başarısız bir kurtarma kilidi açık
+  /// bırakırdı.
+  ///
+  /// Bekleme sayacı da sıfırlanır: kullanıcı kimliğini recovery code ile
+  /// kanıtlamıştır ve parola artık yenidir; eski hatalı denemelerin cezası
+  /// sürmez.
+  void unlockAfterRecovery() {
+    _throttle.reset(throttleKey);
+    _unlocked = true;
+  }
 
   // --- Parola kurulumu ve doğrulaması --------------------------------------
 
@@ -201,6 +223,30 @@ class FinancialAccessService {
     await _db.transaction(() => _writeSecret(secret));
     return const Ok(null);
   }
+
+  /// Parolayı **yan etkisiz** doğrular: kilidi açmaz, sayaç işletmez.
+  ///
+  /// Ayarlar → "Yeni Kurtarma Kodu Üret" akışı bunu kullanır (docs/17 §8 ·
+  /// EC-REC-008/009): orada istenen kimlik kanıtıdır, finansal ekranlara giriş
+  /// değil. Kilidi açmak için [unlock] kullanılır.
+  ///
+  /// Parola belirlenmemişse `false` döner.
+  Future<bool> verifyPassword(String password) async {
+    final stored = await _readSecret();
+    if (stored == null) return false;
+    return _hasher.verify(password, stored);
+  }
+
+  /// Recovery akışının parola adımı — docs/17 §8 adım 1.
+  ///
+  /// ⚠️ Mevcut parola **sorulmaz**: çağıran (`RecoveryCodeService`) recovery
+  /// code'u doğrulamış olmalıdır. Bu metot BR-AUTH-010'un istisnası değildir —
+  /// BR-AUTH-015 zaten "parola recovery code ile sıfırlanabilir" der.
+  ///
+  /// Transaction **çağıranındır** (rules/01 §5): kurtarmanın dört adımı tek
+  /// transaction'dır, bu yüzden burada yeni bir transaction açılmaz.
+  Future<void> applyRecoveredPassword(String password) =>
+      _writeSecret(_hasher.hash(password));
 
   // --- BR-AUTH-012 kapısı ---------------------------------------------------
 
