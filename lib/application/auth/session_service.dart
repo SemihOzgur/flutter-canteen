@@ -24,7 +24,8 @@ import 'dart:convert';
 
 import '../../data/dao/daos.dart';
 import '../../data/db/app_setting_keys.dart';
-import '../../data/db/canteen_database.dart';
+import '../../domain/models/auth_user.dart';
+import '../../data/dao/user_mapper.dart';
 
 class SessionService {
   /// JSON alan adları — docs/17 §6.
@@ -54,7 +55,7 @@ class SessionService {
   /// | JSON bozuk / alanlar eksik veya yanlış tipte | EC-AUTH-004 |
   /// | Kullanıcı veritabanında yok | REQ-AUTH-006 |
   /// | Kullanıcı pasifleştirilmiş | EC-AUTH-003 |
-  Future<User?> load() async {
+  Future<AuthUser?> load() async {
     final raw = await _settings.read(AppSettingKeys.session);
     if (raw == null) return null;
 
@@ -69,7 +70,7 @@ class SessionService {
       await clear();
       return null;
     }
-    return user;
+    return user.toAuthUser();
   }
 
   /// Oturumu yazar. `loginAt` yazma anının UTC unix-millisecond değeridir.

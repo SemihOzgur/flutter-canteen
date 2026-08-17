@@ -222,7 +222,7 @@ void main() {
   });
 
   group('katman sınırı — rules/01 §1', () {
-    test('presentation/ altında drift import\'u YOK', () {
+    test('presentation/ altında drift ve data/db import\'u YOK', () {
       final offenders = <String>[];
 
       for (final entity in Directory(
@@ -230,9 +230,18 @@ void main() {
       ).listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
         final source = entity.readAsStringSync();
-        if (source.contains("import 'package:drift/") ||
-            source.contains('import "package:drift/')) {
-          offenders.add(entity.path);
+        for (final banned in const [
+          "import 'package:drift/",
+          'import "package:drift/',
+          // `data/db` Drift satır tiplerini taşır — `User` bunlardan biri ve
+          // üretilen `toString()`'i hash + salt basar (rules/04 §8). UI bu
+          // tipleri hiç görmemeli; `domain/models/auth_user.dart` kullanılır.
+          'data/db/',
+          "package:canteen/data/",
+        ]) {
+          if (source.contains(banned)) {
+            offenders.add('${entity.path} → $banned');
+          }
         }
       }
 
@@ -240,8 +249,8 @@ void main() {
         offenders,
         isEmpty,
         reason:
-            'rules/01 §1: presentation altında drift import\'u BİR BUG\'dır → '
-            '${offenders.join(", ")}',
+            'rules/01 §1: presentation altında drift/data import\'u BİR '
+            'BUG\'dır → $offenders',
       );
     });
 
@@ -276,7 +285,13 @@ void main() {
     // yerini katmanın KENDİ sınırlarını koruyan bu kontrol aldı.
     test('application/ altında widget ve ham SQL YOK', () {
       final applicationDir = Directory('lib/application');
-      if (!applicationDir.existsSync()) return;
+      expect(
+        applicationDir.existsSync(),
+        isTrue,
+        reason:
+            'Faz 3a application katmanını açtı; dizin yoksa bu bekçi sessizce '
+            'boş geçerdi.',
+      );
 
       final offenders = <String>[];
 
@@ -287,9 +302,13 @@ void main() {
           "import 'package:flutter/",
           "import 'package:flutter_test/",
           '../presentation/',
+          'package:canteen/presentation/',
           // rules/01 §1: application katmanı ham SQL detayı içermez.
           'customSelect(',
           'customStatement(',
+          'customUpdate(',
+          'customInsert(',
+          'customWriteInto(',
         ]) {
           if (source.contains(banned)) {
             offenders.add('${entity.path} → $banned');

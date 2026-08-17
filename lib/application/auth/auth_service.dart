@@ -28,6 +28,8 @@ import '../../domain/services/password_hasher.dart';
 import 'auth_failures.dart';
 import 'login_throttle.dart';
 import 'session_service.dart';
+import '../../domain/models/auth_user.dart';
+import '../../data/dao/user_mapper.dart';
 
 class AuthService {
   final CanteenDatabase _db;
@@ -125,7 +127,7 @@ class AuthService {
   ///
   /// Pasif kullanıcı da **aynı genel hatayı** alır: aksi hâlde kullanıcı adının
   /// sistemde var olduğu sızardı.
-  Future<Result<User>> login(String username, String password) async {
+  Future<Result<AuthUser>> login(String username, String password) async {
     final key = normalizeUsername(username);
     final now = _clock().toUtc();
 
@@ -150,7 +152,7 @@ class AuthService {
     });
 
     // Güncel satır döndürülür: lastLoginAt/updatedAt taze olsun.
-    return Ok(await _users.findById(user.id) ?? user);
+    return Ok((await _users.findById(user.id) ?? user).toAuthUser());
   }
 
   /// Oturumu sonlandırır (REQ-AUTH-004).
@@ -164,7 +166,7 @@ class AuthService {
   Future<void> logout() => _session.clear();
 
   /// Geçerli oturumdaki kullanıcı; oturum yoksa/geçersizse `null`.
-  Future<User?> currentUser() => _session.load();
+  Future<AuthUser?> currentUser() => _session.load();
 
   // --- Kullanıcı yönetimi (docs/17 §11) -----------------------------------
 

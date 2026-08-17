@@ -20,6 +20,7 @@ import 'package:canteen/domain/services/password_hasher.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database.dart';
+import 'package:canteen/domain/models/auth_user.dart';
 
 void main() {
   const password = 'kantin-2026';
@@ -222,8 +223,27 @@ void main() {
       final id = await createUser();
       final result = await auth.login('kasa', password);
 
-      expect(result, isA<Ok<User>>());
-      expect((result as Ok<User>).value.id, id);
+      expect(result, isA<Ok<AuthUser>>());
+      expect((result as Ok<AuthUser>).value.id, id);
+    });
+
+    test('BR-SEC-001 — dönen tip hash/salt TAŞIMAZ', () async {
+      final id = await createUser();
+      final row = (await usersDao.findById(id))!;
+
+      // Drift satır tipi sırları taşır ve toString() ikisini de basar.
+      expect(row.toString(), contains(row.passwordHash));
+
+      final user = (await auth.login('kasa', password) as Ok<AuthUser>).value;
+
+      expect(user.toString(), isNot(contains(row.passwordHash)));
+      expect(user.toString(), isNot(contains(row.passwordSalt)));
+      expect(user.toString(), isNot(contains(password)));
+
+      // currentUser da aynı sır taşımayan tipi döner.
+      final current = await auth.currentUser();
+      expect(current, isA<AuthUser>());
+      expect(current.toString(), isNot(contains(row.passwordHash)));
     });
 
     test('başarılı giriş lastLoginAt günceller', () async {
@@ -233,7 +253,7 @@ void main() {
       clock.advance(const Duration(hours: 3));
       final result = await auth.login('kasa', password);
 
-      final loggedIn = (result as Ok<User>).value;
+      final loggedIn = (result as Ok<AuthUser>).value;
       expect(loggedIn.lastLoginAt, clock.current);
       expect((await usersDao.findById(id))!.lastLoginAt, clock.current);
     });
