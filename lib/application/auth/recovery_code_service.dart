@@ -46,7 +46,37 @@ import 'financial_access_service.dart';
 import 'login_throttle.dart';
 import 'recovery_code_failures.dart';
 
+/// Kurtarma kodunun **doğrulandığının kanıtı** — yetenek (capability) nesnesi.
+///
+/// `FinancialAccessService`'in iki metodu dashboard parolasını sormadan iş
+/// yapar: [FinancialAccessService.applyRecoveredPassword] parolayı yazar,
+/// [FinancialAccessService.unlockAfterRecovery] kilidi açar. Bunlar korumasız
+/// public kalsaydı, servis Riverpod ile presentation'a açıldığı anda
+/// `ref.read(...).unlockAfterRecovery()` derlenen ve testten geçen bir
+/// **BR-AUTH-010/012/013 bypass'ı** olurdu.
+///
+/// Bu sınıfın yapıcısı **bu library'ye private'tır**: kanıtı yalnızca
+/// [RecoveryCodeService] — yani kurtarma kodunu gerçekten doğrulamış olan akış —
+/// üretebilir. Başka hiçbir library bir örnek elde edemez, dolayısıyla o iki
+/// metodu çağıramaz. Koruma bir yorum değil, **derleyici seviyesindedir.**
+///
+/// ## Neden bu tip burada tanımlı
+///
+/// Kanıtı üretebilen tek yer burasıdır; Dart'ta privacy library seviyesindedir,
+/// bu yüzden tip de bu library'de yaşamak zorundadır. `FinancialAccessService`
+/// bu dosyayı **yalnızca tip için** import eder; bir [RecoveryCodeService]
+/// örneği tutmaz ve onu çağırmaz — kurulum (construction) bağımlılığı hâlâ tek
+/// yönlüdür.
+final class RecoveryProof {
+  const RecoveryProof._();
+}
+
 class RecoveryCodeService {
+  /// Kurtarma kodu doğrulandıktan sonra kullanılan kanıt.
+  ///
+  /// Yalnızca bu library üretebilir; dışarıya sızdırılmaz.
+  static const RecoveryProof _proof = RecoveryProof._();
+
   /// Throttle anahtarı — recovery code **sistemde tektir** (dashboard
   /// parolası gibi, BR-AUTH-008), kullanıcı başına değildir.
   ///
@@ -57,7 +87,9 @@ class RecoveryCodeService {
 
   /// Audit `entity_type` — dashboard parolası sistem geneli tek bir varlıktır,
   /// bu yüzden `entity_id` yoktur (docs/18 §2: sistem işlemlerinde `NULL`).
-  static const String auditEntityType = 'dashboard';
+  ///
+  /// Kilit olaylarıyla **aynı varlık** olduğu için tek kaynaktan gelir.
+  static const String auditEntityType = FinancialAccessService.auditEntityType;
 
   /// docs/18 §3 — kod değeri **yazılmaz**, yalnızca olayın kendisi.
   static const String actionRecoveryUsed = 'dashboardRecoveryUsed';
@@ -195,13 +227,26 @@ class RecoveryCodeService {
 
       // EC-REC-002 — doğru ama tükenmiş kod. Kontrol doğrulamadan SONRA yapılır:
       // yanlış kod girene "bu kod kullanılmış" demek bilgi sızdırırdı.
+      //
+      // ⚠️ Bu dal **normal akışta erişilemez.** BR-AUTH-017 gereği kod
+      // kullanılınca yenisi üretilir ve `used_at` adım 3'te temizlenir (aşağıya
+      // bakın); dolayısıyla "hash var + used_at dolu" durumu yalnızca Faz 9
+      // restore'undan (EC-REC-010) veya dışarıdan değiştirilmiş bir kayıttan
+      // doğar. Kullanıcı eski kodunu girerse `alreadyUsed` değil,
+      // `invalidCode` görür — çünkü eski hash artık yoktur.
+      //
+      // **Proje sahibi kararı (A):** bu kabul edilir. BR-AUTH-015 korunuyor
+      // (eski kod gerçekten çalışmıyor); farklı olan yalnızca mesaj. Ayırt
+      // edici mesajı üretebilmek eski hash'i kalıcı olarak saklamayı
+      // gerektirirdi ve kullanıcıya faydası küçük olurdu.
+      // Kontrol savunmacı olarak duruyor: restore sonrası doğru davranır.
       if (await _readUsedAt() != null) {
         return const Err<String>(RecoveryCodeFailures.alreadyUsed);
       }
 
       // docs/17 §8 — dört adım, tek transaction (EC-REC-004):
       // 1) dashboard parolası güncellenir
-      await _financialAccess.applyRecoveredPassword(newPassword);
+      await _financialAccess.applyRecoveredPassword(newPassword, _proof);
       // 2) kullanılan kod geçersizleşir (used_at = now)
       await _markUsed(now);
       // 3) YENİ kod üretilir (BR-AUTH-017) — `used_at` bu adımda temizlenir,
@@ -225,7 +270,7 @@ class RecoveryCodeService {
         // Kilit **commit'ten sonra** açılır: bellekteki durum rollback ile geri
         // alınamazdı (EC-REC-005). docs/17 §8 — "Finansal erişim kilidi AÇILIR".
         _throttle.reset(throttleKey);
-        _financialAccess.unlockAfterRecovery();
+        _financialAccess.unlockAfterRecovery(_proof);
       case Err<String>(:final failure):
         await _registerRejection(failure, now: now, userId: userId);
     }

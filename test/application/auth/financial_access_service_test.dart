@@ -8,6 +8,7 @@
 /// → `BR-AUTH-012` grubu.
 library;
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:canteen/application/auth/auth_service.dart';
@@ -38,19 +39,50 @@ class SpyFinancialSource {
   }
 }
 
+/// Enjekte edilen hata — gerçek bir arıza gibi davranır.
+class _InjectedFailure implements Exception {
+  const _InjectedFailure();
+  @override
+  String toString() => 'enjekte edilmiş hata';
+}
+
+/// Audit yazımında patlayan DAO — REQ-AUDIT-007.
+class _FailingAuditLogsDao extends AuditLogsDao {
+  _FailingAuditLogsDao(super.db);
+
+  @override
+  Future<int> record({
+    required DateTime createdAt,
+    required String action,
+    required String entityType,
+    int? userId,
+    int? entityId,
+    String? oldValue,
+    String? newValue,
+    String? metadata,
+  }) async {
+    throw const _InjectedFailure();
+  }
+}
+
 void main() {
   const dashboardPassword = 'kasa-panel-2026';
 
   late FakeClock clock;
   late CanteenDatabase db;
   late AppSettingsDao settingsDao;
+  late AuditLogsDao auditDao;
   late LoginThrottle throttle;
   late FinancialAccessService access;
 
-  FinancialAccessService buildService({LoginThrottle? withThrottle}) {
+  FinancialAccessService buildService({
+    LoginThrottle? withThrottle,
+    AuditLogsDao? audit,
+  }) {
     return FinancialAccessService(
       db: db,
       settings: settingsDao,
+      auditLogs: audit ?? auditDao,
       // Deterministik salt üretimi (rules/06 §7).
       hasher: PasswordHasher.withRandom(Random(11)),
       throttle: withThrottle ?? throttle,
@@ -62,6 +94,7 @@ void main() {
     clock = FakeClock(testEpochUtc);
     db = memoryDatabase(clock: clock.fn);
     settingsDao = AppSettingsDao(db);
+    auditDao = AuditLogsDao(db);
     throttle = LoginThrottle();
     access = buildService();
   });
@@ -82,6 +115,8 @@ void main() {
     final rows = await db.select(db.appSettings).get();
     return rows.map((row) => row.key).toSet();
   }
+
+  Future<List<AuditLog>> auditRows() => db.select(db.auditLogs).get();
 
   // --- BR-AUTH-012 — kilit görsel bir perde değildir ------------------------
 
@@ -246,6 +281,7 @@ void main() {
         db: db,
         users: usersDao,
         session: session,
+        financialAccess: access,
         hasher: PasswordHasher.withRandom(Random(3)),
         clock: clock.fn,
       );
@@ -577,6 +613,235 @@ void main() {
       for (final row in rows) {
         expect(row.value.contains(next), isFalse, reason: row.key);
       }
+    });
+  });
+
+  // --- Audit (REQ-AUTH-020 · docs/18 §3) -----------------------------------
+
+  group('REQ-AUTH-020 — kilit olayları audit log\'a yazılır', () {
+    late int userId;
+
+    setUp(() async {
+      // `audit_logs.user_id` → `users.id` FK'sı gerçek bir kullanıcı ister.
+      userId = await insertTestUser(db);
+    });
+
+    test('doğru parola → dashboardUnlocked (docs/22 F9)', () async {
+      await configure();
+
+      final result = await access.unlock(dashboardPassword, userId: userId);
+
+      expect(result, isA<Ok<void>>());
+      final logs = await auditRows();
+      expect(logs, hasLength(1));
+      expect(logs.single.action, FinancialAccessService.actionUnlocked);
+      expect(logs.single.entityType, FinancialAccessService.auditEntityType);
+      expect(logs.single.userId, userId);
+      expect(
+        logs.single.entityId,
+        isNull,
+        reason: 'docs/18 §2: sistem geneli varlıkta entity_id yoktur',
+      );
+      expect(
+        logs.single.metadata,
+        isNull,
+        reason: 'docs/18 §3: dashboardUnlocked metadata taşımaz',
+      );
+      expect(logs.single.createdAt, clock.now().toUtc());
+    });
+
+    test('yanlış parola → dashboardUnlockFailed + deneme sayısı', () async {
+      await configure();
+
+      await access.unlock('yanlis', userId: userId);
+      await access.unlock('yine-yanlis', userId: userId);
+
+      final logs = await auditRows();
+      expect(logs, hasLength(2));
+      expect(
+        logs.map((log) => log.action),
+        everyElement(FinancialAccessService.actionUnlockFailed),
+      );
+      expect(
+        logs.map((log) => jsonDecode(log.metadata!)),
+        [
+          {'attempts': 1},
+          {'attempts': 2},
+        ],
+        reason: 'docs/18 §3: ardışık deneme sayısı',
+      );
+    });
+
+    test('EC-DASH-002 — bekleme sırasındaki deneme kayıt üretmez', () async {
+      await configure();
+
+      for (var i = 0; i < LoginThrottle.maxAttempts; i++) {
+        await access.unlock('yanlis', userId: userId);
+      }
+      // Bekleme başladı: parola artık **denenmiyor** bile.
+      final blocked = await access.unlock(dashboardPassword, userId: userId);
+
+      expect(
+        blocked.failureOrNull?.code,
+        FinancialAccessFailures.tooManyAttempts(
+          LoginThrottle.lockDuration,
+        ).code,
+      );
+      expect(
+        await auditRows(),
+        hasLength(LoginThrottle.maxAttempts),
+        reason: 'yalnızca gerçekten denenen 5 parola kaydedilir',
+      );
+    });
+
+    test('parola kurulmamışken deneme kayıt üretmez', () async {
+      final result = await access.unlock(dashboardPassword, userId: userId);
+
+      expect(
+        result.failureOrNull?.code,
+        FinancialAccessFailures.notConfigured.code,
+      );
+      expect(await auditRows(), isEmpty);
+    });
+
+    test('kurulum (setPassword) audit yazmaz', () async {
+      await configure();
+
+      expect(
+        await auditRows(),
+        isEmpty,
+        reason:
+            'docs/18 §3 kurulumda parola belirlemek için action tanımlamaz; '
+            'dashboardPasswordChanged docs/17 §9 değiştirme akışına aittir',
+      );
+    });
+
+    test('changePassword → dashboardPasswordChanged (docs/17 §9)', () async {
+      await configure();
+
+      final result = await access.changePassword(
+        current: dashboardPassword,
+        next: 'yeni-parola-2027',
+        userId: userId,
+      );
+
+      expect(result, isA<Ok<void>>());
+      final logs = await auditRows();
+      expect(logs, hasLength(1));
+      expect(logs.single.action, FinancialAccessService.actionPasswordChanged);
+      expect(logs.single.userId, userId);
+    });
+
+    test('mevcut parola yanlışsa audit yazılmaz', () async {
+      await configure();
+
+      await access.changePassword(
+        current: 'yanlis',
+        next: 'yeni-parola-2027',
+        userId: userId,
+      );
+
+      expect(
+        await auditRows(),
+        isEmpty,
+        reason: 'EC-DASH-008: hiçbir şey değişmedi, denetlenecek olay yok',
+      );
+    });
+
+    test(
+      'REQ-AUDIT-004 · rules/04 §8 — kayıtlar parola/hash/salt taşımaz',
+      () async {
+        await configure();
+        const next = 'yeni-parola-2027';
+
+        await access.unlock('yanlis-deneme', userId: userId);
+        await access.unlock(dashboardPassword, userId: userId);
+        await access.changePassword(
+          current: dashboardPassword,
+          next: next,
+          userId: userId,
+        );
+
+        final hash = (await settingsDao.read(
+          AppSettingKeys.dashboardPasswordHash,
+        ))!;
+        final salt = (await settingsDao.read(
+          AppSettingKeys.dashboardPasswordSalt,
+        ))!;
+        final secrets = <String>[
+          dashboardPassword,
+          next,
+          'yanlis-deneme',
+          hash,
+          salt,
+        ];
+
+        final logs = await auditRows();
+        expect(logs, hasLength(3));
+        for (final log in logs) {
+          final serialized = [
+            log.action,
+            log.entityType,
+            log.oldValue ?? '',
+            log.newValue ?? '',
+            log.metadata ?? '',
+          ].join('|');
+          for (final secret in secrets) {
+            expect(
+              serialized,
+              isNot(contains(secret)),
+              reason:
+                  'rules/04 §8: audit kaydı parola/hash/salt taşıyamaz '
+                  '(${log.action})',
+            );
+          }
+        }
+      },
+    );
+
+    test('REQ-AUDIT-007 — audit patlarsa kilit yine açılır', () async {
+      await configure();
+      final broken = buildService(audit: _FailingAuditLogsDao(db));
+
+      final result = await broken.unlock(dashboardPassword, userId: userId);
+
+      expect(
+        result,
+        isA<Ok<void>>(),
+        reason: 'docs/18 §7: audit hatası ana işlemi başarısız kılmaz',
+      );
+      expect(broken.isUnlocked, isTrue);
+      expect(await auditRows(), isEmpty);
+    });
+
+    test('REQ-AUDIT-007 — audit patlarsa parola yine değişir', () async {
+      await configure();
+      final broken = buildService(audit: _FailingAuditLogsDao(db));
+
+      final result = await broken.changePassword(
+        current: dashboardPassword,
+        next: 'yeni-parola-2027',
+        userId: userId,
+      );
+
+      expect(result, isA<Ok<void>>());
+      expect(
+        (await access.unlock('yeni-parola-2027')).isOk,
+        isTrue,
+        reason:
+            'audit kaydı parola yazımıyla aynı transaction içindedir; hatası '
+            'yukarı taşınsaydı parola değişikliği de geri alınırdı',
+      );
+    });
+
+    test('userId verilmezse kayıt yine yazılır (docs/18 §2)', () async {
+      await configure();
+
+      await access.unlock(dashboardPassword);
+
+      final logs = await auditRows();
+      expect(logs, hasLength(1));
+      expect(logs.single.userId, isNull);
     });
   });
 

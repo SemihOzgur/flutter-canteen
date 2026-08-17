@@ -18,6 +18,15 @@
 /// **enjekte edilir**; bağımlılık tek yönlüdür (finansal kilit servisi
 /// `AuthService`'i tanımaz), böylece döngüsel bağımlılık oluşmaz.
 ///
+/// ## Kilit servisi TEK ÖRNEK olmalıdır
+///
+/// Kilit durumu yalnızca bellektedir (BR-AUTH-016). Bu yüzden bu servise
+/// verilen [FinancialAccessService], uygulamanın kilidi açan/soran örneğiyle
+/// **aynı nesne** olmak zorundadır — ikinci bir örnek verilirse [logout] hayalet
+/// bir nesneyi kapatır, gerçek kilit açık kalır ve REQ-AUTH-004/021 sessizce
+/// ihlal edilir. Bağımlılık bu nedenle `required`'dır: opsiyonel olduğu sürece
+/// bir provider tanımında atlanması derlenen ve testten geçen bir hata olurdu.
+///
 /// ## Transaction sınırı
 ///
 /// rules/01 §5: transaction **yalnızca bu katmanda** açılır. Çok adımlı
@@ -43,22 +52,23 @@ class AuthService {
   final SessionService _session;
   final PasswordHasher _hasher;
   final LoginThrottle _throttle;
-  final FinancialAccessService? _financialAccess;
+  final FinancialAccessService _financialAccess;
   final DateTime Function() _clock;
 
   /// [clock] `rules/06 §7` gereği enjekte edilir; verilmezse veritabanının
   /// saat kaynağı kullanılır — böylece tüm zaman damgaları tek kaynaktan gelir.
   ///
-  /// [financialAccess] verilirse [logout] finansal erişim kilidini de kapatır
-  /// (REQ-AUTH-004). Kilit tamamen belleğe ait olduğu için bu bağımlılık
-  /// opsiyoneldir: kilidi hiç kullanmayan testler onsuz çalışır.
+  /// [financialAccess] **zorunludur** ve uygulamadaki tek örnek olmalıdır:
+  /// [logout], [login] ve [setActive] finansal erişim kilidini kapatır
+  /// (REQ-AUTH-004 · REQ-AUTH-021 · BR-AUTH-016). Gerekçe için sınıf
+  /// dokümantasyonuna bakın.
   AuthService({
     required CanteenDatabase db,
     required UsersDao users,
     required SessionService session,
+    required FinancialAccessService financialAccess,
     PasswordHasher? hasher,
     LoginThrottle? throttle,
-    FinancialAccessService? financialAccess,
     DateTime Function()? clock,
   }) : _db = db,
        _users = users,
@@ -123,8 +133,13 @@ class AuthService {
 
   // --- Kurulum ------------------------------------------------------------
 
-  /// Hiç kullanıcı yoksa `true` — kurulum sihirbazı açılır
+  /// Hiç kullanıcı yoksa `true` — kurulum sihirbazının **Adım 1'i** eksiktir
   /// (REQ-AUTH-002 · EC-AUTH-008).
+  ///
+  /// ⚠️ Bu, kurulumun tamamlandığı anlamına **gelmez**: sihirbazın Adım 2
+  /// (dashboard parolası) ve Adım 3 (kurtarma kodu) adımları ayrı
+  /// transaction'lardır ve yarım kalabilir. Açılışta karar verecek olan
+  /// bootstrap bu metodu değil, `SetupService.currentState()`'i sorar.
   Future<bool> needsSetup() async => (await _users.countAll()) == 0;
 
   // --- Giriş / çıkış ------------------------------------------------------
@@ -166,7 +181,7 @@ class AuthService {
     // düşen kullanıcının açtığı kilit, sıradaki kullanıcıya devredilirdi:
     // A kilidi açar → A pasifleşir → B giriş yapar → B parolasız Dashboard
     // görürdü.
-    _financialAccess?.lock();
+    _financialAccess.lock();
 
     // Son giriş zamanı ve oturum birlikte yazılır; yarım bir giriş durumu
     // oluşmaz (rules/01 §5 — transaction sınırı application katmanındadır).
@@ -189,7 +204,7 @@ class AuthService {
   /// Kilit yalnızca bellekte olduğu için bu adım veritabanına dokunmaz ve
   /// başarısız olamaz; bu yüzden oturum temizliğinden **önce** yapılır.
   Future<void> logout() async {
-    _financialAccess?.lock();
+    _financialAccess.lock();
     await _session.clear();
   }
 
@@ -197,6 +212,30 @@ class AuthService {
   Future<AuthUser?> currentUser() => _session.load();
 
   // --- Kullanıcı yönetimi (docs/17 §11) -----------------------------------
+
+  /// Kullanıcı listesi — **REQ-AUTH-008 · docs/17 §11.**
+  ///
+  /// Varsayılan olarak **pasifler de** listelenir: kullanıcı silinmez, yalnızca
+  /// pasifleşir (BR-AUTH-006) ve yönetim ekranı onu yeniden aktif edebilmelidir.
+  /// [onlyActive] ile yalnızca aktif kullanıcılar istenir (örn. bir seçim
+  /// listesi).
+  ///
+  /// ## Neden ham Drift satırı döndürülmüyor
+  ///
+  /// `users` satırı `passwordHash` ve `passwordSalt` taşır ve üretilen
+  /// `toString()` ikisini de basar — böyle bir nesnenin presentation'a ulaşması
+  /// rules/04 §8'in ("hash ve salt hiçbir log'a/mesaja yazılmaz") sessiz
+  /// ihlalidir. Bu metot sırları düşüren [AuthUser] görünümünü döndürür ve UI'ın
+  /// `UsersDao`'ya inmesini gereksiz kılar (rules/01 §1: presentation'da
+  /// veritabanı erişimi yoktur).
+  ///
+  /// Sıralama kullanıcı adına göredir (DAO tarafında, SQL ile).
+  Future<List<AuthUser>> listUsers({bool onlyActive = false}) async {
+    final rows = onlyActive
+        ? await _users.listActive()
+        : await _users.listAll();
+    return [for (final row in rows) row.toAuthUser()];
+  }
 
   /// Yeni kullanıcı oluşturur ve id'sini döndürür.
   ///
@@ -303,7 +342,7 @@ class AuthService {
         final hadSession = await _session.clearIfUser(userId);
         // Oturumu düşen kullanıcının açtığı kilit onunla birlikte kapanır;
         // login'deki savunma ile birlikte iki katman (BR-AUTH-016).
-        if (hadSession) _financialAccess?.lock();
+        if (hadSession) _financialAccess.lock();
       }
 
       return const Ok<void>(null);

@@ -35,17 +35,23 @@
 /// Recovery code akışı (docs/17 §8) bu dosyaya **ait değildir**;
 /// `RecoveryCodeService`'e aittir — ona yalnızca üç kanca verilir:
 /// [verifyPassword], [applyRecoveredPassword], [unlockAfterRecovery].
-/// Bağımlılık tek yönlüdür (bu servis recovery servisini tanımaz), böylece
-/// döngüsel bağımlılık oluşmaz. Dashboard/Rapor **ekranları** Faz 8
-/// kapsamındadır (`docs/31` — "servis Faz 3'te hazır").
+/// Son ikisi **yalnızca** `RecoveryCodeService`'in üretebildiği bir yetenek
+/// nesnesi ([RecoveryProof]) ister; ayrıntı için o iki metodun dokümantasyonuna
+/// bakın. Bu servis recovery servisinin bir **örneğine** bağımlı değildir
+/// (yalnızca kanıt tipini tanır), bu yüzden kurulum sırası hâlâ tek yönlüdür.
+/// Dashboard/Rapor **ekranları** Faz 8 kapsamındadır (`docs/31` — "servis
+/// Faz 3'te hazır").
 ///
-/// **Bu serviste henüz audit yazımı yoktur.** REQ-AUTH-020 (`docs/25` — Faz 3)
-/// kilit açılışlarının ve başarısız denemelerin de yazılmasını ister
-/// (`dashboardUnlocked` / `dashboardUnlockFailed` / `dashboardPasswordChanged`
-/// — docs/18 §3); recovery olayları `RecoveryCodeService` tarafından **yazılır**,
-/// kilit olayları henüz yazılmaz. Bu servis audit çağrısı **eklenecek** şekilde
-/// tasarlanmıştır: tüm kilit geçişleri tek noktadan ([unlock], [lock],
-/// [setPassword], [changePassword]) geçer.
+/// ## Audit — REQ-AUTH-020 · docs/18 §3
+///
+/// Kilit olayları denetim kaydına yazılır: [actionUnlocked] ·
+/// [actionUnlockFailed] · [actionPasswordChanged]. **Parola, hash ve salt asla
+/// yazılmaz** (REQ-AUDIT-004 · rules/04 §8) — audit'e yalnızca olayın kendisi
+/// ve `dashboardUnlockFailed` için ardışık deneme sayısı gider.
+///
+/// Genel `AuditService` Faz 6'da gelecek ve bu yazımı devralacaktır
+/// (`docs/25` — REQ-AUDIT-012); REQ-AUTH-020 ise Faz 3'tedir, bu yüzden kilit
+/// olaylarının yazımı burada başlar.
 ///
 /// ## Transaction sınırı
 ///
@@ -54,6 +60,9 @@
 /// yazım hâlinde parola doğrulanamaz hâle gelirdi.
 library;
 
+import 'dart:convert';
+
+import '../../core/logging/app_logger.dart';
 import '../../core/result/result.dart';
 import '../../data/dao/daos.dart';
 import '../../data/db/app_setting_keys.dart';
@@ -61,34 +70,63 @@ import '../../data/db/canteen_database.dart';
 import '../../domain/services/password_hasher.dart';
 import 'financial_access_failures.dart';
 import 'login_throttle.dart';
+// Yalnızca [RecoveryProof] **tipi** için — bu servis `RecoveryCodeService`
+// örneği tutmaz ve onu çağırmaz. Kanıt nesnesinin yapıcısı private olduğundan
+// tip, onu üretebilen library'de yaşamak zorundadır (H4 gerekçesi).
+import 'recovery_code_service.dart';
 
 class FinancialAccessService {
   /// Throttle anahtarı — dashboard parolası **sistemde tektir** (BR-AUTH-008),
   /// kullanıcı başına değildir; bu yüzden tek sabit anahtar kullanılır.
   static const String throttleKey = 'dashboard';
 
+  /// Audit `entity_type` — dashboard parolası sistem geneli tek bir varlıktır,
+  /// bu yüzden `entity_id` yoktur (docs/18 §2: sistem işlemlerinde `NULL`).
+  ///
+  /// Recovery olayları da aynı varlığa aittir; `RecoveryCodeService` bu sabiti
+  /// yeniden kullanır (tek kaynak).
+  static const String auditEntityType = 'dashboard';
+
+  /// docs/18 §3 — parola/hash/salt **yazılmaz**, yalnızca olayın kendisi.
+  static const String actionUnlocked = 'dashboardUnlocked';
+  static const String actionUnlockFailed = 'dashboardUnlockFailed';
+  static const String actionPasswordChanged = 'dashboardPasswordChanged';
+
   final CanteenDatabase _db;
   final AppSettingsDao _settings;
+  final AuditLogsDao _auditLogs;
   final PasswordHasher _hasher;
   final LoginThrottle _throttle;
   final DateTime Function() _clock;
+  final AppLogger? _logger;
 
   /// BR-AUTH-016: kilit durumu **yalnızca bellekte**. Kalıcılaştırılmaz.
   bool _unlocked = false;
 
   /// [clock] `rules/06 §7` gereği enjekte edilir; verilmezse veritabanının saat
   /// kaynağı kullanılır — böylece tüm zaman damgaları tek kaynaktan gelir.
+  ///
+  /// [auditLogs] **zorunludur**: REQ-AUTH-020 kilit olaylarının yazılmasını
+  /// ister. Opsiyonel olsaydı bir provider tanımında unutulduğunda denetim izi
+  /// sessizce kaybolurdu ve hiçbir test bunu yakalamazdı.
+  ///
+  /// [logger] yalnızca **audit yazımı başarısız olursa** kullanılır
+  /// (REQ-AUDIT-007); parola, hash veya salt loglanmaz (rules/04 §8).
   FinancialAccessService({
     required CanteenDatabase db,
     required AppSettingsDao settings,
+    required AuditLogsDao auditLogs,
     PasswordHasher? hasher,
     LoginThrottle? throttle,
     DateTime Function()? clock,
+    AppLogger? logger,
   }) : _db = db,
        _settings = settings,
+       _auditLogs = auditLogs,
        _hasher = hasher ?? PasswordHasher(),
        _throttle = throttle ?? LoginThrottle(),
-       _clock = clock ?? db.clock;
+       _clock = clock ?? db.clock,
+       _logger = logger;
 
   // --- Kilit durumu -------------------------------------------------------
 
@@ -107,16 +145,29 @@ class FinancialAccessService {
   /// Recovery akışının **son adımı** — docs/17 §8: *"Finansal erişim kilidi
   /// AÇILIR (kullanıcı zaten doğruladı)"*.
   ///
-  /// Yalnızca `RecoveryCodeService` çağırır ve **yalnızca** kodu doğrulayıp
-  /// parolayı sıfırlayan transaction commit olduktan sonra: kilit bellekte
-  /// tutulduğu için (BR-AUTH-016) rollback onu geri alamazdı — transaction
-  /// içinde açılsaydı EC-REC-005'te başarısız bir kurtarma kilidi açık
-  /// bırakırdı.
+  /// ## Neden [RecoveryProof] isteniyor
+  ///
+  /// Bu metot dashboard parolasını **sormadan** kilidi açar. Serbestçe
+  /// çağrılabilir olsaydı, servis Riverpod ile presentation'a açıldığı anda
+  /// `ref.read(...).unlockAfterRecovery()` derlenen, testten geçen bir
+  /// **BR-AUTH-012/013 bypass'ı** olurdu. [RecoveryProof]'un yapıcısı
+  /// `RecoveryCodeService` library'sine private'tır: kanıtı yalnızca kurtarma
+  /// kodunu doğrulamış olan akış üretebilir, presentation üretemez.
+  ///
+  /// Çağrı **yalnızca** kodu doğrulayıp parolayı sıfırlayan transaction commit
+  /// olduktan sonra yapılır: kilit bellekte tutulduğu için (BR-AUTH-016)
+  /// rollback onu geri alamazdı — transaction içinde açılsaydı EC-REC-005'te
+  /// başarısız bir kurtarma kilidi açık bırakırdı.
   ///
   /// Bekleme sayacı da sıfırlanır: kullanıcı kimliğini recovery code ile
   /// kanıtlamıştır ve parola artık yenidir; eski hatalı denemelerin cezası
   /// sürmez.
-  void unlockAfterRecovery() {
+  ///
+  /// Ayrı bir `dashboardUnlocked` kaydı **yazılmaz**: docs/22 F10 bu akışın
+  /// denetim kaydını `dashboardRecoveryUsed` olarak tanımlar ve o kayıt
+  /// kurtarma transaction'ı içinde zaten yazılmıştır (docs/18 §3). Aynı
+  /// kullanıcı eylemi için ikinci bir satır denetim izini çoğaltırdı.
+  void unlockAfterRecovery(RecoveryProof proof) {
     _throttle.reset(throttleKey);
     _unlocked = true;
   }
@@ -145,6 +196,12 @@ class FinancialAccessService {
   ///
   /// Parola politikası (uzunluk, karmaşıklık) **kapsam dışıdır** (docs/17 §5);
   /// yalnızca boş olmama kontrolü yapılır.
+  ///
+  /// Audit yazılmaz: docs/18 §3 kurulumda parola belirlemek için bir action
+  /// tanımlamaz (`dashboardPasswordChanged` docs/17 §9'daki **değiştirme**
+  /// akışına aittir). Kurulum sihirbazı sistemin ilk anıdır; denetlenecek bir
+  /// "önceki durum" yoktur. `RecoveryCodeService.generateInitial` ile aynı
+  /// gerekçe.
   Future<Result<void>> setPassword(String password) async {
     if (password.isEmpty) {
       return const Err(FinancialAccessFailures.passwordRequired);
@@ -173,7 +230,19 @@ class FinancialAccessService {
   ///
   /// Kullanıcı parola ekranından **vazgeçerse** bu metot çağrılmaz ve kilit
   /// kapalı kalır (EC-DASH-003) — vazgeçmenin ayrı bir yan etkisi yoktur.
-  Future<Result<void>> unlock(String password) async {
+  ///
+  /// Audit (REQ-AUTH-020 · docs/17 §7 · docs/22 F9):
+  ///
+  /// | Sonuç | Kayıt |
+  /// |---|---|
+  /// | Doğru parola | [actionUnlocked] |
+  /// | Yanlış parola | [actionUnlockFailed] + ardışık deneme sayısı |
+  /// | Bekleme sırasında (EC-DASH-002) | **kayıt yok** — parola denenmedi bile |
+  /// | Parola hiç kurulmamış | **kayıt yok** — denemeyle ilgili değil |
+  ///
+  /// [userId] verilirse kayıt kullanıcıya bağlanır (docs/18 §2); kilit ekranı
+  /// oturum açıkken kullanıldığı için normalde doludur.
+  Future<Result<void>> unlock(String password, {int? userId}) async {
     final now = _clock().toUtc();
 
     final remaining = _throttle.remainingLock(throttleKey, now);
@@ -188,11 +257,19 @@ class FinancialAccessService {
 
     if (!_hasher.verify(password, stored)) {
       _throttle.registerFailure(throttleKey, now);
+      await _writeAudit(
+        action: actionUnlockFailed,
+        now: now,
+        userId: userId,
+        // docs/18 §3: `dashboardUnlockFailed` → ardışık deneme sayısı.
+        metadata: {'attempts': _throttle.failureCount(throttleKey)},
+      );
       return const Err(FinancialAccessFailures.wrongPassword);
     }
 
     _throttle.reset(throttleKey);
     _unlocked = true;
+    await _writeAudit(action: actionUnlocked, now: now, userId: userId);
     return const Ok(null);
   }
 
@@ -203,9 +280,16 @@ class FinancialAccessService {
   /// Recovery code bu işlemden **etkilenmez** (docs/17 §9 — geçerli kalır) ve
   /// kilit durumu değişmez: parolayı değiştirmek tek başına finansal erişim
   /// açmaz, açık bir kilidi de kapatmaz.
+  ///
+  /// docs/17 §9 · REQ-AUTH-020: değişiklik audit'e [actionPasswordChanged]
+  /// olarak yazılır — **parola değeri yazılmaz.** Kayıt, parolayı yazan
+  /// transaction'ın **içindedir** (rules/03 §9/1); reddedilen denemeler hiçbir
+  /// şey değiştirmediği için kayıt üretmez (docs/18 §4 — "veriyi değiştiren
+  /// işlemler").
   Future<Result<void>> changePassword({
     required String current,
     required String next,
+    int? userId,
   }) async {
     if (next.isEmpty) {
       return const Err(FinancialAccessFailures.passwordRequired);
@@ -220,7 +304,16 @@ class FinancialAccessService {
     }
 
     final secret = _hasher.hash(next);
-    await _db.transaction(() => _writeSecret(secret));
+    final now = _clock().toUtc();
+
+    await _db.transaction(() async {
+      await _writeSecret(secret);
+      await _writeAudit(
+        action: actionPasswordChanged,
+        now: now,
+        userId: userId,
+      );
+    });
     return const Ok(null);
   }
 
@@ -239,14 +332,29 @@ class FinancialAccessService {
 
   /// Recovery akışının parola adımı — docs/17 §8 adım 1.
   ///
-  /// ⚠️ Mevcut parola **sorulmaz**: çağıran (`RecoveryCodeService`) recovery
-  /// code'u doğrulamış olmalıdır. Bu metot BR-AUTH-010'un istisnası değildir —
+  /// ⚠️ Mevcut parola **sorulmaz**: [proof], çağıranın recovery code'u
+  /// doğruladığının kanıtıdır. Bu metot BR-AUTH-010'un istisnası değildir —
   /// BR-AUTH-015 zaten "parola recovery code ile sıfırlanabilir" der.
   ///
-  /// Transaction **çağıranındır** (rules/01 §5): kurtarmanın dört adımı tek
-  /// transaction'dır, bu yüzden burada yeni bir transaction açılmaz.
-  Future<void> applyRecoveredPassword(String password) =>
-      _writeSecret(_hasher.hash(password));
+  /// ## Neden [RecoveryProof] isteniyor
+  ///
+  /// Kanıtsız çağrılabilseydi, kod doğrulamadan dashboard parolasını yazan bir
+  /// public metot presentation'a açılmış olurdu (BR-AUTH-010 bypass'ı).
+  /// [RecoveryProof]'un yapıcısı `RecoveryCodeService` library'sine private'tır.
+  ///
+  /// ## Yarım yazım koruması
+  ///
+  /// Hash ve salt **iki ayrı** `app_settings` satırıdır; yalnızca biri yazılırsa
+  /// dashboard parolası doğrulanamaz hâle gelir. Bu yüzden yazım artık
+  /// çağıranın transaction açmış olmasına **güvenmez**: kendi transaction'ını
+  /// açar. Kurtarma akışı gibi zaten bir transaction içindeyse Drift bunu
+  /// **iç içe** çalıştırır (savepoint) — dış transaction geri alınırsa bu yazım
+  /// da geri alınır, dolayısıyla EC-REC-004/005 atomikliği korunur. Transaction
+  /// dışında çağrılırsa ikili yazım yine tek parça kalır.
+  Future<void> applyRecoveredPassword(String password, RecoveryProof proof) {
+    final secret = _hasher.hash(password);
+    return _db.transaction(() => _writeSecret(secret));
+  }
 
   // --- BR-AUTH-012 kapısı ---------------------------------------------------
 
@@ -286,6 +394,40 @@ class FinancialAccessService {
   Future<void> _writeSecret(PasswordHash secret) async {
     await _settings.write(AppSettingKeys.dashboardPasswordHash, secret.hash);
     await _settings.write(AppSettingKeys.dashboardPasswordSalt, secret.salt);
+  }
+
+  /// Audit kaydı — **parola, hash ve salt ASLA yazılmaz**
+  /// (REQ-AUDIT-004 · rules/04 §8 · rules/03 §9/5).
+  ///
+  /// REQ-AUDIT-007: audit yazımındaki bir hata ana işlemi **başarısız kılmaz** —
+  /// yakalanır ve log dosyasına yazılır. Aksi hâlde denetim uğruna kilit açma
+  /// veya parola değiştirme kaybedilirdi; [changePassword]'de kayıt parola
+  /// yazımıyla aynı transaction içinde olduğu için hata yukarı taşınsaydı
+  /// parolayı da geri alırdı.
+  ///
+  /// Deseni `RecoveryCodeService._writeAudit` ile birebir aynıdır; ikisi de
+  /// Faz 6'da genel `AuditService`'e devredilecektir (REQ-AUDIT-012).
+  Future<void> _writeAudit({
+    required String action,
+    required DateTime now,
+    int? userId,
+    Map<String, Object?>? metadata,
+  }) async {
+    try {
+      await _auditLogs.record(
+        createdAt: now,
+        action: action,
+        entityType: auditEntityType,
+        userId: userId,
+        metadata: metadata == null ? null : jsonEncode(metadata),
+      );
+    } on Object catch (error, stackTrace) {
+      _logger?.error(
+        'Denetim kaydı yazılamadı ($action).',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 }
 

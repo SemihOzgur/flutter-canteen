@@ -9,6 +9,7 @@ library;
 import 'dart:math';
 
 import 'package:canteen/application/auth/auth_service.dart';
+import 'package:canteen/application/auth/financial_access_service.dart';
 import 'package:canteen/application/auth/login_throttle.dart';
 import 'package:canteen/application/auth/session_service.dart';
 import 'package:canteen/data/dao/daos.dart';
@@ -74,6 +75,15 @@ void main() {
     db: db,
     users: usersDao,
     session: session,
+    // Kilit servisi zorunludur (BR-AUTH-016 — tek örnek kuralı); bu testler
+    // kilide dokunmaz, yalnızca transaction sınırlarını doğrular.
+    financialAccess: FinancialAccessService(
+      db: db,
+      settings: settingsDao,
+      auditLogs: AuditLogsDao(db),
+      hasher: PasswordHasher.withRandom(Random(11)),
+      clock: clock.fn,
+    ),
     hasher: PasswordHasher.withRandom(Random(7)),
     throttle: LoginThrottle(),
     clock: clock.fn,

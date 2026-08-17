@@ -51,8 +51,13 @@ class UsersDao extends DatabaseAccessor<CanteenDatabase> with _$UsersDaoMixin {
             ..limit(1))
           .getSingleOrNull();
 
+  /// Yalnızca aktif kullanıcılar. Sıralama [listAll] ile aynıdır: liste
+  /// ekranının aktif/pasif filtresi değiştiğinde satırların yeri değişmesin.
   Future<List<User>> listActive() =>
-      (select(users)..where((u) => u.isActive.equals(true))).get();
+      (select(users)
+            ..where((u) => u.isActive.equals(true))
+            ..orderBy([(u) => OrderingTerm(expression: u.username)]))
+          .get();
 
   /// **Pasifler dâhil** tüm kullanıcılar — kullanıcı yönetimi ekranı için
   /// (docs/17 §11). Kullanıcı silinmez, yalnızca pasifleşir (BR-AUTH-006);

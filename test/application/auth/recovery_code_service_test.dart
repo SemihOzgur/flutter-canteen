@@ -84,15 +84,18 @@ void main() {
   late FinancialAccessService access;
   late RecoveryCodeService recovery;
 
-  FinancialAccessService buildAccess({AppSettingsDao? settings}) =>
-      FinancialAccessService(
-        db: db,
-        settings: settings ?? settingsDao,
-        // Deterministik salt üretimi (rules/06 §7).
-        hasher: PasswordHasher.withRandom(Random(11)),
-        throttle: financialThrottle,
-        clock: clock.fn,
-      );
+  FinancialAccessService buildAccess({
+    AppSettingsDao? settings,
+    AuditLogsDao? audit,
+  }) => FinancialAccessService(
+    db: db,
+    settings: settings ?? settingsDao,
+    auditLogs: audit ?? auditDao,
+    // Deterministik salt üretimi (rules/06 §7).
+    hasher: PasswordHasher.withRandom(Random(11)),
+    throttle: financialThrottle,
+    clock: clock.fn,
+  );
 
   RecoveryCodeService buildRecovery({
     AppSettingsDao? settings,
@@ -147,6 +150,26 @@ void main() {
   Future<List<AppSetting>> settingRows() => db.select(db.appSettings).get();
 
   Future<List<AuditLog>> auditRows() => db.select(db.auditLogs).get();
+
+  /// Yalnızca **kurtarma** olayları.
+  ///
+  /// `FinancialAccessService` artık kilit olaylarını da aynı tabloya yazıyor
+  /// (REQ-AUTH-020: `dashboardUnlocked` / `dashboardUnlockFailed`). Bu testler
+  /// kurtarma akışını doğruladığı için, doğrulamanın parçası olarak yapılan
+  /// `access.unlock(...)` çağrılarının ürettiği kayıtlar elenir — aksi hâlde
+  /// "kurtarma hiçbir kayıt bırakmadı" iddiası ölçülemez hâle gelirdi.
+  Future<List<AuditLog>> recoveryAuditRows() async {
+    final rows = await auditRows();
+    return rows
+        .where(
+          (row) => const {
+            RecoveryCodeService.actionRecoveryUsed,
+            RecoveryCodeService.actionRecoveryFailed,
+            RecoveryCodeService.actionRecoveryRegenerated,
+          }.contains(row.action),
+        )
+        .toList();
+  }
 
   /// Bir metnin veritabanının hiçbir `app_settings` değerinde geçmediğini
   /// doğrular (BR-SEC-001 · REQ-AUTH-023).
@@ -314,7 +337,7 @@ void main() {
         expect(next, isNotEmpty);
 
         // 4) audit yazıldı
-        final logs = await auditRows();
+        final logs = await recoveryAuditRows();
         expect(logs, hasLength(1));
         expect(logs.single.action, RecoveryCodeService.actionRecoveryUsed);
         expect(logs.single.entityType, RecoveryCodeService.auditEntityType);
@@ -626,7 +649,7 @@ void main() {
         expect(await recovery.isAvailable(), isTrue);
 
         // 3) Audit kaydı oluşmadı (REQ-AUDIT-006).
-        expect(await auditRows(), isEmpty);
+        expect(await recoveryAuditRows(), isEmpty);
 
         // 4) Kilit açılmadı.
         access.lock();
@@ -665,7 +688,7 @@ void main() {
 
       expect((await access.unlock(dashboardPassword)).isOk, isTrue);
       expect(await recovery.isAvailable(), isTrue);
-      expect(await auditRows(), isEmpty);
+      expect(await recoveryAuditRows(), isEmpty);
       expect(
         (await recovery.resetPasswordWithCode(
           code: code,
@@ -695,7 +718,7 @@ void main() {
           isTrue,
           reason: 'docs/18 §7: audit hatası ana işlemi başarısız kılmaz',
         );
-        expect(await auditRows(), isEmpty);
+        expect(await recoveryAuditRows(), isEmpty);
       },
     );
   });

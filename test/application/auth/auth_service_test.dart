@@ -9,6 +9,7 @@ import 'dart:math';
 
 import 'package:canteen/application/auth/auth_failures.dart';
 import 'package:canteen/application/auth/auth_service.dart';
+import 'package:canteen/application/auth/financial_access_service.dart';
 import 'package:canteen/application/auth/login_throttle.dart';
 import 'package:canteen/application/auth/session_service.dart';
 import 'package:canteen/core/result/result.dart';
@@ -30,6 +31,7 @@ void main() {
   late UsersDao usersDao;
   late AppSettingsDao settingsDao;
   late SessionService session;
+  late FinancialAccessService financialAccess;
   late AuthService auth;
 
   setUp(() {
@@ -42,10 +44,19 @@ void main() {
       users: usersDao,
       clock: clock.fn,
     );
+    // Kilit servisi artık zorunludur (BR-AUTH-016 — tek örnek kuralı).
+    financialAccess = FinancialAccessService(
+      db: db,
+      settings: settingsDao,
+      auditLogs: AuditLogsDao(db),
+      hasher: PasswordHasher.withRandom(Random(11)),
+      clock: clock.fn,
+    );
     auth = AuthService(
       db: db,
       users: usersDao,
       session: session,
+      financialAccess: financialAccess,
       // Deterministik salt üretimi (rules/06 §7).
       hasher: PasswordHasher.withRandom(Random(7)),
       throttle: LoginThrottle(),
@@ -467,6 +478,7 @@ void main() {
           db: db,
           users: usersDao,
           session: session,
+          financialAccess: financialAccess,
           hasher: PasswordHasher.withRandom(Random(7)),
           clock: clock.fn,
         );
@@ -595,8 +607,8 @@ void main() {
 
       expect(await usersDao.countAll(), 2);
       expect(await usersDao.findById(first), isNotNull);
-      expect((await usersDao.listAll()).length, 2);
-      expect((await usersDao.listActive()).length, 1);
+      expect((await auth.listUsers()).length, 2);
+      expect((await auth.listUsers(onlyActive: true)).length, 1);
     });
 
     test('pasif kullanıcı tekrar aktifleştirilebilir', () async {
@@ -648,15 +660,74 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  group('kullanıcı listesi', () {
-    test('listAll pasifleri de içerir, listActive içermez', () async {
+  group('kullanıcı listesi — REQ-AUTH-008 · docs/17 §11', () {
+    test('varsayılan liste pasifleri de içerir; onlyActive içermez', () async {
       final first = await createUser(username: 'zeynep');
       await createUser(username: 'ahmet');
       await auth.setActive(first, false);
 
-      final all = await usersDao.listAll();
-      expect(all.map((u) => u.username), ['ahmet', 'zeynep']);
-      expect((await usersDao.listActive()).map((u) => u.username), ['ahmet']);
+      // Servis API'si üzerinden — UI'ın `UsersDao`'ya inmesi gerekmez
+      // (rules/01 §1).
+      expect(
+        (await auth.listUsers()).map((u) => u.username),
+        ['ahmet', 'zeynep'],
+        reason: 'BR-AUTH-006: kullanıcı silinmez, pasifler de listelenir',
+      );
+      expect((await auth.listUsers(onlyActive: true)).map((u) => u.username), [
+        'ahmet',
+      ]);
+    });
+
+    test('kullanıcı yokken boş liste döner', () async {
+      expect(await auth.listUsers(), isEmpty);
+      expect(await auth.listUsers(onlyActive: true), isEmpty);
+    });
+
+    test('alanlar dolu gelir: id, görünen ad, aktiflik', () async {
+      final id = await createUser(username: 'kasa', displayName: 'Kasa');
+      await auth.login('kasa', password);
+
+      final user = (await auth.listUsers()).single;
+
+      expect(user.id, id);
+      expect(user.username, 'kasa');
+      expect(user.displayName, 'Kasa');
+      expect(user.isActive, isTrue);
+      expect(user.lastLoginAt, clock.now().toUtc());
+    });
+
+    test('BR-SEC-001 · rules/04 §8 — liste hash/salt sızdırmaz', () async {
+      final id = await createUser();
+      final row = (await usersDao.findById(id))!;
+
+      final users = await auth.listUsers();
+
+      // `AuthUser` sırları yapısal olarak taşımaz; `toString()` de basmaz.
+      // Ham Drift satırı UI'ya verilseydi tek bir '$user' sızıntı olurdu.
+      for (final user in users) {
+        final serialized = user.toString();
+        expect(serialized, isNot(contains(row.passwordHash)));
+        expect(serialized, isNot(contains(row.passwordSalt)));
+        expect(serialized, isNot(contains(password)));
+      }
+      expect(users, isA<List<AuthUser>>());
+    });
+
+    test('sıralama kullanıcı adına göredir (iki filtrede de)', () async {
+      await createUser(username: 'zeynep');
+      await createUser(username: 'ahmet');
+      await createUser(username: 'mehmet');
+
+      expect((await auth.listUsers()).map((u) => u.username), [
+        'ahmet',
+        'mehmet',
+        'zeynep',
+      ]);
+      expect((await auth.listUsers(onlyActive: true)).map((u) => u.username), [
+        'ahmet',
+        'mehmet',
+        'zeynep',
+      ]);
     });
   });
 }
