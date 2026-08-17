@@ -13,6 +13,11 @@
 /// dosyaya sızdırılmaz — bunlar `FinancialAccessService` /
 /// `RecoveryCodeService`'e aittir.
 ///
+/// Tek istisna [logout]'tur: REQ-AUTH-004 logout'un finansal erişim kilidini de
+/// kapatmasını gerektirir. Bu nedenle [FinancialAccessService] buraya
+/// **enjekte edilir**; bağımlılık tek yönlüdür (finansal kilit servisi
+/// `AuthService`'i tanımaz), böylece döngüsel bağımlılık oluşmaz.
+///
 /// ## Transaction sınırı
 ///
 /// rules/01 §5: transaction **yalnızca bu katmanda** açılır. Çok adımlı
@@ -26,6 +31,7 @@ import '../../data/db/canteen_database.dart';
 import '../../data/repositories/failures.dart';
 import '../../domain/services/password_hasher.dart';
 import 'auth_failures.dart';
+import 'financial_access_service.dart';
 import 'login_throttle.dart';
 import 'session_service.dart';
 import '../../domain/models/auth_user.dart';
@@ -37,22 +43,29 @@ class AuthService {
   final SessionService _session;
   final PasswordHasher _hasher;
   final LoginThrottle _throttle;
+  final FinancialAccessService? _financialAccess;
   final DateTime Function() _clock;
 
   /// [clock] `rules/06 §7` gereği enjekte edilir; verilmezse veritabanının
   /// saat kaynağı kullanılır — böylece tüm zaman damgaları tek kaynaktan gelir.
+  ///
+  /// [financialAccess] verilirse [logout] finansal erişim kilidini de kapatır
+  /// (REQ-AUTH-004). Kilit tamamen belleğe ait olduğu için bu bağımlılık
+  /// opsiyoneldir: kilidi hiç kullanmayan testler onsuz çalışır.
   AuthService({
     required CanteenDatabase db,
     required UsersDao users,
     required SessionService session,
     PasswordHasher? hasher,
     LoginThrottle? throttle,
+    FinancialAccessService? financialAccess,
     DateTime Function()? clock,
   }) : _db = db,
        _users = users,
        _session = session,
        _hasher = hasher ?? PasswordHasher(),
        _throttle = throttle ?? LoginThrottle(),
+       _financialAccess = financialAccess,
        _clock = clock ?? db.clock;
 
   /// Kullanıcı adı normalizasyonu — REQ-AUTH-012 · EC-AUTH-006.
@@ -160,10 +173,14 @@ class AuthService {
   /// **Aktif sepet SİLİNMEZ** (BR-AUTH-005 · REQ-AUTH-005) — sepet Faz 5'te
   /// eklenecek ve bu metot ona dokunmayacaktır.
   ///
-  /// ⚠️ Bu metot **genişletilecektir:** REQ-AUTH-004 logout'un finansal erişim
-  /// kilidini de kapatmasını gerektirir. `FinancialAccessService` bu fazın
-  /// sonraki adımında eklenip buraya bağlanacaktır.
-  Future<void> logout() => _session.clear();
+  /// Finansal erişim kilidi **kapatılır** (REQ-AUTH-004 · REQ-AUTH-021 ·
+  /// EC-DASH-005): tekrar giriş yapıldığında dashboard parolası yeniden sorulur.
+  /// Kilit yalnızca bellekte olduğu için bu adım veritabanına dokunmaz ve
+  /// başarısız olamaz; bu yüzden oturum temizliğinden **önce** yapılır.
+  Future<void> logout() async {
+    _financialAccess?.lock();
+    await _session.clear();
+  }
 
   /// Geçerli oturumdaki kullanıcı; oturum yoksa/geçersizse `null`.
   Future<AuthUser?> currentUser() => _session.load();
