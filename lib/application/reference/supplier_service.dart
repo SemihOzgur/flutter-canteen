@@ -35,6 +35,9 @@ class SupplierService {
   static const String actionUpdated = 'supplierUpdated';
   static const String actionDeactivated = 'supplierDeactivated';
 
+  /// OD-020 — pasifleştirme tek yönlü değildir.
+  static const String actionActivated = 'supplierActivated';
+
   final CanteenDatabase _db;
   final SuppliersDao _suppliers;
   final AuditLogsDao _auditLogs;
@@ -250,5 +253,30 @@ class SupplierService {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  /// Pasifleştirilmiş tedarikçiyi yeniden aktifleştirir — **REQ-SUP-006 ·
+  /// EC-SUP-003 (OD-020).**
+  ///
+  /// Zaten aktif kayıt için işlem yinelenmez (docs/18 §4).
+  Future<Result<void>> activate(int id, {int? userId}) async {
+    final now = _clock().toUtc();
+
+    return _db.transaction(() async {
+      final current = await _suppliers.findById(id);
+      if (current == null) return const Err<void>(SupplierFailures.notFound);
+      if (current.isActive) return const Ok<void>(null);
+
+      await _suppliers.setActive(id, true);
+      await _writeAudit(
+        action: actionActivated,
+        now: now,
+        userId: userId,
+        entityId: id,
+        oldValue: {'is_active': false},
+        newValue: {'is_active': true},
+      );
+      return const Ok<void>(null);
+    });
   }
 }

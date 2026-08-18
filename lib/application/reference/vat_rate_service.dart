@@ -45,6 +45,9 @@ class VatRateService {
   static const String actionChanged = 'vatRateChanged';
   static const String actionDeactivated = 'vatRateDeactivated';
 
+  /// OD-020 — pasifleştirme tek yönlü değildir.
+  static const String actionActivated = 'vatRateActivated';
+
   final CanteenDatabase _db;
   final VatRatesDao _vatRates;
   final AuditLogsDao _auditLogs;
@@ -84,11 +87,24 @@ class VatRateService {
   Future<VatRate?> defaultRate() async =>
       (await _vatRates.findDefault())?.toDomain();
 
-  /// Sistemde hiç KDV oranı tanımlı değilse `true` — BR-VAT-005.
+  /// KDV alanları gizlensin mi — **BR-VAT-005 · OD-017.**
   ///
-  /// Ürün formu ve raporlar KDV alanlarını buna göre gizler. Sistemin oran
-  /// **üretmesi** için bir tetikleyici değildir (docs/08 §3 — seed yok).
-  Future<bool> isVatDisabled() async => (await _vatRates.countAll()) == 0;
+  /// ## Neden koşul "hiç oran yok" değil
+  ///
+  /// OD-017'den önce kurulum `vat_rates`'i boş bırakıyordu, dolayısıyla
+  /// "tablo boş" = "kullanıcı KDV takip etmiyor" demekti. Artık kurulumda
+  /// nötr `%0 — KDV Yok` oranı seed ediliyor (docs/08 §3), yani tablo
+  /// **hiçbir zaman boş olmuyor** ve eski koşul daima `false` dönerdi —
+  /// KDV alanları, kullanıcı hiç oran tanımlamamış olsa bile açılırdı.
+  ///
+  /// BR-VAT-005'in koruduğu davranış "kullanıcı **kendi** oranlarını
+  /// tanımlamadıkça KDV'siz çalış"tır. Bunun ölçütü sıfırdan farklı, aktif
+  /// bir oranın varlığıdır: yalnızca `%0` varsa KDV kapalıdır.
+  ///
+  /// Pasif oranlar sayılmaz — pasif bir `%20` oranı ürünlere atanamaz
+  /// (docs/08 §4), dolayısıyla KDV alanlarını açmak için gerekçe değildir.
+  Future<bool> isVatDisabled() async =>
+      (await _vatRates.countActiveTaxable()) == 0;
 
   /// Bu orana **doğrudan** bağlı ürün sayısı (`products.vat_rate_id`).
   ///
@@ -224,9 +240,10 @@ class VatRateService {
   /// olabilir. Eski varsayılanın temizlenmesi ile yenisinin yazılması **tek
   /// transaction** içindedir; yarıda kalırsa hiçbiri uygulanmaz.
   ///
-  /// Pasif bir oran varsayılan yapılamaz: `findDefault` pasif kaydı varsayılan
-  /// saymaz (docs/08 §4 — "Varsayılan oran yok → %0 kabul edilir"), dolayısıyla
-  /// böyle bir atama KDV'yi sessizce sıfırlardı. Hata görünür olmalıdır.
+  /// **BR-VAT-006 · REQ-VAT-010 · EC-VAT-001 (OD-019):** pasif bir oran
+  /// varsayılan yapılamaz. `findDefault` pasif kaydı varsayılan saymaz
+  /// (docs/08 §4 — "Varsayılan oran yok → %0 kabul edilir"), dolayısıyla böyle
+  /// bir atama KDV'yi sessizce sıfırlardı.
   Future<Result<void>> setDefault(int id, {int? userId}) async {
     final now = _clock().toUtc();
 
@@ -321,5 +338,39 @@ class VatRateService {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  /// Pasifleştirilmiş oranı yeniden aktifleştirir — **REQ-VAT-011 (OD-020).**
+  ///
+  /// `is_default` bayrağına **dokunulmaz.** Oran pasifken bayrak korunmuştu
+  /// (EC-VAT-002); yeniden aktifleştirildiğinde varsayılan olarak geri
+  /// dönmesi tutarlı davranıştır — kullanıcı bayrağı hiç değiştirmedi.
+  ///
+  /// Zaten aktif kayıt için işlem yinelenmez (docs/18 §4).
+  Future<Result<void>> activate(int id, {int? userId}) async {
+    final now = _clock().toUtc();
+
+    return _db.transaction(() async {
+      final current = await _vatRates.findById(id);
+      if (current == null) return const Err<void>(VatRateFailures.notFound);
+      if (current.isActive) return const Ok<void>(null);
+
+      await _vatRates.setActive(id, true);
+
+      // Aktifleşen kayıt varsayılan bayrağını taşıyorsa invariant'ı koru:
+      // docs/04 §3.4 aynı anda tek varsayılana izin verir.
+      if (current.isDefault) await _vatRates.clearDefault(exceptId: id);
+
+      await _writeAudit(
+        action: actionActivated,
+        now: now,
+        userId: userId,
+        entityId: id,
+        oldValue: {'is_active': false},
+        newValue: {'is_active': true},
+        metadata: {'rate_basis_points': current.rateBasisPoints},
+      );
+      return const Ok<void>(null);
+    });
   }
 }

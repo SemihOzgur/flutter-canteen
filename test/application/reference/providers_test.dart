@@ -106,11 +106,16 @@ void main() {
     );
   });
 
-  test('BR-VAT-001: vatRateListProvider seed edilmiş oran GÖSTERMEZ', () async {
+  test('OD-017: vatRateListProvider nötr %0 oranıyla başlar', () async {
     final container = newContainer();
 
-    expect(await container.read(vatRateListProvider.future), isEmpty);
-    expect(await container.read(vatDisabledProvider.future), isTrue);
+    final initial = await container.read(vatRateListProvider.future);
+    expect(initial.single.rateBasisPoints, 0, reason: 'Yalnızca nötr oran.');
+    expect(
+      await container.read(vatDisabledProvider.future),
+      isTrue,
+      reason: 'BR-VAT-005: tek oran %0 ise KDV alanları gizlenir.',
+    );
 
     await container
         .read(vatRateServiceProvider)
@@ -119,7 +124,13 @@ void main() {
       ..invalidate(vatRateListProvider)
       ..invalidate(vatDisabledProvider);
 
-    expect(await container.read(vatRateListProvider.future), hasLength(1));
-    expect(await container.read(vatDisabledProvider.future), isFalse);
+    final after = await container.read(vatRateListProvider.future);
+    expect(after, hasLength(2), reason: 'Nötr oran + kullanıcının oranı.');
+    expect(after.map((r) => r.rateBasisPoints), containsAll(<int>[0, 2000]));
+    expect(
+      await container.read(vatDisabledProvider.future),
+      isFalse,
+      reason: 'Gerçek bir oran tanımlanınca KDV açılır.',
+    );
   });
 }

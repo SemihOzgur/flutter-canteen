@@ -91,8 +91,9 @@ class Suppliers extends Table {
 
 /// docs/05 §2.4 — BR-VAT-001: KDV oranları yönetilebilir.
 ///
-/// **Kurulumda KDV oranı seed EDİLMEZ** (rules/02 §2) — kullanıcı kendi
-/// oranlarını tanımlar.
+/// **Kurulumda yalnızca nötr `%0 — KDV Yok` oranı seed edilir** (docs/08 §3 ·
+/// OD-017). Mevzuata bağlı oranlar (%20, %10 …) seed EDİLMEZ — kullanıcı kendi
+/// oranlarını tanımlar (rules/02 §2).
 class VatRates extends Table {
   @override
   String get tableName => 'vat_rates';

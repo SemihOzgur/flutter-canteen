@@ -28,6 +28,8 @@ abstract final class VatRateFailures {
 
   /// docs/08 §4: varsayılan oran, ürüne oran atanmamışsa **kullanılan** orandır.
   ///
+  /// **BR-VAT-006 · REQ-VAT-010 · EC-VAT-001 (OD-019).**
+  ///
   /// Pasif bir oran varsayılan yapılsaydı sistem "varsayılan oran yok" durumuna
   /// düşer ve KDV sessizce `%0` hesaplanırdı. Hata bu yüzden açıktır: sessiz
   /// KDV kaybı yerine görünür bir uyarı.

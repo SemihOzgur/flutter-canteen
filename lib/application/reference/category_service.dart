@@ -46,7 +46,15 @@ class CategoryService {
   static const String actionCreated = 'categoryCreated';
   static const String actionRenamed = 'categoryRenamed';
   static const String actionDeactivated = 'categoryDeactivated';
+
+  /// OD-020 — pasifleştirme tek yönlü değildir.
+  static const String actionActivated = 'categoryActivated';
   static const String actionDeleted = 'categoryDeleted';
+
+  /// OD-018 — docs/10 §1.4 bu olayı `categoryMerge` diye anıyordu; audit
+  /// action adları docs/18'in konusudur ve kategori silinmediği için
+  /// "merge" yanıltıcıydı. Çelişki OD-018 ile bu ad lehine kapatıldı.
+  static const String actionProductsMoved = 'categoryProductsMoved';
 
   final CanteenDatabase _db;
   final CategoriesDao _categories;
@@ -234,6 +242,116 @@ class CategoryService {
         newValue: {'is_active': false},
       );
       return const Ok<void>(null);
+    });
+  }
+
+  /// Pasifleştirilmiş kategoriyi yeniden aktifleştirir — **REQ-CAT-007 ·
+  /// EC-CAT-007 (OD-020).**
+  ///
+  /// Pasifleştirme tek yönlü olsaydı yanlışlıkla pasifleştirilen bir kategori
+  /// kalıcı olarak kullanılamaz hale gelirdi: kategori adı benzersizliği pasif
+  /// kayıtları da kapsadığı için (REQ-CAT-005) kullanıcı aynı adla yenisini de
+  /// oluşturamazdı.
+  ///
+  /// `Genel` sistem kategorisi zaten pasifleştirilemez (BR-CAT-004), bu yüzden
+  /// burada ayrı bir korumaya ihtiyaç yoktur — pasif bir sistem kategorisi
+  /// oluşamaz.
+  ///
+  /// Zaten aktif kayıt için işlem yinelenmez; veri değişmediği için audit
+  /// kaydı da üretilmez (docs/18 §4).
+  Future<Result<void>> activate(int id, {int? userId}) async {
+    final now = _clock().toUtc();
+
+    return _db.transaction(() async {
+      final current = await _categories.findById(id);
+      if (current == null) return const Err<void>(CategoryFailures.notFound);
+      if (current.isActive) return const Ok<void>(null);
+
+      await _categories.setActive(id, true);
+      await _writeAudit(
+        action: actionActivated,
+        now: now,
+        userId: userId,
+        entityId: id,
+        oldValue: {'is_active': false},
+        newValue: {'is_active': true},
+      );
+      return const Ok<void>(null);
+    });
+  }
+
+  /// Kaynak kategorideki tüm ürünleri hedef kategoriye taşır — **REQ-CAT-004 ·
+  /// docs/10 §1.4 · EC-CAT-004 (OD-018).**
+  ///
+  /// ```text
+  /// Tek transaction:
+  ///   products.category_id  : kaynak → hedef   (tek UPDATE)
+  ///   audit_logs            : categoryProductsMoved (TEK kayıt)
+  /// ```
+  ///
+  /// **Geçmiş satışlar etkilenmez.** `sale_items.category_id_snapshot` satış
+  /// anındaki kategoriyi taşır (rules/02 §3) ve burada **okunmaz da,
+  /// yazılmaz da** — kategori raporu geçmişe dönük değişmez. Taşıma zaten bu
+  /// yüzden güvenlidir.
+  ///
+  /// Audit'e ürün başına kayıt yazılmaz: docs/10 §1.4 "tek bir toplu kayıt"
+  /// der; 500 ürünlük bir taşıma denetim izini okunamaz hale getirirdi.
+  ///
+  /// ## Reddedilen durumlar
+  ///
+  /// | Durum | Sebep |
+  /// |---|---|
+  /// | Kaynak = hedef | Anlamsız; sessizce başarı dönmek kullanıcıyı yanıltır |
+  /// | Kaynak veya hedef yok | `notFound` |
+  /// | **Hedef pasif** | Pasif kategoriye yeni ürün atanamaz (docs/10 §1.3) |
+  ///
+  /// Hedefin pasif olamayacağı docs/10 §1.3'ten türetilmiştir: "Yeni ürün
+  /// ataması: kategori seçim listesinde görünmez." Toplu taşıma da bir
+  /// atamadır; pasif kategoriye izin vermek o kuralı dolanmak olurdu.
+  ///
+  /// Kaynağın pasif olması **engel değildir** — pasifleştirilmiş bir
+  /// kategorinin ürünlerini toparlamak akışın ta kendisidir (docs/10 §1.3).
+  Future<Result<int>> moveProducts({
+    required int fromCategoryId,
+    required int toCategoryId,
+    int? userId,
+  }) async {
+    final now = _clock().toUtc();
+
+    return _db.transaction(() async {
+      if (fromCategoryId == toCategoryId) {
+        return const Err<int>(CategoryFailures.sameCategory);
+      }
+
+      final from = await _categories.findById(fromCategoryId);
+      if (from == null) return const Err<int>(CategoryFailures.notFound);
+
+      final to = await _categories.findById(toCategoryId);
+      if (to == null) return const Err<int>(CategoryFailures.notFound);
+      if (!to.isActive) {
+        return const Err<int>(CategoryFailures.targetInactive);
+      }
+
+      final moved = await _categories.moveProductsTo(
+        fromCategoryId: fromCategoryId,
+        toCategoryId: toCategoryId,
+      );
+
+      await _writeAudit(
+        action: actionProductsMoved,
+        now: now,
+        userId: userId,
+        entityId: fromCategoryId,
+        metadata: {
+          'from_category_id': fromCategoryId,
+          'from_category_name': from.name,
+          'to_category_id': toCategoryId,
+          'to_category_name': to.name,
+          'product_count': moved,
+        },
+      );
+
+      return Ok<int>(moved);
     });
   }
 

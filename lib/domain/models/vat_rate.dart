@@ -3,9 +3,10 @@
 /// Saf Dart (rules/01 §1). Gerekçesi `domain/models/category.dart` başlığındaki
 /// ile aynıdır: docs/04 §1 KDV oranını entity envanterinde sayar (#4).
 ///
-/// - **BR-VAT-001:** oranlar veritabanında yönetilir; koda gömülmez.
-/// - **docs/08 §3:** hiçbir oran **seed edilmez**; kullanıcı kendi oranlarını
-///   tanımlar.
+/// - **BR-VAT-001:** oranlar veritabanında yönetilir; **mevzuata bağlı**
+///   oranlar koda gömülmez.
+/// - **docs/08 §3 · OD-017:** kurulumda yalnızca nötr `%0 — KDV Yok` oranı
+///   oluşturulur; kullanıcı kendi oranlarını sonradan tanımlar.
 /// - **docs/08 §4:** oran kaydı **silinmez**; yalnızca pasifleştirilir.
 library;
 

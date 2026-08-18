@@ -27,6 +27,10 @@ void main() {
   late AuditLogsDao auditLogs;
   late int userId;
 
+  /// Kurulumda seed edilen `%0 — KDV Yok` oranı (OD-017) — testlerin çoğu
+  /// artık boş bir tabloyla değil, bu tek kayıtla başlar.
+  late int neutralRateId;
+
   setUp(() async {
     db = memoryDatabase();
     vatRates = VatRatesDao(db);
@@ -38,6 +42,7 @@ void main() {
       clock: () => testEpochUtc,
     );
     userId = await insertTestUser(db);
+    neutralRateId = (await vatRates.listAll()).single.id;
   });
 
   tearDown(() async => db.close());
@@ -56,12 +61,31 @@ void main() {
     return rows.map((r) => r.id).toList();
   }
 
-  group('BR-VAT-001 · REQ-VAT-002 — hiçbir oran SEED EDİLMEZ', () {
-    test('temiz kurulumda vat_rates tablosu BOŞTUR', () async {
-      expect(await vatRates.countAll(), 0);
-      expect(await service.list(), isEmpty);
-      expect(await service.defaultRate(), isNull);
-      expect(await service.isVatDisabled(), isTrue);
+  group('BR-VAT-001 · REQ-VAT-002 · OD-017 — yalnızca nötr %0 seed edilir', () {
+    test('temiz kurulumda tek bir %0 oranı vardır ve varsayılandır', () async {
+      expect(await vatRates.countAll(), 1);
+
+      final only = (await service.list()).single;
+      expect(only.rateBasisPoints, 0);
+      expect(only.isDefault, isTrue);
+      expect(only.isActive, isTrue);
+      expect((await service.defaultRate())?.id, only.id);
+    });
+
+    test('BR-VAT-005: kullanıcı oran tanımlamadıkça KDV KAPALIDIR', () async {
+      expect(
+        await service.isVatDisabled(),
+        isTrue,
+        reason: 'Tek oran %0 ise KDV alanları gizlenir (docs/08 §3).',
+      );
+
+      await service.create(name: 'Standart', rateBasisPoints: 2000);
+
+      expect(
+        await service.isVatDisabled(),
+        isFalse,
+        reason: 'Kullanıcı gerçek bir oran tanımlayınca KDV açılır.',
+      );
     });
 
     test('okuma çağrıları kendiliğinden oran ÜRETMEZ', () async {
@@ -69,20 +93,28 @@ void main() {
       await service.defaultRate();
       await service.isVatDisabled();
 
-      expect(await vatRates.countAll(), 0);
+      expect(await vatRates.countAll(), 1);
     });
 
-    test('seed kaynağında KDV oranı yazan bir satır YOK', () {
-      // Koda gömülü oran yasağı (BR-VAT-001) kaynak seviyesinde de korunur.
+    test('seed MEVZUATA BAĞLI hiçbir oran yazmaz (BR-VAT-001)', () {
+      // BR-VAT-001'in koruduğu şey %20/%10/%1 gibi mevzuat değerlerinin koda
+      // yazılmasıdır. Kaynak seviyesinde korunur: seed.dart'taki her
+      // `rateBasisPoints` literali SIFIR olmalıdır.
       final seed = File('lib/data/db/seed.dart').readAsStringSync();
-      expect(seed.toLowerCase(), isNot(contains('vatrate')));
-      expect(seed.toLowerCase(), isNot(contains('vat_rate')));
-      expect(seed, isNot(contains('basisPoint')));
+      final literals = RegExp(
+        r'rateBasisPoints:\s*(-?\d+)',
+      ).allMatches(seed).map((m) => m.group(1)).toList();
+
+      expect(literals, isNotEmpty, reason: 'OD-017: %0 oranı seed edilir.');
+      expect(
+        literals,
+        everyElement('0'),
+        reason: 'Sıfırdan farklı bir oran seed edilemez.',
+      );
     });
 
-    test('BR-VAT-005: oran yokken KDV hesabı sıfırdır', () async {
-      // Varsayılan oran yoksa KDV `%0` kabul edilir (docs/08 §4).
-      expect(await service.defaultRate(), isNull);
+    test('BR-VAT-005: %0 varsayılanıyla KDV hesabı sıfırdır', () async {
+      expect((await service.defaultRate())!.rateBasisPoints, 0);
 
       final breakdown = VatCalculator.fromGross(
         gross: const Money(12000),
@@ -117,15 +149,17 @@ void main() {
     });
 
     test('ad boşsa reddedilir', () async {
+      final before = await vatRates.countAll();
       final result = await service.create(name: ' ', rateBasisPoints: 2000);
       expect(result.failureOrNull?.code, 'vat_rate_name_required');
-      expect(await vatRates.countAll(), 0);
+      expect(await vatRates.countAll(), before, reason: 'Yeni kayıt yok.');
     });
 
     test('negatif oran reddedilir (CHECK(rate_basis_points >= 0))', () async {
+      final before = await vatRates.countAll();
       final result = await service.create(name: 'Hatalı', rateBasisPoints: -1);
       expect(result.failureOrNull?.code, 'vat_rate_invalid');
-      expect(await vatRates.countAll(), 0);
+      expect(await vatRates.countAll(), before, reason: 'Yeni kayıt yok.');
     });
 
     test('%0 oranı geçerlidir (BR-VAT-005 — "KDV Yok")', () async {
@@ -215,7 +249,7 @@ void main() {
       await db
           .update(db.vatRates)
           .write(const VatRatesCompanion(isDefault: Value(true)));
-      expect(await rawDefaultIds(), [first, second]);
+      expect(await rawDefaultIds(), [neutralRateId, first, second]);
 
       expect((await service.setDefault(second)).isOk, isTrue);
       expect(await rawDefaultIds(), [second]);
@@ -231,7 +265,9 @@ void main() {
       final result = await service.setDefault(id);
 
       expect(result.failureOrNull?.code, 'vat_rate_inactive_default');
-      expect(await rawDefaultIds(), isEmpty);
+      expect(await rawDefaultIds(), [
+        neutralRateId,
+      ], reason: 'Varsayılan devredilmemiş olmalıdır.');
     });
 
     test('olmayan oran varsayılan yapılamaz', () async {
@@ -436,6 +472,90 @@ void main() {
         }
       }
       expect(offenders, isEmpty, reason: 'docs/08 §4 ihlali: $offenders');
+    });
+  });
+
+  group('REQ-VAT-011 · OD-020 — yeniden aktifleştirme', () {
+    test('pasif oran yeniden aktifleştirilir ve audit yazılır', () async {
+      final id =
+          (await service.create(name: 'Standart', rateBasisPoints: 2000)
+                  as Ok<int>)
+              .value;
+      await service.deactivate(id);
+
+      expect((await service.activate(id, userId: userId)).isOk, isTrue);
+
+      expect((await service.findById(id))!.isActive, isTrue);
+      expect(await auditOf(VatRateService.actionActivated), hasLength(1));
+    });
+
+    test(
+      'varsayılan bayrağı taşıyan oran aktifleşince invariant korunur',
+      () async {
+        // Seed edilen %0 varsayılandır. Yeni bir oranı varsayılan yapıp
+        // pasifleştirirsek bayrak onda kalır (EC-VAT-002).
+        final id =
+            (await service.create(
+                      name: 'Standart',
+                      rateBasisPoints: 2000,
+                      isDefault: true,
+                    )
+                    as Ok<int>)
+                .value;
+        await service.deactivate(id);
+
+        await service.activate(id);
+
+        expect(
+          await rawDefaultIds(),
+          [id],
+          reason: 'docs/04 §3.4: aynı anda yalnızca bir varsayılan.',
+        );
+      },
+    );
+
+    test('zaten aktif kayıt audit ÜRETMEZ', () async {
+      final id =
+          (await service.create(name: 'Standart', rateBasisPoints: 2000)
+                  as Ok<int>)
+              .value;
+
+      expect((await service.activate(id)).isOk, isTrue);
+
+      expect(await auditOf(VatRateService.actionActivated), isEmpty);
+    });
+  });
+
+  group('EC-VAT-002 / EC-VAT-003 — varsayılan ve silinemezlik', () {
+    test(
+      'EC-VAT-002: varsayılan oran pasifleştirilince bayrak KORUNUR',
+      () async {
+        final neutral = (await service.list()).single;
+        expect(neutral.isDefault, isTrue);
+
+        await service.deactivate(neutral.id);
+
+        expect(
+          await rawDefaultIds(),
+          [neutral.id],
+          reason: 'docs/08 §4: is_default bayrağına dokunulmaz.',
+        );
+        expect(
+          await service.defaultRate(),
+          isNull,
+          reason: 'Arama aktiflik filtreler → sonuç "varsayılan yok" → %0.',
+        );
+      },
+    );
+
+    test('EC-VAT-003: %0 oranı SİLİNEMEZ — silme yolu yok', () {
+      // docs/08 §4: hiçbir KDV oranı silinemez. Kural runtime kontrolü değil,
+      // metodun var olmamasıdır.
+      final source = File(
+        'lib/application/reference/vat_rate_service.dart',
+      ).readAsStringSync();
+      expect(source, isNot(contains('Future<Result<void>> delete')));
+      expect(source, isNot(contains('delete(vatRates)')));
     });
   });
 }

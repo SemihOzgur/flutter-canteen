@@ -432,4 +432,166 @@ void main() {
       );
     });
   });
+
+  group('REQ-CAT-004 · OD-018 — ürünleri başka kategoriye taşıma', () {
+    test('tüm ürünler taşınır ve TEK audit kaydı yazılır', () async {
+      final from = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+      final to = (await service.create(name: 'Atıştırmalık') as Ok<int>).value;
+      for (var i = 0; i < 3; i++) {
+        await insertTestProduct(db, name: 'Ürün $i', categoryId: from);
+      }
+
+      final result = await service.moveProducts(
+        fromCategoryId: from,
+        toCategoryId: to,
+        userId: userId,
+      );
+
+      expect((result as Ok<int>).value, 3);
+
+      final moved = await (db.select(
+        db.products,
+      )..where((pr) => pr.categoryId.equals(to))).get();
+      expect(moved, hasLength(3));
+      expect(
+        await (db.select(
+          db.products,
+        )..where((pr) => pr.categoryId.equals(from))).get(),
+        isEmpty,
+      );
+
+      final logs = await auditOf(CategoryService.actionProductsMoved);
+      expect(
+        logs,
+        hasLength(1),
+        reason: 'docs/10 §1.4: ürün başına değil, TEK toplu kayıt.',
+      );
+      expect(logs.single.metadata, contains('"product_count":3'));
+      expect(logs.single.metadata, contains('Atıştırmalık'));
+    });
+
+    test(
+      'geçmiş satış snapshot\'ı DEĞİŞMEZ — BR-VAT-004 · rules/02 §3',
+      () async {
+        final from = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+        final to =
+            (await service.create(name: 'Atıştırmalık') as Ok<int>).value;
+        final productId = await insertTestProduct(db, categoryId: from);
+        await insertSaleItemWithCategorySnapshot(
+          categoryIdSnapshot: from,
+          productId: productId,
+        );
+
+        await service.moveProducts(fromCategoryId: from, toCategoryId: to);
+
+        final item = await db.select(db.saleItems).getSingle();
+        expect(
+          item.categoryIdSnapshot,
+          from,
+          reason:
+              'Geçmiş kategori raporu taşımadan etkilenmemelidir — snapshot '
+              'satış anındaki kategoriyi taşır.',
+        );
+      },
+    );
+
+    test('EC-CAT-004: hata durumunda HİÇBİR ürün taşınmaz', () async {
+      final from = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+      await insertTestProduct(db, categoryId: from);
+
+      // Var olmayan hedef: taşıma yazılmadan önce reddedilmelidir.
+      final result = await service.moveProducts(
+        fromCategoryId: from,
+        toCategoryId: 9999,
+      );
+
+      expect(result.failureOrNull?.code, 'category_not_found');
+      expect(
+        await (db.select(
+          db.products,
+        )..where((pr) => pr.categoryId.equals(from))).get(),
+        hasLength(1),
+        reason: 'Tam rollback: ürünün kategorisi değişmemiş olmalıdır.',
+      );
+      expect(await auditOf(CategoryService.actionProductsMoved), isEmpty);
+    });
+
+    test('pasif kategoriye taşınamaz — docs/10 §1.3', () async {
+      final from = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+      final to = (await service.create(name: 'Eski') as Ok<int>).value;
+      await insertTestProduct(db, categoryId: from);
+      await service.deactivate(to);
+
+      final result = await service.moveProducts(
+        fromCategoryId: from,
+        toCategoryId: to,
+      );
+
+      expect(result.failureOrNull?.code, 'category_target_inactive');
+      expect(await auditOf(CategoryService.actionProductsMoved), isEmpty);
+    });
+
+    test('kaynak ve hedef aynı olamaz', () async {
+      final id = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+
+      final result = await service.moveProducts(
+        fromCategoryId: id,
+        toCategoryId: id,
+      );
+
+      expect(result.failureOrNull?.code, 'category_same_target');
+    });
+
+    test(
+      'PASİF kaynaktan taşımaya izin verilir — docs/10 §1.3 akışı',
+      () async {
+        final from = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+        final to =
+            (await service.create(name: 'Atıştırmalık') as Ok<int>).value;
+        await insertTestProduct(db, categoryId: from);
+        await service.deactivate(from);
+
+        final result = await service.moveProducts(
+          fromCategoryId: from,
+          toCategoryId: to,
+        );
+
+        expect(
+          (result as Ok<int>).value,
+          1,
+          reason:
+              'Pasifleştirilmiş kategorinin ürünlerini toparlamak akışın ta '
+              'kendisidir.',
+        );
+      },
+    );
+  });
+
+  group('REQ-CAT-007 · EC-CAT-007 · OD-020 — yeniden aktifleştirme', () {
+    test('pasif kategori yeniden aktifleştirilir ve audit yazılır', () async {
+      final id = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+      await service.deactivate(id);
+      expect((await service.findById(id))!.isActive, isFalse);
+
+      expect((await service.activate(id, userId: userId)).isOk, isTrue);
+
+      expect((await service.findById(id))!.isActive, isTrue);
+      expect(await auditOf(CategoryService.actionActivated), hasLength(1));
+    });
+
+    test('zaten aktif kayıt audit ÜRETMEZ', () async {
+      final id = (await service.create(name: 'Şekerleme') as Ok<int>).value;
+
+      expect((await service.activate(id)).isOk, isTrue);
+
+      expect(await auditOf(CategoryService.actionActivated), isEmpty);
+    });
+
+    test('olmayan kategori aktifleştirilemez', () async {
+      expect(
+        (await service.activate(9999)).failureOrNull?.code,
+        'category_not_found',
+      );
+    });
+  });
 }

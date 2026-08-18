@@ -268,6 +268,23 @@ class CategoriesDao extends DatabaseAccessor<CanteenDatabase>
     return row.read(count) ?? 0;
   }
 
+  /// Bir kategorideki **tüm** ürünleri hedef kategoriye taşır — docs/10 §1.4.
+  ///
+  /// Tek `UPDATE` ifadesidir; ürün başına döngü yoktur. Değişen satır sayısını
+  /// döndürür (audit metadata'sındaki ürün sayısı budur).
+  ///
+  /// ⚠️ Transaction **çağıran serviste** açılır (rules/01 §5).
+  Future<int> moveProductsTo({
+    required int fromCategoryId,
+    required int toCategoryId,
+  }) => (update(products)..where((p) => p.categoryId.equals(fromCategoryId)))
+      .write(
+        ProductsCompanion(
+          categoryId: Value(toCategoryId),
+          updatedAt: Value(_now()),
+        ),
+      );
+
   DateTime _now() => attachedDatabase.clock().toUtc();
 }
 
@@ -368,8 +385,9 @@ class SuppliersDao extends DatabaseAccessor<CanteenDatabase>
 // 4 — vat_rates
 // ---------------------------------------------------------------------------
 
-/// BR-VAT-001: oranlar yönetilebilir; **koda gömülmez** (rules/02 §2).
-/// Kurulumda oran **seed edilmez** (docs/08 §3).
+/// BR-VAT-001: oranlar yönetilebilir; **mevzuata bağlı oranlar koda gömülmez
+/// ve seed edilmez** (rules/02 §2). Kurulumda yalnızca nötr `%0 — KDV Yok`
+/// oluşturulur (docs/08 §3 · OD-017).
 ///
 /// docs/08 §4: oran kaydı **silinemez** — geçmiş ürün ilişkileri korunur.
 /// Bu DAO bu yüzden `deleteById` **sunmaz.**
@@ -469,6 +487,25 @@ class VatRatesDao extends DatabaseAccessor<CanteenDatabase>
   Future<int> countAll() async {
     final count = vatRates.id.count();
     final row = await (selectOnly(vatRates)..addColumns([count])).getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  /// Aktif ve **sıfırdan farklı** oran sayısı — BR-VAT-005 · OD-017.
+  ///
+  /// Kurulumda nötr `%0` oranı seed edildiği için (docs/08 §3) `countAll`
+  /// artık "kullanıcı KDV takip ediyor mu" sorusuna cevap veremez; bu sayım
+  /// verir. Karar `VatRateService.isVatDisabled` içindedir — bu DAO yalnızca
+  /// sorgular (rules/01 §1).
+  Future<int> countActiveTaxable() async {
+    final count = vatRates.id.count();
+    final row =
+        await (selectOnly(vatRates)
+              ..addColumns([count])
+              ..where(
+                vatRates.isActive.equals(true) &
+                    vatRates.rateBasisPoints.isBiggerThanValue(0),
+              ))
+            .getSingle();
     return row.read(count) ?? 0;
   }
 

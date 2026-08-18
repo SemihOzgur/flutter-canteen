@@ -303,4 +303,32 @@ void main() {
       expect(offenders, isEmpty, reason: 'BR-SUP-002 ihlali: $offenders');
     });
   });
+
+  group('REQ-SUP-006 · EC-SUP-003 · OD-020 — yeniden aktifleştirme', () {
+    test('pasif tedarikçi yeniden aktifleştirilir ve audit yazılır', () async {
+      final id = (await service.create(name: 'Toptancı') as Ok<int>).value;
+      await service.deactivate(id);
+      expect((await service.findById(id))!.isActive, isFalse);
+
+      expect((await service.activate(id, userId: userId)).isOk, isTrue);
+
+      expect((await service.findById(id))!.isActive, isTrue);
+      expect(await auditOf(SupplierService.actionActivated), hasLength(1));
+    });
+
+    test('zaten aktif kayıt audit ÜRETMEZ', () async {
+      final id = (await service.create(name: 'Toptancı') as Ok<int>).value;
+
+      expect((await service.activate(id)).isOk, isTrue);
+
+      expect(await auditOf(SupplierService.actionActivated), isEmpty);
+    });
+
+    test('olmayan tedarikçi aktifleştirilemez', () async {
+      expect(
+        (await service.activate(9999)).failureOrNull?.code,
+        'supplier_not_found',
+      );
+    });
+  });
 }

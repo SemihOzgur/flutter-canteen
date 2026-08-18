@@ -58,4 +58,19 @@ abstract final class CategoryFailures {
           'Kategoriyi pasife alabilirsiniz; mevcut ürünler etkilenmez.',
     );
   }
+
+  /// REQ-CAT-004 — kaynak ve hedef aynı olamaz.
+  static const Failure sameCategory = Failure(
+    code: 'category_same_target',
+    userMessage:
+        'Ürünler zaten bu kategoride. Taşımak için farklı bir kategori seçin.',
+  );
+
+  /// docs/10 §1.3 — pasif kategoriye yeni ürün ataması yapılamaz.
+  static const Failure targetInactive = Failure(
+    code: 'category_target_inactive',
+    userMessage:
+        'Ürünler pasif bir kategoriye taşınamaz. '
+        'Önce hedef kategoriyi aktifleştirin veya başka bir kategori seçin.',
+  );
 }
