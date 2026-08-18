@@ -13,8 +13,11 @@ import 'package:flutter/material.dart';
 import '../presentation/auth/login_screen.dart';
 import '../presentation/auth/setup_wizard_screen.dart';
 import '../presentation/home/home_screen.dart';
+import '../presentation/settings/category_management_screen.dart';
 import '../presentation/settings/financial_access_settings_screen.dart';
+import '../presentation/settings/supplier_management_screen.dart';
 import '../presentation/settings/user_management_screen.dart';
+import '../presentation/settings/vat_rate_management_screen.dart';
 
 class AppRoutes {
   const AppRoutes._();
@@ -39,11 +42,26 @@ class AppRoutes {
   /// parolasını ister (BR-AUTH-010).
   static const String financialAccessSettings = '/financial-access';
 
+  /// Kategori yönetimi (docs/10 §1 · REQ-CAT-001).
+  ///
+  /// ⚠️ Bu üç referans veri ekranı da finansal erişim kilidinin **dışındadır**
+  /// (BR-AUTH-013 · rules/04 §4 — kilit yalnızca Dashboard ve Raporlar için).
+  static const String categories = '/categories';
+
+  /// Tedarikçi yönetimi (docs/10 §2 · REQ-SUP-001).
+  static const String suppliers = '/suppliers';
+
+  /// KDV oranı yönetimi (docs/08 §4 · REQ-VAT-001).
+  static const String vatRates = '/vat-rates';
+
   static Map<String, WidgetBuilder> routes() => {
     setup: (_) => const SetupWizardScreen(),
     login: (_) => const LoginScreen(),
     home: (_) => const HomeScreen(),
     users: (_) => const UserManagementScreen(),
     financialAccessSettings: (_) => const FinancialAccessSettingsScreen(),
+    categories: (_) => const CategoryManagementScreen(),
+    suppliers: (_) => const SupplierManagementScreen(),
+    vatRates: (_) => const VatRateManagementScreen(),
   };
 }

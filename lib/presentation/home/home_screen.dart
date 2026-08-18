@@ -7,6 +7,9 @@
 /// |---|---|---|
 /// | Kullanıcı Yönetimi | 🔓 kilit dışında | BR-AUTH-014 · docs/17 §11 |
 /// | Finansal Erişim (Ayarlar) | 🔓 kilit dışında | BR-AUTH-014 · EC-DASH-014 |
+/// | Kategoriler | 🔓 kilit dışında | rules/04 §4 · docs/10 §1 |
+/// | Tedarikçiler | 🔓 kilit dışında | rules/04 §4 · docs/10 §2 |
+/// | KDV Oranları | 🔓 kilit dışında | rules/04 §4 · docs/08 §4 |
 /// | Dashboard | 🔒 **kilit arkasında** | BR-AUTH-013 · docs/22 F9 |
 ///
 /// ## Dashboard bağlantısı neden burada
@@ -35,6 +38,9 @@ class HomeScreen extends ConsumerWidget {
     'home_financial_access_button',
   );
   static const Key dashboardButtonKey = Key('home_dashboard_button');
+  static const Key categoriesButtonKey = Key('home_categories_button');
+  static const Key suppliersButtonKey = Key('home_suppliers_button');
+  static const Key vatRatesButtonKey = Key('home_vat_rates_button');
 
   const HomeScreen({super.key});
 
@@ -112,6 +118,27 @@ class HomeScreen extends ConsumerWidget {
                       ).pushNamed(AppRoutes.financialAccessSettings),
                       icon: const Icon(Icons.tune_outlined),
                       label: const Text(AppStringsTr.homeFinancialAccessAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.categoriesButtonKey,
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.categories),
+                      icon: const Icon(Icons.folder_outlined),
+                      label: const Text(AppStringsTr.homeCategoriesAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.suppliersButtonKey,
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.suppliers),
+                      icon: const Icon(Icons.local_shipping_outlined),
+                      label: const Text(AppStringsTr.homeSuppliersAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.vatRatesButtonKey,
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.vatRates),
+                      icon: const Icon(Icons.percent_outlined),
+                      label: const Text(AppStringsTr.homeVatRatesAction),
                     ),
                     OutlinedButton.icon(
                       key: HomeScreen.dashboardButtonKey,

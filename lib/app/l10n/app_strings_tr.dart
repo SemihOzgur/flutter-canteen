@@ -203,6 +203,135 @@ class AppStringsTr {
   static const String homeFinancialAccessAction = 'Finansal Erişim';
   static const String homeDashboardAction = 'Dashboard';
 
+  // ── Faz 3b — ortak durum ve eylemler (docs/10 · docs/08 §4) ──────────────
+  //
+  // Üç referans veri ekranı da (kategori, tedarikçi, KDV oranı) aynı
+  // pasifleştirme/aktifleştirme sözlüğünü kullanır; metin tek yerde yaşar.
+  static const String statusActive = 'Aktif';
+  static const String statusInactive = 'Pasif';
+  static const String deactivateAction = 'Pasife Al';
+  static const String activateAction = 'Yeniden Aktifleştir';
+  static const String deleteAction = 'Sil';
+  static const String changeAction = 'Değiştir';
+
+  // ── Faz 3b — kategoriler (docs/10 §1 · REQ-CAT-001…007) ──────────────────
+  static const String categoriesTitle = 'Kategoriler';
+  static const String categoriesDescription =
+      'Kategoriler satış ekranındaki sıra numarasına göre listelenir. '
+      'Kullanılmış bir kategori silinemez; pasife alınır ve ürünleri '
+      'etkilenmez.';
+  static const String categoryAddTitle = 'Yeni kategori';
+  static const String categoryAddAction = 'Kategori Ekle';
+  static const String categoryNameLabel = 'Kategori adı';
+  static const String categoryNameRequired = 'Kategori adı boş olamaz.';
+  static const String categoryRenameTitle = 'Kategori adını değiştir';
+  static const String categorySortOrderTitle = 'Sıralamayı değiştir';
+  static const String categorySortOrderLabel = 'Sıra numarası';
+  static const String categorySortOrderInvalid =
+      'Sıra numarası tam sayı olmalı. Örnek: 10';
+
+  /// Liste satırındaki sıra bilgisi.
+  static String categorySortOrderValue(int sortOrder) => 'Sıra $sortOrder';
+
+  /// BR-CAT-004 · EC-CAT-001 — sebep açıklanır; eylem gizlenmez, devre dışıdır.
+  static const String categorySystemBadge = 'Sistem kategorisi';
+  static const String categorySystemHint =
+      '"Genel" sistem kategorisidir: adı değiştirilemez, pasife alınamaz ve '
+      'silinemez. Ürüne kategori seçilmediğinde bu kategori kullanılır.';
+
+  static const String categoryCreated = 'Kategori eklendi.';
+  static const String categoryRenamed = 'Kategori adı güncellendi.';
+  static const String categorySortOrderUpdated = 'Sıralama güncellendi.';
+  static const String categoryDeactivated = 'Kategori pasife alındı.';
+  static const String categoryActivated = 'Kategori yeniden aktifleştirildi.';
+  static const String categoryDeleted = 'Kategori silindi.';
+
+  /// REQ-CAT-006 — kalıcı silme geri alınamaz; onay metni bunu söyler.
+  static const String categoryDeleteTitle = 'Kategoriyi sil';
+  static String categoryDeleteConfirm(String name) =>
+      '"$name" kategorisi kalıcı olarak silinecek. Bu işlem geri alınamaz.';
+
+  /// docs/10 §1.3 — pasifleştirme öncesi bilgi: ürün sayısı gösterilir.
+  static const String categoryDeactivateTitle = 'Kategoriyi pasife al';
+  static String categoryDeactivateMessage(String name, int productCount) =>
+      productCount > 0
+      ? '"$name" kategorisi pasife alınacak. Bu kategoride $productCount ürün '
+            'var. Ürünler etkilenmeyecek, satılmaya devam edecek. Yalnızca '
+            'yeni ürünlere bu kategori atanamayacak.'
+      : '"$name" kategorisi pasife alınacak. Bu kategoride ürün yok. '
+            'Yalnızca yeni ürünlere bu kategori atanamayacak.';
+
+  /// REQ-CAT-004 — docs/10 §1.4 toplu taşıma.
+  static const String categoryMoveProductsAction =
+      'Ürünleri başka kategoriye taşı';
+  static const String categoryMoveTargetTitle = 'Hedef kategoriyi seçin';
+  static const String categoryMoveTargetDescription =
+      'Ürünler seçtiğiniz kategoriye taşınır. Geçmiş satışların kategori '
+      'raporu değişmez. Yalnızca aktif kategoriler listelenir.';
+  static const String categoryMoveNoTarget =
+      'Taşınabilecek başka aktif kategori yok. Önce yeni bir kategori ekleyin.';
+  static String categoryProductsMoved(int count, String targetName) =>
+      '$count ürün "$targetName" kategorisine taşındı.';
+
+  // ── Faz 3b — tedarikçiler (docs/10 §2 · REQ-SUP-001/002/006) ─────────────
+  static const String suppliersTitle = 'Tedarikçiler';
+  static const String suppliersDescription =
+      'Tedarikçi silinemez; yalnızca pasife alınır. Bağlı ürünler ve geçmiş '
+      'stok girişleri korunur.';
+  static const String suppliersEmpty =
+      'Henüz tedarikçi yok. Yeni bir tedarikçi ekleyin.';
+  static const String supplierAddTitle = 'Yeni tedarikçi';
+  static const String supplierAddAction = 'Tedarikçi Ekle';
+  static const String supplierEditTitle = 'Tedarikçiyi düzenle';
+
+  /// REQ-SUP-001 — yalnızca ad zorunludur; etiketler bunu görünür kılar.
+  static const String supplierNameLabel = 'Tedarikçi adı';
+  static const String supplierNameRequired = 'Tedarikçi adı boş olamaz.';
+  static const String supplierContactNameLabel = 'Yetkili kişi (opsiyonel)';
+  static const String supplierPhoneLabel = 'Telefon (opsiyonel)';
+  static const String supplierEmailLabel = 'E-posta (opsiyonel)';
+  static const String supplierAddressLabel = 'Adres (opsiyonel)';
+  static const String supplierNoteLabel = 'Not (opsiyonel)';
+  static const String supplierCreated = 'Tedarikçi eklendi.';
+  static const String supplierUpdated = 'Tedarikçi güncellendi.';
+  static const String supplierDeactivated = 'Tedarikçi pasife alındı.';
+  static const String supplierActivated = 'Tedarikçi yeniden aktifleştirildi.';
+
+  // ── Faz 3b — KDV oranları (docs/08 §4 · REQ-VAT-001/010/011) ─────────────
+  static const String vatRatesTitle = 'KDV Oranları';
+  static const String vatRatesDescription =
+      'Satış fiyatları KDV dahildir. Oran kaydı silinemez; yalnızca pasife '
+      'alınır. Oran değişikliği geçmiş satışların KDV tutarını değiştirmez.';
+  static const String vatRateAddTitle = 'Yeni KDV oranı';
+  static const String vatRateAddAction = 'KDV Oranı Ekle';
+  static const String vatRateEditTitle = 'KDV oranını düzenle';
+  static const String vatRateNameLabel = 'Oran adı';
+  static const String vatRateNameRequired = 'KDV oranı adı boş olamaz.';
+  static const String vatRateValueLabel = 'Oran';
+  static const String vatRateValueHint = 'Örnek: 20 veya 0,5';
+  static const String vatRateValueRequired = 'KDV oranı boş olamaz.';
+  static const String vatRateDefaultBadge = 'Varsayılan';
+
+  /// BR-VAT-006 · EC-VAT-001 — pasif satırda bu eylem sunulmaz.
+  static const String vatRateSetDefaultAction = 'Varsayılan yap';
+  static const String vatRateCreated = 'KDV oranı eklendi.';
+  static const String vatRateUpdated = 'KDV oranı güncellendi.';
+  static const String vatRateDefaultUpdated =
+      'Varsayılan KDV oranı güncellendi.';
+  static const String vatRateDeactivated = 'KDV oranı pasife alındı.';
+  static const String vatRateActivated = 'KDV oranı yeniden aktifleştirildi.';
+
+  /// docs/08 §4 — oran DEĞERİ değişiyorsa kaydetmeden önce gösterilir.
+  static const String vatRateChangeWarningTitle = 'Oran değişikliği';
+  static String vatRateChangeWarning(int productCount) =>
+      'Bu oran $productCount üründe kullanılıyor. Değişiklik yalnızca bundan '
+      'sonraki satışları etkiler. Geçmiş satışların KDV tutarları değişmez.';
+
+  // ── Faz 3b — ana ekran gezinme ───────────────────────────────────────────
+  static const String homeCategoriesAction = 'Kategoriler';
+  static const String homeSuppliersAction = 'Tedarikçiler';
+  static const String homeVatRatesAction = 'KDV Oranları';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

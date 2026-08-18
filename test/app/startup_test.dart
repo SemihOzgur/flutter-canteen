@@ -281,10 +281,14 @@ void main() {
         // Faz 3a — docs/17 §8, §9, §11.
         AppRoutes.users,
         AppRoutes.financialAccessSettings,
+        // Faz 3b — docs/10 §1, §2 · docs/08 §4.
+        AppRoutes.categories,
+        AppRoutes.suppliers,
+        AppRoutes.vatRates,
       });
       expect(
         routes.length,
-        5,
+        8,
         reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
       );
     });
