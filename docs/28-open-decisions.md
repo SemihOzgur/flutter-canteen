@@ -1,6 +1,6 @@
 # 28 — Karar Kaydı (Decision Log)
 
-> **Doküman sürümü:** v3 (revizyon: 2026-08-13)
+> **Doküman sürümü:** v4 (revizyon: 2026-08-18)
 >
 > ## ✅ AÇIK KARAR KALMAMIŞTIR.
 >
@@ -31,6 +31,10 @@
 | OD-014 | Grafik kütüphanesi | **fl_chart** | v3 |
 | OD-015 | Finansal erişim kilidi süresi | **Oturum boyunca** | v3 |
 | OD-016 | Görsel optimizasyon | **1000 px / JPEG 85**, yapılandırılabilir teknik politika | v3 |
+| **OD-017** | **Kurulumda KDV oranı** | **`%0 — KDV Yok` otomatik oluşturulur ve varsayılan olur** | **v4** |
+| **OD-018** | **Kategori taşıma audit adı** | **`categoryProductsMoved`** | **v4** |
+| **OD-019** | **Pasif KDV oranı varsayılan olabilir mi** | **Hayır — reddedilir** | **v4** |
+| **OD-020** | **Kategori/tedarikçi/KDV yeniden aktifleştirme** | **Desteklenir** | **v4** |
 
 **Ek olarak v3'te kesinleşen iki yeni gereksinim** (açık karar olarak hiç durmadılar):
 
@@ -242,6 +246,85 @@ canteen_backup.canteenbackup
 **Kesin olan kısım:** Optimizasyon **import sırasında** yapılır ve **orijinal büyük görsel saklanmaz.** Yalnızca optimize edilmiş dosya diskte tutulur.
 
 **Etki:** BR-IMG-002. [21](21-image-storage.md).
+
+---
+
+### OD-017 — Kurulumda `%0 — KDV Yok` oranı oluşturulur
+
+**Karar:** İlk kurulumda `%0 — KDV Yok` adında tek bir KDV oranı **otomatik oluşturulur** ve
+`is_default = true` olarak işaretlenir. Kullanıcının KDV takibi için hiçbir şey tanımlaması
+gerekmez. Kullanıcı dilediği zaman Ayarlar → KDV Oranları'ndan yeni oran ekleyebilir, mevcut
+oranı düzenleyebilir ve ürün eklerken/düzenlerken ürünün oranını değiştirebilir.
+
+**Çözülen çelişki:** [08 §3](08-vat-rules.md) kendi içinde tutarsızdı — aynı bölüm hem
+"Hiçbir KDV oranı önceden seed edilmez" diyor, hem de "Kullanıcı hiç oran tanımlamazsa
+`%0 — KDV Yok` adında tek bir varsayılan oran oluşturulur" diyordu. İkincisinin **kim
+tarafından ve ne zaman** yapılacağı hiçbir dokümanda tanımlı değildi.
+
+**Neden bu yön:** BR-VAT-001'in koruduğu şey **mevzuata bağlı bir değeri koda yazmamaktır**
+— yani `%20`, `%10`, `%1` gibi oranların varsayılması. `%0` mevzuata bağlı bir oran değil,
+KDV aritmetiğinin **nötr elemanıdır**: `vat = total × 0 / (10000 + 0) = 0`. Seed edilmesi
+hiçbir vergi varsayımı yapmaz; yalnızca "KDV takip etmeyen kantin" senaryosunu kurulumdan
+itibaren çalışır kılar. Alternatif — kullanıcıyı kurulumda oran tanımlamaya zorlamak —
+KDV takip etmek istemeyen kullanıcıya anlamsız bir adım dayatırdı.
+
+**Etki:** BR-VAT-001 ve BR-VAT-005 metni güncellendi · REQ-VAT-002 ve REQ-VAT-005 güncellendi ·
+[08 §3](08-vat-rules.md) seed politikası yeniden yazıldı · `.claude/rules/02 §2` yasak
+listesinden "Kurulumda KDV oranı seed etmek" çıkarıldı · `Seed.apply` `%0 — KDV Yok` oranını
+`Genel` kategorisiyle aynı idempotent yolla oluşturur.
+
+---
+
+### OD-018 — Kategori taşıma audit action adı: `categoryProductsMoved`
+
+**Karar:** Kategori birleştirme (ürünleri başka kategoriye taşıma) işleminin audit action adı
+**`categoryProductsMoved`**'dur.
+
+**Çözülen çelişki:** [10 §1.4](10-category-brand-supplier.md) bu olayı `categoryMerge` olarak
+adlandırıyordu; [18 §3](18-audit-log.md) ise `categoryProductsMoved` diyordu. `audit_logs.action`
+kalıcı bir literal olduğu için iki ad aynı anda geçerli olamaz.
+
+**Neden bu yön:** Audit action adları [18](18-audit-log.md)'in kendi konusudur ve orada bir
+tabloda sistematik olarak listelenmiştir; [10 §1.4](10-category-brand-supplier.md)'teki geçiş
+parantez içi bir yan nottur. Ayrıca ad, yapılan işi daha doğru anlatır: "merge" kaynak
+kategorinin yok olduğunu ima eder, oysa kategori silinmez — yalnızca ürünleri taşınır ve
+kendisi pasifleştirilebilir.
+
+**Etki:** [10 §1.4](10-category-brand-supplier.md) düzeltildi. [18](18-audit-log.md) zaten doğruydu.
+
+---
+
+### OD-019 — Pasif KDV oranı varsayılan yapılamaz
+
+**Karar:** `is_active = false` olan bir KDV oranı **varsayılan olarak atanamaz**; işlem
+kullanıcıya görünür bir hata ile reddedilir.
+
+**Neden:** Varsayılan oran araması aktiflik filtreler (`is_default AND is_active`). Pasif bir
+oranın varsayılan yapılmasına izin verilseydi, sistem "varsayılan oran yok" durumuna düşer ve
+[08 §4](08-vat-rules.md) gereği **KDV sessizce %0 kabul edilirdi.** Kullanıcı bir oran seçtiğini
+sanırken ürünlerinin KDV'si sıfırlanırdı. Para davranışındaki sessiz değişiklik kabul edilemez;
+hata görünür olmalıdır.
+
+**Etki:** [08 §4](08-vat-rules.md)'e kural eklendi. REQ-VAT-010 eklendi.
+
+---
+
+### OD-020 — Kategori, tedarikçi ve KDV oranı yeniden aktifleştirilebilir
+
+**Karar:** Pasifleştirilmiş kategori, tedarikçi ve KDV oranı **yeniden aktifleştirilebilir.**
+Audit action'ları: `categoryActivated` · `supplierActivated` · `vatRateActivated`.
+
+**Neden:** Dokümanlar bu üç entity için yalnızca pasifleştirmeyi tanımlıyordu; yeniden
+aktifleştirme hiçbir yerde geçmiyordu (yalnızca ürün için `productActivated` vardı). Bu,
+pasifleştirmeyi tek yönlü ve geri alınamaz yapıyordu: yanlışlıkla pasifleştirilen bir kategori
+kalıcı olarak kullanılamaz hale gelirdi. Kategori adı benzersizliği pasif kayıtları da
+kapsadığı için (REQ-CAT-005) kullanıcı aynı adla yenisini de oluşturamazdı — yani hatadan
+çıkış yolu yoktu.
+
+`Genel` sistem kategorisi zaten pasifleştirilemediği için (BR-CAT-004) bu karardan etkilenmez.
+
+**Etki:** REQ-CAT-007, REQ-SUP-006, REQ-VAT-011 eklendi · [10 §1.1, §2.1](10-category-brand-supplier.md)
+tabloları güncellendi · [18 §3](18-audit-log.md)'e üç action eklendi.
 
 ---
 

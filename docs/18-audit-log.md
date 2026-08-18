@@ -77,10 +77,10 @@ KÖTÜ:
 ### Kategori / Tedarikçi / KDV
 | Action | metadata |
 |---|---|
-| `categoryCreated` / `categoryRenamed` / `categoryDeactivated` | — |
+| `categoryCreated` / `categoryRenamed` / `categoryDeactivated` / `categoryActivated` | — |
 | `categoryProductsMoved` | kaynak, hedef, ürün sayısı |
-| `supplierCreated` / `supplierUpdated` / `supplierDeactivated` | — |
-| `vatRateCreated` / `vatRateChanged` / `vatRateDeactivated` | eski/yeni oran, etkilenen ürün sayısı |
+| `supplierCreated` / `supplierUpdated` / `supplierDeactivated` / `supplierActivated` | — |
+| `vatRateCreated` / `vatRateChanged` / `vatRateDeactivated` / `vatRateActivated` | eski/yeni oran, etkilenen ürün sayısı |
 
 ### Sistem / Veri
 | Action | metadata |

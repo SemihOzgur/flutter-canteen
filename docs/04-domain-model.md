@@ -133,7 +133,8 @@ düşük maliyetli bir genişleme yolu tanımlanmıştır.
 | isActive | bool | |
 | createdAt / updatedAt | datetime | |
 
-Seed edilmez ([08 §3](08-vat-rules.md)).
+Kurulumda yalnızca nötr `%0 — KDV Yok` oranı seed edilir ve varsayılan olur; mevzuata bağlı
+oranlar (%20, %10 …) seed **edilmez** ([08 §3](08-vat-rules.md) · OD-017).
 
 ### 3.5 Product
 

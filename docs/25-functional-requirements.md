@@ -125,14 +125,16 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | ID | Özet | Ö | Faz |
 |---|---|---|---|
 | REQ-VAT-001 | KDV oranları yönetilebilir | 🔴 M | 3 |
-| REQ-VAT-002 | Oran koda gömülmez / seed edilmez | 🔴 M | 3 |
+| REQ-VAT-002 | **Mevzuata bağlı** oran koda gömülmez / seed edilmez; kurulumda yalnızca `%0` (OD-017) | 🔴 M | 3 |
 | REQ-VAT-003 | Satır bazında oran snapshot'ı | 🔴 M | 5 |
 | REQ-VAT-004 | Oran değişikliği geçmişi bozmaz | 🔴 M | 5 |
-| REQ-VAT-005 | Oran yoksa KDV'siz çalışır | 🟡 S | 3 |
+| REQ-VAT-005 | Kullanıcı oran tanımlamadıkça KDV'siz çalışır (`%0` varsayılan) | 🟡 S | 3 |
 | REQ-VAT-006 | KDV raporu snapshot üzerinden | 🟡 S | 8 |
 | **REQ-VAT-007** | **Satış fiyatı KDV dahil; sepet toplamı = girilen fiyatlar** | 🔴 M | 1 |
 | **REQ-VAT-008** | **KDV, satır bazında brüt tutardan çıkarılır** | 🔴 M | 1 |
 | **REQ-VAT-009** | **Kâr KDV hariç matrah üzerinden** | 🔴 M | 5 |
+| **REQ-VAT-010** | **Pasif oran varsayılan yapılamaz** (BR-VAT-006 · OD-019) | 🔴 M | 3 |
+| **REQ-VAT-011** | **Pasif oran yeniden aktifleştirilebilir** (OD-020) | 🟡 S | 3 |
 
 ## PROD — Ürün · [09](09-product-management.md)
 
@@ -164,11 +166,13 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-CAT-004 | Ürünleri başka kategoriye taşıma | 🟢 C | 3 |
 | REQ-CAT-005 | Kategori adı benzersiz | 🟡 S | 3 |
 | **REQ-CAT-006** | **Hiç kullanılmamış kategori kalıcı silinebilir** | 🟡 S | 3 |
+| **REQ-CAT-007** | **Pasif kategori yeniden aktifleştirilebilir** (OD-020) | 🟡 S | 3 |
 | REQ-SUP-001 | Yalnızca ad ile tedarikçi | 🔴 M | 3 |
 | REQ-SUP-002 | Tedarikçi silinemez | 🔴 M | 3 |
 | REQ-SUP-003 | Tedarikçi detayında ürün ve girişler | 🟡 S | 6 |
 | REQ-SUP-004 | Tedarikçi opsiyonel | 🔴 M | 3 |
 | **REQ-SUP-005** | **Marka/birim serbest metin; entity'ye dönüştürülebilir** | 🟡 S | 3 |
+| **REQ-SUP-006** | **Pasif tedarikçi yeniden aktifleştirilebilir** (OD-020) | 🟡 S | 3 |
 
 ## BARC — Barkod · [11](11-barcode-system.md)
 

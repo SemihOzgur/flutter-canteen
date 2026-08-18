@@ -146,11 +146,12 @@
 
 | ID | Kural |
 |---|---|
-| BR-VAT-001 | KDV oranları veritabanında yönetilir; koda gömülmez ve seed edilmez. |
+| BR-VAT-001 | KDV oranları veritabanında yönetilir; **mevzuata bağlı oranlar** (%20, %10, %1 …) koda gömülmez ve seed edilmez. Kurulumda yalnızca nötr `%0 — KDV Yok` oranı oluşturulur (OD-017). |
 | BR-VAT-002 | Her `SaleItem` kendi KDV oranının snapshot'ını taşır. |
 | **BR-VAT-003** | **Ürünün satış fiyatı KDV DAHİLDİR.** Kullanıcı ₺120 girdiğinde müşteriden alınan tutar ₺120'dir. |
 | BR-VAT-004 | KDV oranı değişikliği geçmiş satışların KDV tutarını değiştirmez. |
-| BR-VAT-005 | Sistemde tanımlı KDV oranı yoksa uygulama KDV'siz çalışır ve KDV alanları gizlenir. |
+| BR-VAT-005 | Kullanıcı kendi oranlarını tanımlamadığı sürece uygulama **KDV'siz çalışır**: kurulumda oluşturulan `%0 — KDV Yok` varsayılandır, KDV alanları gizlenir ve `vat = 0`, `net = total` kaydedilir (OD-017). |
+| **BR-VAT-006** | **Pasif bir KDV oranı varsayılan olarak atanamaz** — atanabilseydi varsayılan araması aktiflik filtrelediği için KDV sessizce %0'a düşerdi (OD-019). |
 
 Detay ve formüller: [08 — VAT Rules](08-vat-rules.md).
 

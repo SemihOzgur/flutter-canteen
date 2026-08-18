@@ -35,7 +35,7 @@ Her edge case: **durum → beklenen davranış**. Bu liste test senaryolarının
 | EC-PROD-022 | Kalıcı silinen ürünün barkodu yeni bir ürüne atanıyor | İzin verilir (barkod artık serbest) |
 | EC-PROD-023 | Ürün fiyatı KDV dahil ₺120 giriliyor, KDV oranı yok | `line_vat = 0`, `line_net = line_total = 12000` (BR-VAT-005) |
 
-## 2. Kategori / Tedarikçi
+## 2. Kategori / Tedarikçi / KDV
 
 | ID | Durum | Beklenen davranış |
 |---|---|---|
@@ -47,6 +47,11 @@ Her edge case: **durum → beklenen davranış**. Bu liste test senaryolarının
 | EC-CAT-006 | Ürünü olmayan ama geçmiş satış snapshot'ında geçen kategori siliniyor | Kalıcı silme **sunulmaz** — geçmiş kategori raporu bozulur; pasifleştirme önerilir |
 | EC-SUP-001 | Tedarikçi pasifleştiriliyor, bağlı ürünler var | İzin verilir; ürünler etkilenmez |
 | EC-SUP-002 | Tedarikçisiz stok girişi | İzin verilir; `supplier_id = NULL` |
+| **EC-CAT-007** | **Pasif kategori yeniden aktifleştiriliyor** | **İzin verilir; `categoryActivated` audit'e yazılır (OD-020)** |
+| **EC-SUP-003** | **Pasif tedarikçi yeniden aktifleştiriliyor** | **İzin verilir; `supplierActivated` audit'e yazılır (OD-020)** |
+| **EC-VAT-001** | **Pasif KDV oranı varsayılan yapılmaya çalışılıyor** | **Reddedilir; sebep açıklanır — izin verilseydi KDV sessizce %0'a düşerdi (BR-VAT-006 · OD-019)** |
+| **EC-VAT-002** | **Varsayılan olan KDV oranı pasifleştiriliyor** | **İzin verilir; `is_default` bayrağına dokunulmaz. Arama aktiflik filtrelediği için sonuç "varsayılan yok" olur → `%0` (docs/08 §4)** |
+| **EC-VAT-003** | **Kullanıcı `%0 — KDV Yok` oranını siliyor** | **Silinemez — hiçbir KDV oranı silinemez (docs/08 §4). Pasifleştirilebilir; sonuç yine `%0`'dır** |
 
 ## 3. Barkod
 
