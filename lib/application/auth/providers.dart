@@ -40,6 +40,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/logging/app_logger.dart';
 import '../../data/db/providers.dart';
+import '../../domain/models/auth_user.dart';
 import 'auth_service.dart';
 import 'financial_access_service.dart';
 import 'login_throttle.dart';
@@ -128,6 +129,19 @@ final setupServiceProvider = Provider<SetupService>(
     financialAccess: ref.watch(financialAccessProvider),
     recoveryCode: ref.watch(recoveryCodeServiceProvider),
   ),
+);
+
+/// Kullanıcı listesi — kullanıcı yönetimi ekranı bunu izler (docs/17 §11 ·
+/// REQ-AUTH-008).
+///
+/// Pasif kullanıcılar da listelenir: kullanıcı silinmez, yalnızca pasifleşir
+/// (BR-AUTH-006) ve ekran onu yeniden aktif edebilmelidir.
+///
+/// Liste `AuthUser` taşır — `users` satırının aksine parola hash'i ve salt'ı
+/// **yoktur** (BR-SEC-001 · rules/04 §8). Ekran mutasyondan sonra
+/// `ref.invalidate(userListProvider)` ile tazeler.
+final userListProvider = FutureProvider<List<AuthUser>>(
+  (ref) => ref.watch(authServiceProvider).listUsers(),
 );
 
 /// Kurulumun **ilk eksik adımı** — sihirbaz ekranı bunu izler.

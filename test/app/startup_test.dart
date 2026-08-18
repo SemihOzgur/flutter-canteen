@@ -271,15 +271,22 @@ void main() {
   });
 
   group('router', () {
-    test('üç rota tanımlıdır ve adları benzersizdir', () {
+    test('tüm rotalar tanımlıdır ve adları benzersizdir', () {
       final routes = AppRoutes.routes();
 
       expect(routes.keys.toSet(), {
         AppRoutes.setup,
         AppRoutes.login,
         AppRoutes.home,
+        // Faz 3a — docs/17 §8, §9, §11.
+        AppRoutes.users,
+        AppRoutes.financialAccessSettings,
       });
-      expect(routes.length, 3);
+      expect(
+        routes.length,
+        5,
+        reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
+      );
     });
 
     test('resolveInitialRoute yalnızca tanımlı rota döndürür', () async {

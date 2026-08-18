@@ -48,7 +48,6 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/l10n/app_strings_tr.dart';
@@ -56,24 +55,17 @@ import '../../app/router.dart';
 import '../../application/auth/providers.dart';
 import '../../application/auth/setup_service.dart';
 import '../../core/result/result.dart';
-import '../common/form_message.dart';
-import 'package:file_selector/file_selector.dart' as file_selector;
-
 import '../../data/files/text_file_writer.dart';
+import '../common/form_message.dart';
+import '../common/save_location_picker.dart';
+import '../common/step_layout.dart';
 import '../common/submit_button.dart';
+import 'recovery_code_display.dart';
 
-/// Kullanıcıya kayıt konumu sorar; iptal edilirse `null`.
-///
-/// Enjekte edilebilir: widget testi gerçek işletim sistemi dialogu açmaz.
-typedef SaveLocationPicker = Future<String?> Function(String suggestedName);
-
-/// Üretim uygulaması — yerel kayıt dialogu.
-Future<String?> pickSaveLocation(String suggestedName) async {
-  final location = await file_selector.getSaveLocation(
-    suggestedName: suggestedName,
-  );
-  return location?.path;
-}
+/// Kayıt konumu seçici, kurtarma akışıyla **ortaktır**
+/// (`presentation/common/save_location_picker.dart`); bu ekranın API'si
+/// değişmesin diye buradan da görünür kılınır.
+export '../common/save_location_picker.dart';
 
 class SetupWizardScreen extends ConsumerWidget {
   /// Test ve odak doğrulaması için sabit anahtarlar.
@@ -205,45 +197,6 @@ class _SetupWizardFlowState extends ConsumerState<_SetupWizardFlow> {
   }
 }
 
-/// Adımların ortak yerleşimi: başlık, adım sayacı, açıklama ve içerik.
-class _StepLayout extends StatelessWidget {
-  final String stepCounter;
-  final String title;
-  final String description;
-  final List<Widget> children;
-
-  const _StepLayout({
-    required this.stepCounter,
-    required this.title,
-    required this.description,
-    required this.children,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          stepCounter,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.primary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(title, style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Text(description, style: theme.textTheme.bodyMedium),
-        const SizedBox(height: 24),
-        ...children,
-      ],
-    );
-  }
-}
-
 // --- Adım 1 — kullanıcı hesabı (docs/17 §4) ---------------------------------
 
 class _UserStep extends ConsumerStatefulWidget {
@@ -327,7 +280,7 @@ class _UserStepState extends ConsumerState<_UserStep> {
   Widget build(BuildContext context) {
     return Form(
       key: _formKey,
-      child: _StepLayout(
+      child: StepLayout(
         stepCounter: AppStringsTr.setupStepCounterUser,
         title: AppStringsTr.setupStepUser,
         description: AppStringsTr.setupUserStepDescription,
@@ -474,7 +427,7 @@ class _DashboardPasswordStepState
   Widget build(BuildContext context) {
     return Form(
       key: _formKey,
-      child: _StepLayout(
+      child: StepLayout(
         stepCounter: AppStringsTr.setupStepCounterDashboardPassword,
         title: AppStringsTr.setupStepDashboardPassword,
         description: AppStringsTr.setupDashboardStepDescription,
@@ -584,64 +537,11 @@ class _RecoveryCodeStepState extends ConsumerState<_RecoveryCodeStep> {
     });
   }
 
-  Future<void> _copy() async {
-    final code = _code;
-    if (code == null) return;
-
-    await Clipboard.setData(ClipboardData(text: code));
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text(AppStringsTr.setupRecoveryCodeCopied)),
-    );
-  }
-
-  /// REQ-AUTH-022 — kodu kullanıcının seçtiği bir dosyaya yazar.
-  ///
-  /// Konumu **kullanıcı** seçer: uygulama düz metin kurtarma kodunu kendi veri
-  /// dizinine yazmaz (BR-SEC-001 · rules/04 §5). Yazma işini data katmanı yapar
-  /// — presentation dosya sistemine dokunmaz (rules/01 §1).
-  ///
-  /// Bu işlem **"Kodu kaydettim" onayının yerine geçmez** (REQ-AUTH-024):
-  /// dosyaya yazmak kullanıcının kodu gördüğünü ve sakladığını kanıtlamaz.
-  Future<void> _saveToFile() async {
-    final code = _code;
-    if (code == null) return;
-
-    final path = await widget.savePicker(
-      AppStringsTr.setupRecoveryCodeSaveFileName,
-    );
-    // Kullanıcı vazgeçti — sessizce dönülür, hata gösterilmez.
-    if (path == null) return;
-
-    String message;
-    try {
-      await widget.fileWriter(
-        path,
-        AppStringsTr.recoveryCodeFileContents(code),
-      );
-      message = AppStringsTr.setupRecoveryCodeSaved;
-    } on Object catch (error) {
-      // rules/04 §7: dosya yolu ve teknik hata kullanıcıya sızdırılmaz.
-      // Kod da loglanmaz (rules/04 §8) — yalnızca hatanın kendisi.
-      ref
-          .read(appLoggerProvider)
-          ?.error('Kurtarma kodu dosyaya yazılamadı', error: error);
-      message = AppStringsTr.setupRecoveryCodeSaveFailed;
-    }
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final code = _code;
 
-    return _StepLayout(
+    return StepLayout(
       stepCounter: AppStringsTr.setupStepCounterRecoveryCode,
       title: AppStringsTr.setupStepRecoveryCode,
       description: AppStringsTr.setupRecoveryStepDescription,
@@ -657,56 +557,18 @@ class _RecoveryCodeStepState extends ConsumerState<_RecoveryCodeStep> {
             onPressed: _generate,
           ),
         ] else ...[
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: SelectableText(
-              code,
-              key: SetupWizardScreen.recoveryCodeTextKey,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // rules/05 §5: uyarı renkle değil, ikon + metinle de anlatılır.
-          const FormMessage(
-            AppStringsTr.setupRecoveryCodeWarning,
-            kind: FormMessageKind.warning,
-          ),
-          const SizedBox(height: 16),
-          // REQ-AUTH-022: kopyalama VE dosyaya kaydetme seçenekleri sunulur.
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                key: SetupWizardScreen.recoveryCodeCopyButtonKey,
-                onPressed: _copy,
-                icon: const Icon(Icons.copy_outlined),
-                label: const Text(AppStringsTr.setupRecoveryCodeCopy),
-              ),
-              OutlinedButton.icon(
-                key: SetupWizardScreen.recoveryCodeSaveButtonKey,
-                onPressed: _saveToFile,
-                icon: const Icon(Icons.save_outlined),
-                label: const Text(AppStringsTr.setupRecoveryCodeSaveToFile),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          CheckboxListTile(
-            key: SetupWizardScreen.recoveryCodeSavedCheckboxKey,
-            value: _saved,
-            onChanged: (value) => setState(() => _saved = value ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: const Text(AppStringsTr.setupRecoveryCodeSavedConfirm),
+          // Gösterim, kopyalama, dosyaya kaydetme ve onay kutusu kurtarma
+          // akışıyla **ortak** widget'tadır (REQ-AUTH-022/024 · EC-REC-006).
+          RecoveryCodeDisplay(
+            code: code,
+            savedConfirmed: _saved,
+            onSavedChanged: (value) => setState(() => _saved = value),
+            savePicker: widget.savePicker,
+            fileWriter: widget.fileWriter,
+            codeKey: SetupWizardScreen.recoveryCodeTextKey,
+            copyButtonKey: SetupWizardScreen.recoveryCodeCopyButtonKey,
+            saveButtonKey: SetupWizardScreen.recoveryCodeSaveButtonKey,
+            savedCheckboxKey: SetupWizardScreen.recoveryCodeSavedCheckboxKey,
           ),
           const SizedBox(height: 16),
           SubmitButton(

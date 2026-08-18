@@ -11,6 +11,8 @@ import 'package:canteen/app/router.dart';
 import 'package:canteen/data/db/canteen_database.dart'
     hide Product, Sale, SaleItem, StockMovement;
 import 'package:canteen/data/db/providers.dart';
+import 'package:canteen/presentation/auth/financial_access_dialog.dart';
+import 'package:canteen/presentation/home/home_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -57,5 +59,60 @@ void main() {
     await pumpApp(tester, AppRoutes.home);
 
     expect(find.text(AppStringsTr.foundationReady), findsOneWidget);
+  });
+
+  // --- Faz 3a rotaları (docs/17 §8, §9, §11) --------------------------------
+
+  testWidgets('kullanıcı yönetimi rotası ekranı açar', (tester) async {
+    await pumpApp(tester, AppRoutes.users);
+
+    expect(find.text(AppStringsTr.usersTitle), findsOneWidget);
+  });
+
+  testWidgets('finansal erişim ayarları rotası ekranı açar', (tester) async {
+    await pumpApp(tester, AppRoutes.financialAccessSettings);
+
+    expect(find.text(AppStringsTr.financialAccessTitle), findsOneWidget);
+    expect(
+      find.text(AppStringsTr.changeDashboardPasswordTitle),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('ana ekrandan kullanıcı yönetimine gidilir', (tester) async {
+    await pumpApp(tester, AppRoutes.home);
+
+    await tester.tap(find.byKey(HomeScreen.usersButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStringsTr.usersTitle), findsOneWidget);
+  });
+
+  testWidgets('ana ekrandan finansal erişim ayarlarına gidilir', (
+    tester,
+  ) async {
+    await pumpApp(tester, AppRoutes.home);
+
+    await tester.tap(find.byKey(HomeScreen.financialAccessSettingsButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(AppStringsTr.changeDashboardPasswordTitle),
+      findsOneWidget,
+    );
+  });
+
+  /// docs/22 F9 · BR-AUTH-013: Dashboard kilidin arkasındadır — ekran Faz 8'de
+  /// gelecek olsa da kapı bugün çalışır.
+  testWidgets('ana ekranda Dashboard finansal erişim parolası sorar', (
+    tester,
+  ) async {
+    await pumpApp(tester, AppRoutes.home);
+
+    await tester.tap(find.byKey(HomeScreen.dashboardButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FinancialAccessDialog), findsOneWidget);
+    expect(find.text(AppStringsTr.dashboardPlaceholderTitle), findsNothing);
   });
 }

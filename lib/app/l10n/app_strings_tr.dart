@@ -122,6 +122,87 @@ class AppStringsTr {
   static const String passwordMismatch =
       'Parolalar aynı değil. İki alana da aynı parolayı yazın.';
 
+  // ── Faz 3a — ortak eylemler ──────────────────────────────────────────────
+  static const String cancelAction = 'Vazgeç';
+  static const String saveAction = 'Kaydet';
+  static const String okAction = 'Tamam';
+  static const String addAction = 'Ekle';
+  static const String editAction = 'Düzenle';
+
+  // ── Faz 3a — finansal erişim kilidi (docs/17 §7 · docs/22 F9) ────────────
+  static const String financialAccessTitle = 'Finansal Erişim';
+  static const String financialAccessDescription =
+      'Dashboard ve Raporlar için parola gerekiyor.';
+  static const String financialAccessUnlockAction = 'Aç';
+  static const String financialAccessForgotAction = 'Şifremi unuttum';
+
+  /// Faz 8 gelene kadar kilidin arkasında gösterilecek yer tutucu.
+  static const String dashboardPlaceholderTitle = 'Finansal erişim açıldı';
+  static const String dashboardPlaceholderMessage =
+      'Dashboard ve Raporlar ekranları sonraki fazda eklenecek. '
+      'Kilit bu oturum boyunca açık kalır.';
+
+  // ── Faz 3a — kurtarma akışı (docs/17 §8 · docs/22 F10) ───────────────────
+  static const String recoveryTitle = 'Kurtarma Kodu';
+  static const String recoveryStepCounterCode = 'Adım 1 / 3';
+  static const String recoveryStepCounterPassword = 'Adım 2 / 3';
+  static const String recoveryStepCounterNewCode = 'Adım 3 / 3';
+  static const String recoveryCodeStepTitle = 'Kurtarma kodunu girin';
+  static const String recoveryCodeStepDescription =
+      'Kurulumda size verilen kurtarma kodunu girin. '
+      'Büyük/küçük harf ve tire farkı önemli değildir.';
+  static const String recoveryCodeLabel = 'Kurtarma kodu';
+  static const String recoveryCodeHint = 'XXXX-XXXX-XXXX-XXXX';
+  static const String recoveryCodeRequired = 'Kurtarma kodu boş olamaz.';
+  static const String recoveryPasswordStepTitle = 'Yeni dashboard parolası';
+  static const String recoveryPasswordStepDescription =
+      'Kurtarma kodu bu adımda doğrulanır. Doğruysa dashboard parolanız '
+      'yenisiyle değiştirilir ve size yeni bir kurtarma kodu verilir.';
+  static const String newDashboardPasswordLabel = 'Yeni dashboard parolası';
+  static const String newDashboardPasswordConfirmLabel =
+      'Yeni dashboard parolası (tekrar)';
+  static const String recoveryNewCodeStepTitle =
+      'Dashboard parolanız değiştirildi';
+  static const String recoveryNewCodeStepDescription =
+      'Eski kurtarma kodunuz artık geçersiz. Aşağıdaki YENİ kodu saklayın.';
+
+  // ── Faz 3a — Ayarlar → Finansal Erişim (docs/17 §8, §9) ──────────────────
+  static const String financialAccessSettingsDescription =
+      'Dashboard parolanızı değiştirebilir veya yeni bir kurtarma kodu '
+      'üretebilirsiniz.';
+  static const String changeDashboardPasswordTitle =
+      'Dashboard parolasını değiştir';
+  static const String currentDashboardPasswordLabel =
+      'Mevcut dashboard parolası';
+  static const String changeDashboardPasswordAction = 'Parolayı Değiştir';
+  static const String dashboardPasswordChanged =
+      'Dashboard parolası değiştirildi.';
+  static const String regenerateRecoveryCodeTitle = 'Yeni kurtarma kodu üret';
+  static const String regenerateRecoveryCodeDescription =
+      'Mevcut kodunuz bir daha gösterilemez. Yeni kod ürettiğinizde eski kod '
+      'geçersizleşir.';
+  static const String regenerateRecoveryCodeAction = 'Yeni Kurtarma Kodu Üret';
+
+  // ── Faz 3a — kullanıcı yönetimi (docs/17 §11 · REQ-AUTH-008/009) ─────────
+  static const String usersTitle = 'Kullanıcı Yönetimi';
+  static const String usersDescription =
+      'Tüm kullanıcılar aynı yetkilere sahiptir. Kullanıcılar silinemez; '
+      'yalnızca pasifleştirilir.';
+  static const String usersEmpty =
+      'Henüz kullanıcı yok. Yeni bir kullanıcı ekleyin.';
+  static const String userAddTitle = 'Yeni kullanıcı';
+  static const String userAddAction = 'Kullanıcı Ekle';
+  static const String userEditDisplayNameTitle = 'Görünen adı değiştir';
+  static const String userActive = 'Aktif';
+  static const String userInactive = 'Pasif';
+  static const String userCreated = 'Kullanıcı eklendi.';
+  static const String userUpdated = 'Kullanıcı güncellendi.';
+
+  // ── Faz 3a — ana ekran gezinme ───────────────────────────────────────────
+  static const String homeUsersAction = 'Kullanıcı Yönetimi';
+  static const String homeFinancialAccessAction = 'Finansal Erişim';
+  static const String homeDashboardAction = 'Dashboard';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =
