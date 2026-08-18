@@ -17,6 +17,12 @@ class UsersDaoManager {
 
 mixin _$CategoriesDaoMixin on DatabaseAccessor<CanteenDatabase> {
   $CategoriesTable get categories => attachedDatabase.categories;
+  $VatRatesTable get vatRates => attachedDatabase.vatRates;
+  $SuppliersTable get suppliers => attachedDatabase.suppliers;
+  $ProductsTable get products => attachedDatabase.products;
+  $UsersTable get users => attachedDatabase.users;
+  $SalesTable get sales => attachedDatabase.sales;
+  $SaleItemsTable get saleItems => attachedDatabase.saleItems;
   CategoriesDaoManager get managers => CategoriesDaoManager(this);
 }
 
@@ -25,10 +31,25 @@ class CategoriesDaoManager {
   CategoriesDaoManager(this._db);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db.attachedDatabase, _db.categories);
+  $$VatRatesTableTableManager get vatRates =>
+      $$VatRatesTableTableManager(_db.attachedDatabase, _db.vatRates);
+  $$SuppliersTableTableManager get suppliers =>
+      $$SuppliersTableTableManager(_db.attachedDatabase, _db.suppliers);
+  $$ProductsTableTableManager get products =>
+      $$ProductsTableTableManager(_db.attachedDatabase, _db.products);
+  $$UsersTableTableManager get users =>
+      $$UsersTableTableManager(_db.attachedDatabase, _db.users);
+  $$SalesTableTableManager get sales =>
+      $$SalesTableTableManager(_db.attachedDatabase, _db.sales);
+  $$SaleItemsTableTableManager get saleItems =>
+      $$SaleItemsTableTableManager(_db.attachedDatabase, _db.saleItems);
 }
 
 mixin _$SuppliersDaoMixin on DatabaseAccessor<CanteenDatabase> {
   $SuppliersTable get suppliers => attachedDatabase.suppliers;
+  $CategoriesTable get categories => attachedDatabase.categories;
+  $VatRatesTable get vatRates => attachedDatabase.vatRates;
+  $ProductsTable get products => attachedDatabase.products;
   SuppliersDaoManager get managers => SuppliersDaoManager(this);
 }
 
@@ -37,10 +58,19 @@ class SuppliersDaoManager {
   SuppliersDaoManager(this._db);
   $$SuppliersTableTableManager get suppliers =>
       $$SuppliersTableTableManager(_db.attachedDatabase, _db.suppliers);
+  $$CategoriesTableTableManager get categories =>
+      $$CategoriesTableTableManager(_db.attachedDatabase, _db.categories);
+  $$VatRatesTableTableManager get vatRates =>
+      $$VatRatesTableTableManager(_db.attachedDatabase, _db.vatRates);
+  $$ProductsTableTableManager get products =>
+      $$ProductsTableTableManager(_db.attachedDatabase, _db.products);
 }
 
 mixin _$VatRatesDaoMixin on DatabaseAccessor<CanteenDatabase> {
   $VatRatesTable get vatRates => attachedDatabase.vatRates;
+  $CategoriesTable get categories => attachedDatabase.categories;
+  $SuppliersTable get suppliers => attachedDatabase.suppliers;
+  $ProductsTable get products => attachedDatabase.products;
   VatRatesDaoManager get managers => VatRatesDaoManager(this);
 }
 
@@ -49,6 +79,12 @@ class VatRatesDaoManager {
   VatRatesDaoManager(this._db);
   $$VatRatesTableTableManager get vatRates =>
       $$VatRatesTableTableManager(_db.attachedDatabase, _db.vatRates);
+  $$CategoriesTableTableManager get categories =>
+      $$CategoriesTableTableManager(_db.attachedDatabase, _db.categories);
+  $$SuppliersTableTableManager get suppliers =>
+      $$SuppliersTableTableManager(_db.attachedDatabase, _db.suppliers);
+  $$ProductsTableTableManager get products =>
+      $$ProductsTableTableManager(_db.attachedDatabase, _db.products);
 }
 
 mixin _$ProductBarcodesDaoMixin on DatabaseAccessor<CanteenDatabase> {

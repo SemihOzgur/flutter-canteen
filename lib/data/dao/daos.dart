@@ -139,7 +139,14 @@ class UsersDao extends DatabaseAccessor<CanteenDatabase> with _$UsersDaoMixin {
 // 2 — categories
 // ---------------------------------------------------------------------------
 
-@DriftAccessor(tables: [Categories])
+/// `products` ve `sale_items` bu accessor'a **kullanım sayımı** için dâhildir.
+///
+/// BR-CAT-005 · REQ-CAT-006: bir kategori ancak hiçbir ürüne atanmamışsa **ve**
+/// hiçbir satış satırı snapshot'ında geçmiyorsa kalıcı silinebilir. İki sayım
+/// da burada, SQL tarafında yapılır (rules/01 §8 — aggregation Dart'ta değil).
+/// **Karar** DAO'ya ait değildir: sayıları yorumlayan ve silme/pasifleştirme
+/// arasında seçim yapan `CategoryService`'tir (rules/01 §1).
+@DriftAccessor(tables: [Categories, Products, SaleItems])
 class CategoriesDao extends DatabaseAccessor<CanteenDatabase>
     with _$CategoriesDaoMixin {
   CategoriesDao(super.db);
@@ -147,6 +154,10 @@ class CategoriesDao extends DatabaseAccessor<CanteenDatabase>
   Future<Category?> findById(int id) =>
       (select(categories)..where((c) => c.id.equals(id))).getSingleOrNull();
 
+  /// **Ham** eşleşme — `ux_categories_name` ne diyorsa o.
+  ///
+  /// Büyük/küçük harf katlaması **yapılmaz**: benzersizlik kısıtı şemada
+  /// `UNIQUE(name)`'dir (docs/05 §2.2) ve katlama bir şema kararı olurdu.
   Future<Category?> findByName(String name) =>
       (select(categories)
             ..where((c) => c.name.equals(name))
@@ -162,6 +173,17 @@ class CategoriesDao extends DatabaseAccessor<CanteenDatabase>
             ]))
           .get();
 
+  /// **Pasifler dâhil** tüm kategoriler — yönetim ekranı için.
+  ///
+  /// Sıralama [listActive] ile aynıdır: aktif/pasif filtresi değiştiğinde
+  /// satırların yeri değişmesin.
+  Future<List<Category>> listAll() =>
+      (select(categories)..orderBy([
+            (c) => OrderingTerm(expression: c.sortOrder),
+            (c) => OrderingTerm(expression: c.name),
+          ]))
+          .get();
+
   /// BR-CAT-004 — `Genel` sistem kategorisi.
   Future<Category?> findSystemCategory() =>
       (select(categories)
@@ -169,21 +191,95 @@ class CategoriesDao extends DatabaseAccessor<CanteenDatabase>
             ..limit(1))
           .getSingleOrNull();
 
-  Future<int> insertCategory(CategoriesCompanion category) =>
-      into(categories).insert(category);
+  /// Yeni kategori. `isSystem` **yazılmaz**: sistem kategorisi yalnızca
+  /// seed tarafından oluşturulur (BR-CAT-004 · `data/db/seed.dart`).
+  Future<int> insertCategory({
+    required String name,
+    required int sortOrder,
+    required DateTime now,
+  }) => into(categories).insert(
+    CategoriesCompanion.insert(
+      name: name,
+      sortOrder: Value(sortOrder),
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
+
+  Future<int> updateName(int id, String name) =>
+      (update(categories)..where((c) => c.id.equals(id))).write(
+        CategoriesCompanion(name: Value(name), updatedAt: Value(_now())),
+      );
+
+  Future<int> updateSortOrder(int id, int sortOrder) =>
+      (update(categories)..where((c) => c.id.equals(id))).write(
+        CategoriesCompanion(
+          sortOrder: Value(sortOrder),
+          updatedAt: Value(_now()),
+        ),
+      );
+
+  /// BR-CAT-003 — pasifleştirme **yalnızca bu satıra** dokunur; bağlı ürünler
+  /// değişmez. Sistem kategorisi koruması bir iş kuralıdır ve
+  /// `CategoryService`'tedir (rules/01 §1).
+  Future<int> setActive(int id, bool isActive) =>
+      (update(categories)..where((c) => c.id.equals(id))).write(
+        CategoriesCompanion(
+          isActive: Value(isActive),
+          updatedAt: Value(_now()),
+        ),
+      );
+
+  /// BR-CAT-005 — **koşulsuz** siler. Koşul kontrolü çağırana aittir ve
+  /// silmeyle aynı transaction içinde yapılmalıdır (`CategoryService.delete`).
+  Future<int> deleteById(int id) =>
+      (delete(categories)..where((c) => c.id.equals(id))).go();
 
   Future<int> countAll() async {
     final count = categories.id.count();
     final row = await (selectOnly(categories)..addColumns([count])).getSingle();
     return row.read(count) ?? 0;
   }
+
+  /// Bu kategoriye atanmış ürün sayısı — **pasif ürünler dâhil**
+  /// (docs/10 §1.2b: "aktif veya pasif").
+  Future<int> countProducts(int categoryId) async {
+    final count = products.id.count();
+    final row =
+        await (selectOnly(products)
+              ..addColumns([count])
+              ..where(products.categoryId.equals(categoryId)))
+            .getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  /// Bu kategorinin geçtiği satış satırı snapshot'ı sayısı — EC-CAT-006.
+  ///
+  /// `sale_items.category_id_snapshot` satış anındaki kategoriyi taşır
+  /// (rules/02 §3). Kategori satılmış bir satırda geçiyorsa kalıcı silme
+  /// geçmiş kategori raporunu bozar.
+  Future<int> countSaleItemSnapshots(int categoryId) async {
+    final count = saleItems.id.count();
+    final row =
+        await (selectOnly(saleItems)
+              ..addColumns([count])
+              ..where(saleItems.categoryIdSnapshot.equals(categoryId)))
+            .getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  DateTime _now() => attachedDatabase.clock().toUtc();
 }
 
 // ---------------------------------------------------------------------------
 // 3 — suppliers
 // ---------------------------------------------------------------------------
 
-@DriftAccessor(tables: [Suppliers])
+/// BR-SUP-002 · REQ-SUP-002: tedarikçi **silinmez.**
+///
+/// Bu DAO bu yüzden `deleteById` **sunmaz** — kural bir runtime kontrolü değil,
+/// var olmayan bir metottur. Aynı koruma `SupplierService`'te de geçerlidir.
+@DriftAccessor(tables: [Suppliers, Products])
 class SuppliersDao extends DatabaseAccessor<CanteenDatabase>
     with _$SuppliersDaoMixin {
   SuppliersDao(super.db);
@@ -197,8 +293,75 @@ class SuppliersDao extends DatabaseAccessor<CanteenDatabase>
             ..orderBy([(s) => OrderingTerm(expression: s.name)]))
           .get();
 
-  Future<int> insertSupplier(SuppliersCompanion supplier) =>
-      into(suppliers).insert(supplier);
+  /// **Pasifler dâhil** — tedarikçi silinmediği için yönetim ekranı pasif
+  /// kayıtları da görebilmelidir.
+  Future<List<Supplier>> listAll() => (select(
+    suppliers,
+  )..orderBy([(s) => OrderingTerm(expression: s.name)])).get();
+
+  /// Yalnızca [name] zorunludur (REQ-SUP-001).
+  Future<int> insertSupplier({
+    required String name,
+    required DateTime now,
+    String? contactName,
+    String? phone,
+    String? email,
+    String? address,
+    String? note,
+  }) => into(suppliers).insert(
+    SuppliersCompanion.insert(
+      name: name,
+      contactName: Value(contactName),
+      phone: Value(phone),
+      email: Value(email),
+      address: Value(address),
+      note: Value(note),
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
+
+  /// Tüm alanlar güncellenebilir (docs/10 §2.1). Opsiyonel alanlar `null`
+  /// verilerek **temizlenebilir**; bu yüzden `Value(...)` koşulsuz yazılır.
+  Future<int> updateSupplier(
+    int id, {
+    required String name,
+    String? contactName,
+    String? phone,
+    String? email,
+    String? address,
+    String? note,
+  }) => (update(suppliers)..where((s) => s.id.equals(id))).write(
+    SuppliersCompanion(
+      name: Value(name),
+      contactName: Value(contactName),
+      phone: Value(phone),
+      email: Value(email),
+      address: Value(address),
+      note: Value(note),
+      updatedAt: Value(_now()),
+    ),
+  );
+
+  /// EC-SUP-001 — pasifleştirme **yalnızca bu satıra** dokunur; bağlı ürünlerin
+  /// `supplier_id` bağı kopmaz (docs/10 §2.3).
+  Future<int> setActive(int id, bool isActive) =>
+      (update(suppliers)..where((s) => s.id.equals(id))).write(
+        SuppliersCompanion(isActive: Value(isActive), updatedAt: Value(_now())),
+      );
+
+  /// Bu tedarikçiye bağlı ürün sayısı — pasif ürünler dâhil.
+  Future<int> countProducts(int supplierId) async {
+    final count = products.id.count();
+    final row =
+        await (selectOnly(products)
+              ..addColumns([count])
+              ..where(products.supplierId.equals(supplierId)))
+            .getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  DateTime _now() => attachedDatabase.clock().toUtc();
 }
 
 // ---------------------------------------------------------------------------
@@ -206,8 +369,15 @@ class SuppliersDao extends DatabaseAccessor<CanteenDatabase>
 // ---------------------------------------------------------------------------
 
 /// BR-VAT-001: oranlar yönetilebilir; **koda gömülmez** (rules/02 §2).
-/// Kurulumda oran **seed edilmez.**
-@DriftAccessor(tables: [VatRates])
+/// Kurulumda oran **seed edilmez** (docs/08 §3).
+///
+/// docs/08 §4: oran kaydı **silinemez** — geçmiş ürün ilişkileri korunur.
+/// Bu DAO bu yüzden `deleteById` **sunmaz.**
+///
+/// `products` kullanım sayımı içindir: docs/08 §4 oran değiştirilirken
+/// "bu oran `N` üründe kullanılıyor" bilgisini ve `vatRateChanged` audit
+/// metadata'sını (docs/18 §3) gerektirir.
+@DriftAccessor(tables: [VatRates, Products])
 class VatRatesDao extends DatabaseAccessor<CanteenDatabase>
     with _$VatRatesDaoMixin {
   VatRatesDao(super.db);
@@ -216,16 +386,108 @@ class VatRatesDao extends DatabaseAccessor<CanteenDatabase>
       (select(vatRates)..where((v) => v.id.equals(id))).getSingleOrNull();
 
   Future<List<VatRate>> listActive() =>
-      (select(vatRates)..where((v) => v.isActive.equals(true))).get();
+      (select(vatRates)
+            ..where((v) => v.isActive.equals(true))
+            ..orderBy([(v) => OrderingTerm(expression: v.rateBasisPoints)]))
+          .get();
 
+  /// **Pasifler dâhil** — oran silinmediği için yönetim ekranı pasif kayıtları
+  /// da görebilmelidir.
+  Future<List<VatRate>> listAll() => (select(
+    vatRates,
+  )..orderBy([(v) => OrderingTerm(expression: v.rateBasisPoints)])).get();
+
+  /// docs/08 §4 — ürüne oran atanmamışsa kullanılan oran.
+  ///
+  /// Pasif oran varsayılan sayılmaz: pasifleştirilmiş bir varsayılan, "varsayılan
+  /// oran yok" durumudur ve KDV `%0` kabul edilir (docs/08 §4 tablosu).
   Future<VatRate?> findDefault() =>
       (select(vatRates)
             ..where((v) => v.isDefault.equals(true) & v.isActive.equals(true))
             ..limit(1))
           .getSingleOrNull();
 
-  Future<int> insertVatRate(VatRatesCompanion rate) =>
-      into(vatRates).insert(rate);
+  Future<int> insertVatRate({
+    required String name,
+    required int rateBasisPoints,
+    required DateTime now,
+    bool isDefault = false,
+  }) => into(vatRates).insert(
+    VatRatesCompanion.insert(
+      name: name,
+      rateBasisPoints: rateBasisPoints,
+      isDefault: Value(isDefault),
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
+
+  Future<int> updateVatRate(int id, {String? name, int? rateBasisPoints}) =>
+      (update(vatRates)..where((v) => v.id.equals(id))).write(
+        VatRatesCompanion(
+          name: name == null ? const Value.absent() : Value(name),
+          rateBasisPoints: rateBasisPoints == null
+              ? const Value.absent()
+              : Value(rateBasisPoints),
+          updatedAt: Value(_now()),
+        ),
+      );
+
+  Future<int> setActive(int id, bool isActive) =>
+      (update(vatRates)..where((v) => v.id.equals(id))).write(
+        VatRatesCompanion(isActive: Value(isActive), updatedAt: Value(_now())),
+      );
+
+  /// docs/04 §3.4 — `isDefault` yalnızca **bir** kayıtta `true` olabilir.
+  ///
+  /// Bu metot tek başına invariant'ı sağlamaz; [clearDefault] ile birlikte ve
+  /// **aynı transaction** içinde çağrılmalıdır (`VatRateService.setDefault`).
+  Future<int> setDefault(int id, bool isDefault) =>
+      (update(vatRates)..where((v) => v.id.equals(id))).write(
+        VatRatesCompanion(
+          isDefault: Value(isDefault),
+          updatedAt: Value(_now()),
+        ),
+      );
+
+  /// Tüm kayıtlarda `is_default = 0`. [exceptId] verilirse o satır atlanır.
+  Future<int> clearDefault({int? exceptId}) {
+    final statement = update(vatRates)
+      ..where(
+        (v) => exceptId == null
+            ? v.isDefault.equals(true)
+            : v.isDefault.equals(true) & v.id.equals(exceptId).not(),
+      );
+    return statement.write(
+      VatRatesCompanion(
+        isDefault: const Value(false),
+        updatedAt: Value(_now()),
+      ),
+    );
+  }
+
+  Future<int> countAll() async {
+    final count = vatRates.id.count();
+    final row = await (selectOnly(vatRates)..addColumns([count])).getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  /// Bu oranı **doğrudan** kullanan ürün sayısı (`products.vat_rate_id`).
+  ///
+  /// `vat_rate_id IS NULL` olan ürünler varsayılan oranı kullanır (docs/08 §4);
+  /// onlar bu sayıma girmez — sayı "oran değişirse hangi ürünlerin oranı
+  /// değişir" sorusuna değil, "kaç ürün bu kayda bağlı" sorusuna cevaptır.
+  Future<int> countProducts(int vatRateId) async {
+    final count = products.id.count();
+    final row =
+        await (selectOnly(products)
+              ..addColumns([count])
+              ..where(products.vatRateId.equals(vatRateId)))
+            .getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  DateTime _now() => attachedDatabase.clock().toUtc();
 }
 
 // ---------------------------------------------------------------------------
