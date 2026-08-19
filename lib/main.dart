@@ -21,8 +21,11 @@
 /// kilitli doğar ve durumu hiçbir yere yazılmaz (BR-AUTH-016). Doğru davranış,
 /// bu dosyada kilidi açan bir çağrının **bulunmamasıdır.**
 ///
-/// Aktif sepet restore (docs/03 §6 adım 11) **Faz 5** kapsamındadır ve burada
-/// yoktur.
+/// **Adım 4b — yarım kalan geri yükleme (REQ-BKUP-012 · OD-027):** veritabanı
+/// açılmadan ÖNCE kontrol edilir. Kurtarmanın gerekli olduğu senaryoda yerinde
+/// geçerli bir veritabanı yoktur; sonra çalıştırılsaydı bootstrap boş bir
+/// veritabanı oluşturur ve kullanıcının verisi `.old_<ts>` dosyalarında
+/// unutulurdu.
 library;
 
 import 'dart:ui' show AppExitResponse;
@@ -36,6 +39,7 @@ import 'app/l10n/app_strings_tr.dart';
 import 'app/startup.dart';
 import 'app/theme/app_theme.dart';
 import 'application/auth/providers.dart';
+import 'application/backup/restore_service.dart';
 import 'core/errors/app_exception.dart';
 import 'core/logging/app_logger.dart';
 import 'core/paths/app_paths.dart';
@@ -87,6 +91,20 @@ Future<void> main() async {
   }
 
   logger.info('Uygulama başlatıldı. Veri dizini: ${paths.rootPath}');
+
+  // 4b. REQ-BKUP-012 · OD-027 — yarım kalan geri yükleme.
+  //
+  // ⚠️ Veritabanı AÇILMADAN ÖNCE çalışır ve bu zorunludur: kurtarmanın gerekli
+  // olduğu senaryoda yerinde geçerli bir veritabanı **yoktur**. Sonra
+  // çalıştırılsaydı bootstrap boş bir veritabanı oluşturur ve kullanıcının
+  // verisi `.old_<ts>` dosyalarında unutulurdu.
+  final recovery = await RestoreService.recoverAtStartup(
+    paths: paths,
+    logger: logger,
+  );
+  if (recovery != RestoreRecovery.notInterrupted) {
+    logger.info('Geri yükleme kurtarması: ${recovery.name}');
+  }
 
   // 5. Veritabanı — kilit ALINDIKTAN SONRA açılır (RSK-003).
   final CanteenDatabase database;

@@ -296,10 +296,12 @@ void main() {
         AppRoutes.stockEntry,
         AppRoutes.stockMovements,
         AppRoutes.consistency,
+        // Faz 9 — docs/19.
+        AppRoutes.backup,
       });
       expect(
         routes.length,
-        15,
+        16,
         reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
       );
     });

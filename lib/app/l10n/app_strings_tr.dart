@@ -846,6 +846,86 @@ class AppStringsTr {
   static const String supplierDetailNoEntries =
       'Bu tedarikçiden yapılmış stok girişi yok.';
 
+  // ── Yedekleme (docs/19) ──────────────────────────────────────────────────
+  static const String backupTitle = 'Yedekleme';
+  static const String homeBackupAction = 'Yedekleme';
+  static const String backupCreateAction = 'Yedek Oluştur';
+  static const String backupCreating = 'Yedek alınıyor...';
+  static const String backupRestoreAction = 'Yedekten Geri Yükle';
+  static const String backupListTitle = 'Mevcut yedekler';
+  static const String backupListEmpty =
+      'Henüz yedek alınmamış. İlk yedeğinizi şimdi alın.';
+  static String backupCreated(String fileName, String size) =>
+      'Yedek oluşturuldu: $fileName ($size)';
+  static const String backupNeverTaken = 'Hiç yedek alınmadı';
+  static String backupLastTaken(String when) => 'Son yedek: $when';
+
+  /// docs/19 §3 — otomatik yedek aynı diskte durur.
+  static const String backupAutoNotice =
+      'Otomatik yedekler aynı bilgisayarda saklanır. Disk arızasına karşı '
+      'koruma sağlamazlar — düzenli olarak harici bir diske de yedek alın.';
+
+  // ── Yedek hatırlatması (REQ-BKUP-016) ────────────────────────────────────
+  static String backupReminder(int days) =>
+      '$days gündür yedek alınmadı. Verilerinizi korumak için yedek alın.';
+  static const String backupReminderNever =
+      'Henüz hiç yedek alınmadı. Verileriniz korunmasız.';
+  static const String backupReminderAction = 'Yedek Al';
+  static const String backupReminderDismiss = 'Kapat';
+
+  // ── Geri yükleme (docs/19 §4) ────────────────────────────────────────────
+  static const String restoreTitle = 'Yedek Geri Yükleme';
+  static const String restoreChooseFile = 'Yedek dosyası seç';
+  static const String restoreValidating = 'Yedek doğrulanıyor...';
+  static String restoreBackupDate(String when) => 'Yedek tarihi: $when';
+  static String restoreBackupAuthor(String who, String version) =>
+      'Alan: $who · Sürüm $version';
+  static const String restoreColumnBackup = 'YEDEKTEKİ';
+  static const String restoreColumnCurrent = 'ŞU ANKİ';
+  static const String restoreRowProducts = 'Ürün';
+  static const String restoreRowSales = 'Satış';
+  static const String restoreRowStockMovements = 'Stok hareketi';
+  static const String restoreRowImages = 'Görsel';
+
+  /// docs/19 §4 — "şu anki veri daha fazla kayıt içeriyor" AÇIKÇA vurgulanır.
+  static String restoreSalesAtRisk(int count) => '⚠ $count satış kaybolacak';
+
+  static const String restoreWarning =
+      '⚠ Mevcut verileriniz bu yedekle DEĞİŞTİRİLECEK.\n'
+      'İşlem öncesi otomatik güvenlik yedeği alınacak.';
+
+  /// REQ-BKUP-020 — parolalar da değişir.
+  static const String restorePasswordWarning =
+      'Kullanıcı parolaları ve dashboard parolası yedekteki değerlerle '
+      'değişecek. Oturumunuz sonlandırılacak ve giriş ekranına döneceksiniz.';
+
+  /// REQ-BKUP-014 — daha eski şema.
+  static const String restoreMigrationNotice =
+      'Bu yedek daha eski bir veritabanı sürümüne ait. Geri yükleme sonrası '
+      'otomatik olarak güncellenecek.';
+
+  /// REQ-BKUP-018 — eksik görsel engellemez.
+  static String restoreMissingImages(int count) =>
+      '$count görsel yedekte bulunamadı. Geri yükleme yapılabilir; bu ürünler '
+      'varsayılan ikonla gösterilir.';
+
+  static String restoreConfirmPrompt(String phrase) =>
+      'Onaylamak için "$phrase" yazın:';
+  static const String restoreConfirmAction = 'Geri Yükle';
+  static const String restoreRunning = 'Geri yükleniyor...';
+  static const String restoreSucceeded =
+      'Geri yükleme tamamlandı. Uygulamayı yeniden başlatın.';
+
+  // ── Kesinti kurtarma (REQ-BKUP-012) ──────────────────────────────────────
+  static const String restoreInterruptedTitle = 'Geri yükleme yarım kaldı';
+  static const String restoreRecoveredCompleted =
+      'Geri yükleme tamamlanmış görünüyor; verileriniz doğrulandı.';
+  static const String restoreRecoveredRolledBack =
+      'Geri yükleme tamamlanamadı. Önceki verileriniz geri yüklendi.';
+  static const String restoreRecoveredFailed =
+      'Geri yükleme kurtarılamadı. Güvenlik yedeği veri klasörünüzdeki '
+      'backups/auto altındadır.';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

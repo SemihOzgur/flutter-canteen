@@ -19,6 +19,7 @@ import '../presentation/settings/supplier_management_screen.dart';
 import '../presentation/settings/user_management_screen.dart';
 import '../presentation/barcode/barcode_diagnostics_screen.dart';
 import '../presentation/products/product_list_screen.dart';
+import '../presentation/backup/backup_screen.dart';
 import '../presentation/maintenance/consistency_screen.dart';
 import '../presentation/sales/sale_screen.dart';
 import '../presentation/stock/stock_entry_screen.dart';
@@ -76,6 +77,12 @@ class AppRoutes {
   /// Hareket geçmişi (docs/13 §8 · REQ-STOCK-010).
   static const String stockMovements = '/stock/movements';
 
+  /// Ayarlar → Yedekleme (docs/19). Kilit dışındadır (rules/04 §4).
+  ///
+  /// ⚠️ Bu rotanın yolu `BackupReminderBanner` içinde de geçer; ikisi birlikte
+  /// değiştirilmelidir.
+  static const String backup = '/backup';
+
   /// Ayarlar → Bakım → Veri Tutarlılığı Kontrolü (docs/24 §3.3).
   static const String consistency = '/maintenance/consistency';
 
@@ -99,5 +106,6 @@ class AppRoutes {
     stockEntry: (_) => const StockEntryScreen(),
     stockMovements: (_) => const StockMovementsScreen(),
     consistency: (_) => const ConsistencyScreen(),
+    backup: (_) => const BackupScreen(),
   };
 }

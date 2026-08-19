@@ -505,6 +505,26 @@ class RestoreService {
     return candidates.isEmpty ? null : candidates.first;
   }
 
+  /// Açılışta, **veritabanı açılmadan önce** çalışan kurtarma girişi.
+  ///
+  /// Statiktir çünkü tam olarak veritabanına ihtiyaç duymayan yolu temsil
+  /// eder: `RestoreService`'in diğer bağımlılıkları (DAO, yedek servisi) bir
+  /// bağlantı ister ve o bağlantı bu noktada henüz yoktur — hatta açılamıyor
+  /// olabilir. İşaret dosyada olduğu için okunabilir (OD-027).
+  static Future<RestoreRecovery> recoverAtStartup({
+    required AppPaths paths,
+    AppLogger? logger,
+  }) {
+    return RestoreService(
+      paths: paths,
+      dao: _UnavailableBackupDao(),
+      backupService: _UnavailableBackupService(),
+      supportedSchemaVersion: 0,
+      clock: DateTime.now,
+      logger: logger,
+    ).recoverInterrupted();
+  }
+
   /// docs/19 §4 adım 22 — 7 günden eski `.old_<ts>` verileri temizlenir.
   Future<void> pruneReplacedData() async {
     final cutoff = _clock().toUtc().subtract(retainReplacedData);
@@ -577,4 +597,25 @@ enum RestoreRecovery {
   /// Ne yeni ne eski veritabanı kurtarılabildi; güvenlik yedeğinden elle
   /// geri yükleme gerekir.
   unrecoverable,
+}
+
+/// [RestoreService.recoverAtStartup] için yer tutucular.
+///
+/// Açılış kurtarması yalnızca dosya sistemine bakar; veritabanına dayanan
+/// hiçbir yolu çalıştırmaz. Bu tipler o sözleşmeyi **zorlar**: yanlışlıkla
+/// veritabanı gerektiren bir yol eklenirse test değil, çalışma zamanı
+/// gürültülü biçimde patlar.
+class _UnavailableBackupDao implements BackupDao {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw StateError(
+    'Açılış kurtarması veritabanına erişemez (OD-027): '
+    '${invocation.memberName}',
+  );
+}
+
+class _UnavailableBackupService implements BackupService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw StateError(
+    'Açılış kurtarması yedek alamaz: ${invocation.memberName}',
+  );
 }

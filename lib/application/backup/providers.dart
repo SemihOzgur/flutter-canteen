@@ -29,6 +29,15 @@ final backupServiceProvider = Provider<BackupService>(
   ),
 );
 
+/// docs/19 §4 adım 12 — veritabanı bağlantısını kapatan geri çağrı.
+///
+/// Ekran `data/` katmanını tanımaz (rules/01 §1) ama restore'un bağlantıyı
+/// kapatması gerekir. Yetenek burada, application katmanında açığa çıkarılır;
+/// ekran yalnızca **ne yapılacağını** bilir, bağlantının kendisini değil.
+final closeDatabaseProvider = Provider<Future<void> Function()>(
+  (ref) => ref.watch(canteenDatabaseProvider).close,
+);
+
 /// docs/19 §4 — geri yükleme. Uygulamanın **en tehlikeli** işlemi.
 final restoreServiceProvider = Provider<RestoreService>(
   (ref) => RestoreService(
