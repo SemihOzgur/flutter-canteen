@@ -73,6 +73,15 @@ abstract interface class StockRepository {
     String? note,
   });
 
+  /// `products.stock_quantity` türetilmiş **önbelleğini** okur.
+  ///
+  /// Bilerek defterin toplamı ([sumQuantityDelta]) değildir. Yeni hareketin
+  /// `resulting_stock`'u önbellekten türetilir; böylece varsa mevcut sapma
+  /// **korunur ve görünür kalır**. Defterden okumak sapmayı sessizce
+  /// düzeltirdi — rules/03 §2 bunu yasaklar: sapma yalnızca kullanıcı onayıyla,
+  /// `adjustment` hareketiyle kapatılır.
+  Future<int> readStockQuantity(int productId);
+
   /// `products.stock_quantity` türetilmiş önbelleğini yazar (BR-STOCK-002).
   ///
   /// ⚠️ **Yalnızca `StockService` çağırır** ve daima [appendMovement] ile

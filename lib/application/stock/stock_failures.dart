@@ -27,4 +27,15 @@ abstract final class StockFailures {
         'Bu ürünün stok geçmişi zaten başlamış. Stok değişikliği için stok '
         'giriş veya düzeltme işlemini kullanın.',
   );
+
+  /// BR-STOCK-004 — `quantity_delta` asla `0` olamaz; satış hareketi de
+  /// negatif yönde **pozitif** bir miktar taşır.
+  ///
+  /// Normal akışta görülmez: sepet satırı `CHECK(quantity > 0)` altındadır.
+  /// Yine de vardır — sıfır miktarlı bir hareket defteri okunamaz hâle
+  /// getirir, negatif miktarlı bir "satış" ise stoğu **artırırdı**.
+  static const Failure nonPositiveSaleQuantity = Failure(
+    code: 'stock_sale_quantity_invalid',
+    userMessage: 'Satış miktarı en az 1 olmalıdır.',
+  );
 }

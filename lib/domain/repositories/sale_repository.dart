@@ -1,11 +1,17 @@
 /// Satış repository sözleşmesi — **REQ-ARCH-004**
 ///
-/// ## Neden `create` yok
+/// ## Yazma metotlarının tek çağıranı vardır
 ///
 /// Satış oluşturma **atomik bir transaction**'dır (BR-SALE-005): sale +
 /// saleItems + stockMovements + stock + cart + audit. Transaction sınırları
-/// yalnızca application katmanında açılır (rules/01 §5) ve bu akış **Faz 5**
-/// kapsamındadır. Faz 2 yalnızca okuma tarafını kurar.
+/// yalnızca application katmanında açılır (rules/01 §5), dolayısıyla
+/// [insertSale] ve [insertItem] **yalnızca `SaleService`** tarafından ve
+/// **tek bir transaction içinde** çağrılır. Ayrı ayrı çağrılırlarsa başlıksız
+/// satır ya da satırsız satış oluşur — yani BR-SALE-005 ihlal edilir.
+///
+/// `update`/`delete` **yoktur ve eklenmeyecektir**: satış kayıtları silinmez
+/// (BR-GEN-002 · BR-SALE-006), snapshot alanları immutable'dır (rules/02 §3);
+/// iptal ve iade yalnızca **durum** değiştirir ve Faz 7 kapsamındadır.
 library;
 
 import '../../core/result/result.dart';
@@ -29,4 +35,18 @@ abstract interface class SaleRepository {
 
   /// Satış satırları — 5 snapshot alanıyla birlikte (BR-SALE-001).
   Future<List<SaleItem>> itemsOf(int saleId);
+
+  /// Satış başlığını yazar ve `id`'sini döner.
+  ///
+  /// ⚠️ **Yalnızca `SaleService` çağırır.** Transaction çağırana aittir
+  /// (rules/01 §5). `sale_number` şemada `UNIQUE`'tir; çakışma bir hata
+  /// değil, **satışın hiç oluşmaması** demektir (REQ-SALE-005).
+  Future<int> insertSale(NewSale sale);
+
+  /// Satış satırını **beş snapshot alanıyla** yazar (BR-SALE-001) ve `id`'sini
+  /// döner.
+  ///
+  /// ⚠️ **Yalnızca `SaleService` çağırır**, [insertSale] ile aynı transaction
+  /// içinde.
+  Future<int> insertItem(int saleId, NewSaleItem item);
 }

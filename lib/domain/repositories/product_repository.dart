@@ -134,5 +134,9 @@ abstract interface class ProductRepository {
   /// docs/04 §3.6 — ürün başına en fazla bir `is_primary = true`.
   Future<int> clearPrimaryBarcodes(int productId);
 
+  /// Ürünün barkodları — **birincil barkod başta**, sonra ekleniş sırasında.
+  ///
+  /// Sıra sözleşmenin parçasıdır: `sale_items.barcode_snapshot` listenin
+  /// ilkinden yazılır (docs/04 §3.9).
   Future<List<String>> barcodesOf(int productId);
 }
