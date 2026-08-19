@@ -6,11 +6,15 @@
 /// Bu dosya `domain/` içindedir ve **hiçbir Drift/Flutter/dart:io bağımlılığı
 /// taşımaz** (rules/01 §1).
 ///
-/// ## Faz 2 kapsam sınırı
+/// ## Kapsam sınırı
 ///
 /// Burada **kalıcılık** işlemleri vardır; iş akışı orkestrasyonu yoktur.
-/// `stock_quantity` bu arayüzden yazılamaz — tek yazım noktası `StockService`
-/// olacaktır (rules/02 §4, Faz 6).
+/// Doğrulama, varsayılan kategori, uyarı üretimi, audit ve transaction
+/// sınırları `ProductService`'e aittir (rules/01 §1, §5).
+///
+/// `stock_quantity` bu arayüzden **yazılamaz** — tek yazım noktası
+/// `StockService`'tir (rules/02 §4). `create` bile başlangıç stoğu almaz:
+/// stok yalnızca `stock_movements` üzerinden oluşur (BR-STOCK-001).
 library;
 
 import '../../core/result/result.dart';
@@ -25,16 +29,89 @@ abstract interface class ProductRepository {
   /// sonuçtur (bilinmeyen barkod akışı, rules/02 §10) ve exception fırlatmaz.
   Future<Result<Product>> findByBarcode(String barcode);
 
-  /// Ad araması — yalnızca aktif ürünler, SQL tarafında sıralı ve sayfalı
-  /// (docs/05 §3.1).
-  Future<List<Product>> searchByName(String query, {int limit = 50});
+  /// Ürün araması — **REQ-PROD-010 · docs/09 §6**
+  ///
+  /// | Kural | |
+  /// |---|---|
+  /// | Kapsam | Önce ürün adı, sonra marka (`contains`) |
+  /// | Duyarlılık | Büyük/küçük harf **ve** Türkçe karakter duyarsız |
+  /// | Görünürlük | Yalnızca **aktif** ürünler (docs/09 §4) |
+  /// | Sıralama | Ad eşleşmeleri önce, sonra **satış adedi**, sonra ad |
+  /// | Sınır | Varsayılan 50 sonuç |
+  ///
+  /// [query] **ham kullanıcı metnidir**; katlama ve LIKE kaçışlaması
+  /// implementasyonun işidir. (Kullanıcı adı eşleşmesinden farkı budur:
+  /// orada hangi kuralın uygulanacağı bir iş kararıdır ve çağıran normalize
+  /// eder; burada kural tektir ve `TurkishText.fold`'dur.)
+  /// [includeInactive] "Pasifleri göster" filtresidir — docs/09 §4 tablosu
+  /// aramanın da bu filtreye uymasını ister ("varsayılan gizli; filtre ile
+  /// görünür"). Aksi hâlde kullanıcı filtreyi açıp arama yazdığında pasif
+  /// ürünler sessizce kaybolurdu.
+  Future<List<Product>> search(String query, {bool includeInactive, int limit});
 
-  Future<List<Product>> listActive({int limit = 100, int offset = 0});
+  /// Ürün listesi — **REQ-PERF-006**: sayfalıdır, tüm kayıtlar belleğe alınmaz
+  /// (rules/01 §8).
+  ///
+  /// [includeInactive] yönetim ekranının "Pasifleri göster" filtresidir
+  /// (docs/09 §4); varsayılan olarak pasif ürünler **gizlidir**.
+  Future<List<Product>> list({
+    bool includeInactive,
+    int? categoryId,
+    int limit,
+    int offset,
+  });
+
+  /// [list] ile aynı filtrelerin toplam kayıt sayısı — sayfalama göstergesi
+  /// için. Sayım **SQL tarafında** yapılır (rules/01 §8).
+  Future<int> count({bool includeInactive, int? categoryId});
+
+  /// BR-PROD-013 · EC-PROD-010 — aynı ad + aynı kategori kombinasyonu var mı?
+  ///
+  /// Sonuç bir **uyarıdır**, kısıt değil: ürün adı benzersiz olmak zorunda
+  /// değildir. Karşılaştırma arama ile aynı katlamayı kullanır
+  /// (`TurkishText.fold`) — "Ayran" ile "AYRAN" aynı üründür.
+  ///
+  /// [excludeProductId] düzenleme sırasında ürünün **kendisini** dışarıda
+  /// bırakır; aksi hâlde her kayıt kendi kopyası sanılırdı.
+  Future<bool> existsWithName({
+    required String name,
+    required int categoryId,
+    int? excludeProductId,
+  });
 
   /// Ürünü kaydeder ve yeni `id`'yi döner.
   Future<Result<int>> create(NewProduct product);
 
   Future<Result<void>> update(Product product);
+
+  /// BR-PROD-009 — kullanılmış ürün silinmez, yalnızca pasifleşir.
+  ///
+  /// Yalnızca `is_active` (ve `updated_at`) yazılır; başka hiçbir alan
+  /// değişmez. Etkilenen satır sayısını döner.
+  Future<int> setActive(int id, bool isActive);
+
+  /// BR-PROD-008 · REQ-PROD-009 — favori bayrağını değiştirir.
+  ///
+  /// `Product.isFavorite` **boolean bir alandır**; ayrı bir `Favorite`
+  /// entity'si veya tablosu yoktur (rules/02 §11.5 · docs/04 §1). Yalnızca
+  /// `is_favorite` (ve `updated_at`) yazılır; başka hiçbir alan değişmez.
+  /// Etkilenen satır sayısını döner.
+  Future<int> setFavorite(int id, bool isFavorite);
+
+  /// docs/09 §5 — "30'dan fazla favori eklenirse kullanıcı uyarılır."
+  ///
+  /// Sayım **SQL tarafında** yapılır (rules/01 §8) ve `ix_products_favorite`
+  /// kısmi index'ini kullanır. Yalnızca **aktif** ürünler sayılır: pasif ürün
+  /// satış ekranındaki favoriler bölümünde görünmez, dolayısıyla ekran
+  /// karmaşasına da katkı vermez.
+  Future<int> countFavorites();
+
+  /// BR-PROD-014 — **koşulsuz** siler.
+  ///
+  /// "Hiç satılmamış ve hiç stok hareketi yok" koşulunun kontrolü çağırana
+  /// aittir ve silmeyle **aynı transaction** içinde yapılmalıdır
+  /// (`ProductService.delete`).
+  Future<int> deleteById(int id);
 
   /// BR-PROD-005 — barkod global benzersizdir.
   /// Çakışma → `Failure('barcode_exists')`.
@@ -43,6 +120,19 @@ abstract interface class ProductRepository {
     required String barcode,
     bool isPrimary = false,
   });
+
+  /// EC-PROD-016 — barkod silinebilir; ürün barkodsuz kalabilir.
+  ///
+  /// Silinen barkod global benzersizlik havuzundan **çıkar** (docs/09 §3).
+  /// Etkilenen satır sayısını döner.
+  Future<int> removeBarcode({required int productId, required String barcode});
+
+  /// Kalıcı silmenin parçası — ürünün tüm barkodları serbest kalır
+  /// (EC-PROD-022).
+  Future<int> removeAllBarcodesOf(int productId);
+
+  /// docs/04 §3.6 — ürün başına en fazla bir `is_primary = true`.
+  Future<int> clearPrimaryBarcodes(int productId);
 
   Future<List<String>> barcodesOf(int productId);
 }

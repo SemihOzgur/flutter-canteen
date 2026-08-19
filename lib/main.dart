@@ -7,15 +7,22 @@
 /// 3. Loglama başlat               [REQ-SEC-007]
 /// 4. Single-instance lock al      [REQ-ARCH-005 · REQ-DATA-005]
 /// 5. Veritabanı: kurtarma kontrolü → aç → PRAGMA → migration → seed  [Faz 2]
-/// 6. Uygulamayı başlat (Riverpod ProviderScope)
+/// 6. Kurulum kontrolü             [EC-AUTH-008 · REQ-AUTH-016/022]   [Faz 3a]
+/// 7. Oturum yükle                 [REQ-AUTH-001/006 · EC-AUTH-003/004]
+/// 8. Finansal kilit KAPALI başlar [BR-AUTH-016 · EC-DASH-006]
+/// 9. Uygulamayı başlat (Riverpod ProviderScope)
 /// ```
 ///
 /// **KRİTİK SIRA (rules/03 §5 · RSK-003):** Veritabanı, single-instance kilidi
 /// alındıktan **sonra** açılır. İkinci uygulama örneğinde veritabanı dosyasına
 /// hiç dokunulmaz.
 ///
-/// Faz 3+ adımları (oturum, sepet restore, kurulum sihirbazı) bu fazın kapsamı
-/// dışındadır ve **eklenmemiştir.**
+/// **Adım 8'in kodu yoktur ve olmamalıdır:** `FinancialAccessService` bellekte
+/// kilitli doğar ve durumu hiçbir yere yazılmaz (BR-AUTH-016). Doğru davranış,
+/// bu dosyada kilidi açan bir çağrının **bulunmamasıdır.**
+///
+/// Aktif sepet restore (docs/03 §6 adım 11) **Faz 5** kapsamındadır ve burada
+/// yoktur.
 library;
 
 import 'dart:ui' show AppExitResponse;
@@ -26,7 +33,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'app/l10n/app_strings_tr.dart';
+import 'app/startup.dart';
 import 'app/theme/app_theme.dart';
+import 'application/auth/providers.dart';
 import 'core/errors/app_exception.dart';
 import 'core/logging/app_logger.dart';
 import 'core/paths/app_paths.dart';
@@ -34,6 +43,7 @@ import 'core/single_instance/instance_lock.dart';
 import 'data/db/canteen_database.dart';
 import 'data/db/database_bootstrap.dart';
 import 'data/db/providers.dart';
+import 'data/files/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -92,10 +102,29 @@ Future<void> main() async {
     return;
   }
 
+  // Riverpod (OD-002) — bağlantı ve log override ile enjekte edilir; global
+  // statik duruma dönüştürülmez.
+  //
+  // Container `runApp`'ten ÖNCE kurulur: adım 6–7 kararları (kurulum durumu ve
+  // oturum) ilk kare çizilmeden önce verilmelidir; aksi hâlde uygulama önce
+  // yanlış ekranı gösterip sonra sıçrardı. Aynı container `runApp`'e devredilir
+  // ki servisler — özellikle **bellekte** yaşayan finansal erişim kilidi
+  // (BR-AUTH-016) — ikinci kez kurulmasın.
+  final container = ProviderContainer(
+    overrides: [
+      canteenDatabaseProvider.overrideWithValue(database),
+      appLoggerProvider.overrideWithValue(logger),
+      // Veri dizini bootstrap'ta bir kez çözülür; servisler ikinci kez
+      // çözmez (BR-DATA-001 · docs/21 §1).
+      appPathsProvider.overrideWithValue(paths),
+    ],
+  );
+
   // Kapanışta bağlantı düzgün kapatılır — Windows dosya kilidi katıdır
   // (rules/05 §6) ve açık WAL dosyaları yedeklemeyi bozar.
   AppLifecycleListener(
     onExitRequested: () async {
+      container.dispose();
       await database.close();
       lock.release();
       logger.info('Uygulama kapatıldı.');
@@ -103,12 +132,37 @@ Future<void> main() async {
     },
   );
 
-  // 6. Riverpod (OD-002) — bağlantı override ile enjekte edilir; global
-  // statik duruma dönüştürülmez.
+  // 6–7. Kurulum durumu ve oturum → açılış rotası (EC-AUTH-008 · REQ-AUTH-006).
+  //
+  // 8. Finansal erişim kilidi burada **açılmaz**: servis kilitli doğar ve
+  // durumu kalıcılaştırılmaz (BR-AUTH-016 · EC-DASH-006).
+  final String initialRoute;
+  try {
+    initialRoute = await resolveInitialRoute(
+      setup: container.read(setupServiceProvider),
+      session: container.read(sessionServiceProvider),
+    );
+  } on Object catch (error, stackTrace) {
+    // REQ-SEC-007: teknik detay log'a, kullanıcıya sade Türkçe mesaj.
+    logger.error(
+      'Açılış durumu çözülemedi',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    container.dispose();
+    await database.close();
+    lock.release();
+    runApp(
+      const _StartupFailureApp(message: AppStringsTr.unexpectedErrorMessage),
+    );
+    return;
+  }
+
+  // 9. Uygulamayı başlat.
   runApp(
-    ProviderScope(
-      overrides: [canteenDatabaseProvider.overrideWithValue(database)],
-      child: const CanteenApp(),
+    UncontrolledProviderScope(
+      container: container,
+      child: CanteenApp(initialRoute: initialRoute),
     ),
   );
 }

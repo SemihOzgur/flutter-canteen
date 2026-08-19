@@ -46,6 +46,25 @@ dependencies:
   # gerekmez (`sqlite3_flutter_libs` 0.6.0'da tamamen boşaltıldı).
   drift: ^2.34.3
 
+  # Kurtarma kodunu dosyaya kaydetme dialogu — REQ-AUTH-022.
+  # Flutter'da yerel kayıt dialogu yoktur; konumu KULLANICI seçer, böylece
+  # düz metin kod uygulamanın kendi dizinine yazılmaz (rules/04 §5).
+  # Proje sahibi onayı ile eklendi (rules/01 §7).
+  file_selector: ^1.0.3
+
+  # Parola / recovery code hash'leme — OD-003 (salt'lı SHA-256).
+  # rules/01 §7 karar kapsamı: ayrıca onay gerekmez.
+  crypto: ^3.0.6
+
+  # Görsel optimizasyonu (yeniden boyutlandırma + yeniden kodlama) —
+  # BR-IMG-002 / REQ-IMG-003 / OD-016. rules/01 §7 karar kapsamındadır;
+  # dört soru: (1) gerekli — optimizasyon zorunlu bir gerekliliktir,
+  # (2) standart kütüphane yetmez — `dart:ui` seçilen kalitede JPEG
+  # kodlayamaz, (3) mevcut bağımlılıkların hiçbiri görsel çözmez/kodlamaz,
+  # (4) saf Dart olduğu için platform kanalı yoktur ve Windows'ta macOS ile
+  # aynı davranır.
+  image: ^4.5.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

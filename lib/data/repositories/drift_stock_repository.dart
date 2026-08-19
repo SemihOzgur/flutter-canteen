@@ -1,13 +1,15 @@
 /// [StockRepository]'nin Drift implementasyonu.
 ///
-/// **Yazma yoktur:** `stock_quantity` ve stok defteri yalnızca `StockService`
-/// üzerinden değişir (rules/02 §4, Faz 6).
+/// **Yazmanın tek çağıranı `StockService`'tir:** `stock_quantity` ve stok
+/// defteri yalnızca o servis üzerinden değişir (rules/02 §4). Transaction
+/// sınırı da oradadır (rules/01 §5).
 library;
 
 import 'package:drift/drift.dart';
 
 import '../../core/money/money.dart';
 import '../../core/result/result.dart';
+import '../../domain/enums/stock_movement_type.dart';
 import '../../domain/enums/stock_reference_type.dart';
 import '../../domain/models/stock_movement.dart' as domain;
 import '../../domain/repositories/stock_repository.dart';
@@ -76,6 +78,62 @@ class DriftStockRepository implements StockRepository {
               ..where(_db.stockMovements.productId.equals(productId)))
             .getSingle();
     return row.read(total) ?? 0;
+  }
+
+  @override
+  Future<int> countMovements(int productId) async {
+    final total = _db.stockMovements.id.count();
+    final row =
+        await (_db.selectOnly(_db.stockMovements)
+              ..addColumns([total])
+              ..where(_db.stockMovements.productId.equals(productId)))
+            .getSingle();
+    return row.read(total) ?? 0;
+  }
+
+  @override
+  Future<int> appendMovement({
+    required int productId,
+    required StockMovementType type,
+    required int quantityDelta,
+    required int resultingStock,
+    required int userId,
+    required DateTime createdAtUtc,
+    Money? unitCost,
+    StockReferenceType? referenceType,
+    int? referenceId,
+    int? supplierId,
+    String? note,
+  }) {
+    return _db
+        .into(_db.stockMovements)
+        .insert(
+          db.StockMovementsCompanion.insert(
+            productId: productId,
+            type: type,
+            quantityDelta: quantityDelta,
+            resultingStock: resultingStock,
+            unitCostMinor: Value(unitCost?.minor),
+            referenceType: Value(referenceType),
+            referenceId: Value(referenceId),
+            supplierId: Value(supplierId),
+            note: Value(note),
+            userId: userId,
+            createdAt: createdAtUtc.toUtc(),
+          ),
+        );
+  }
+
+  @override
+  Future<int> writeStockQuantity(int productId, int quantity) {
+    return (_db.update(
+      _db.products,
+    )..where((p) => p.id.equals(productId))).write(
+      db.ProductsCompanion(
+        stockQuantity: Value(quantity),
+        updatedAt: Value(_db.clock().toUtc()),
+      ),
+    );
   }
 
   @override

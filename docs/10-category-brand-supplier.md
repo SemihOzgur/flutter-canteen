@@ -12,6 +12,7 @@ tek seviye yeterlidir ve raporlamayı basit tutar. İhtiyaç doğarsa [30](30-fu
 | Oluştur | İsim benzersiz olmalı (pasifler dahil) |
 | Düzenle | İsim ve sıralama değiştirilebilir |
 | Pasifleştir | İçinde ürün olsa bile mümkün; ürünler etkilenmez (BR-CAT-003) |
+| **Yeniden aktifleştir** | **Mümkün** — `categoryActivated` (OD-020) |
 | **Sil** | 🟡 **Yalnızca hiç kullanılmamışsa** (BR-CAT-005) — §1.3 |
 
 ### 1.2b Kategori silme koşulu
@@ -67,7 +68,7 @@ satılmaya devam edecek. Yalnızca yeni ürünlere bu kategori atanamayacak.
 "Ürünleri başka kategoriye taşı" işlemi toplu güncelleme yapar:
 - Tüm ürünlerin `category_id` değeri hedef kategoriye çekilir.
 - Tek transaction.
-- Audit log'a tek bir toplu kayıt (`categoryMerge`, metadata: kaynak, hedef, ürün sayısı).
+- Audit log'a tek bir toplu kayıt (`categoryProductsMoved`, metadata: kaynak, hedef, ürün sayısı — OD-018).
 - **Geçmiş satışlar etkilenmez** çünkü `sale_items.category_id_snapshot` mevcuttur.
 
 ---
@@ -81,6 +82,7 @@ satılmaya devam edecek. Yalnızca yeni ürünlere bu kategori atanamayacak.
 | Oluştur | Yalnızca `name` zorunlu |
 | Düzenle | Tüm alanlar |
 | Pasifleştir | Mümkün; bağlı ürünler ve geçmiş stok girişleri korunur (BR-SUP-002) |
+| **Yeniden aktifleştir** | **Mümkün** — `supplierActivated` (OD-020) |
 | Sil | ❌ Yasak |
 
 ### 2.2 Tedarikçi üzerinden erişilebilecek bilgiler
@@ -185,6 +187,8 @@ dönüşüm katsayıları gerekir. İkisi birlikte değerlendirilmelidir ([30 §
 | REQ-SUP-003 | Tedarikçi detayında bağlı ürünler ve stok girişleri listelenir. |
 | REQ-SUP-004 | Ürün tedarikçisiz kaydedilebilir. |
 | REQ-CAT-006 | Hiçbir ürüne atanmamış ve hiçbir satış satırı snapshot'ında geçmemiş kategori kalıcı olarak silinebilir; diğer kategoriler yalnızca pasifleştirilebilir. |
+| **REQ-CAT-007** | **Pasifleştirilmiş kategori yeniden aktifleştirilebilir** (OD-020). |
+| **REQ-SUP-006** | **Pasifleştirilmiş tedarikçi yeniden aktifleştirilebilir** (OD-020). |
 | REQ-SUP-005 | Marka ve satış birimi V1'de ürün üzerinde serbest metin alanı olarak tutulur; ileride ayrı entity'ye dönüştürülebilecek şekilde tasarlanır. |
 
 ---

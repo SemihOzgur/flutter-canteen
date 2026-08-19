@@ -87,10 +87,12 @@ taxExclusiveSub   = 10000    ← ₺100,00
 |---|---|
 | Fiyatın **üzerine** KDV eklemek | En kritik regresyon riski — açık test yazılır |
 | KDV oranını koda gömmek | Oranlar `vat_rates` tablosundan gelir |
-| Kurulumda KDV oranı seed etmek | Kullanıcı kendi oranlarını tanımlar |
+| **Mevzuata bağlı** oran (%20, %10 …) seed etmek | Kullanıcı kendi oranlarını tanımlar. Kurulumda **yalnızca nötr `%0 — KDV Yok`** oluşturulur (OD-017) |
 | KDV'yi UI'da hesaplamak | Tek merkezî domain implementasyonu |
 
-KDV oranı tanımlı değilse: `vat = 0`, `net = total` (BR-VAT-005).
+Kullanıcı kendi oranını tanımlamadıkça varsayılan `%0 — KDV Yok`'tur: `vat = 0`, `net = total`
+(BR-VAT-005 · OD-017). **Pasif bir oran varsayılan yapılamaz** (BR-VAT-006 · OD-019) — izin
+verilseydi varsayılan araması aktiflik filtrelediği için KDV sessizce `%0`'a düşerdi.
 
 ---
 

@@ -134,7 +134,7 @@ void main() {
         const ProductsCompanion(isActive: Value(false)),
       );
 
-      final results = await products.searchByName('Kola');
+      final results = await products.search('Kola');
       expect(results.map((p) => p.name), ['Yeni Kola']);
     });
 
@@ -142,14 +142,14 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await products.create(draft('Ürün $i'));
       }
-      expect((await products.searchByName('Ürün', limit: 3)).length, 3);
+      expect((await products.search('Ürün', limit: 3)).length, 3);
     });
 
-    test('listActive sayfalama yapar', () async {
+    test('list sayfalama yapar', () async {
       for (var i = 0; i < 5; i++) {
         await products.create(draft('P$i'));
       }
-      final page = await products.listActive(limit: 2, offset: 2);
+      final page = await products.list(limit: 2, offset: 2);
       expect(page.length, 2);
     });
 

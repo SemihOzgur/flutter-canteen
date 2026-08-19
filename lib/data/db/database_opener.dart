@@ -21,6 +21,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 
 import '../../core/errors/app_exception.dart';
+import '../../domain/services/turkish_text.dart';
 import 'schema_version.dart';
 
 /// SQLite PRAGMA değerleri — testler bu sabitleri doğrular.
@@ -66,6 +67,28 @@ const List<String> _sharedPragmas = [
 /// iken de ihlalleri raporlar), bu yüzden tanı bağlantısına uygulanmaz.
 const List<String> _writeConnectionPragmas = ['PRAGMA foreign_keys = ON;'];
 
+/// Uygulama tarafından tanımlanan SQL fonksiyonları.
+///
+/// **REQ-PROD-010 · docs/09 §6** — ürün araması Türkçe karakter ve büyük/küçük
+/// harf duyarsızdır.
+///
+/// ## Neden normalize edilmiş bir kolon değil
+///
+/// Şema **FİNAL**'dir (rules/03 §1): `products` tablosuna katlanmış bir arama
+/// kolonu eklemek bir şema kararıdır ve dokümanda yoktur. Bunun yerine
+/// karşılaştırma anında çalışan **deterministik bir skaler fonksiyon**
+/// kaydedilir; sorgu `WHERE canteen_fold(name) LIKE ?` yazabilir.
+///
+/// Katlama mantığı Dart tarafında **tek yerde** yaşar
+/// ([TurkishText.fold]) — sorgunun iki yakası aynı kuralı kullanır.
+///
+/// Tam tarama bilinçli bir tercihtir: rules/01 §8 FTS5/rollup/önbelleği
+/// "yalnızca ölçülerek eşik aşıldığında" serbest bırakır.
+abstract final class SqliteFunctions {
+  /// Türkçe arama katlaması — [TurkishText.fold].
+  static const String fold = 'canteen_fold';
+}
+
 /// Bağlantı kurulum adımlarını üretir.
 ///
 /// [useWal] yalnızca dosya tabanlı veritabanları için anlamlıdır; in-memory
@@ -86,6 +109,32 @@ DatabaseSetup buildDatabaseSetup({
     for (final pragma in _writeConnectionPragmas) {
       rawDb.execute(pragma);
     }
+
+    // [SqliteFunctions.fold] — PRAGMA'ların tamamının ARDINDAN kaydedilir.
+    // Fonksiyon kaydı veritabanına hiç dokunmaz (SQL çalıştırmaz), yine de
+    // `busy_timeout`'un ilk ifade olması kuralı (bkz. [_sharedPragmas])
+    // hiçbir koşulda esnetilmez.
+    //
+    // `deterministic: true`: aynı girdi daima aynı çıktıyı verir; sorgu
+    // planlayıcı çağrıyı iç döngülerden çıkarabilir.
+    // `directOnly` varsayılanı (`true`) korunur: fonksiyon yalnızca üst düzey
+    // SQL'den çağrılabilir, VIEW/TRIGGER veya şema ifadelerinden çağrılamaz —
+    // sqlite3 bunu tüm uygulama fonksiyonları için önerir.
+    //
+    // Kayıt burada **satır içidir**, çünkü `rawDb`'nin tipi [DatabaseSetup]'tan
+    // çıkarılır; ayrı bir yardımcı fonksiyon `package:sqlite3` import etmeyi
+    // gerektirirdi ve o paket drift'in **geçişli** bağımlılığıdır.
+    rawDb.createFunction(
+      functionName: SqliteFunctions.fold,
+      deterministic: true,
+      function: (args) {
+        if (args.isEmpty) return null;
+        final value = args.first;
+        // NULL girdi NULL döner — SQL fonksiyonlarının beklenen davranışı;
+        // `brand` gibi nullable kolonlar bu yoldan geçer.
+        return value is String ? TurkishText.fold(value) : null;
+      },
+    );
 
     // REQ-MIG-005 — kendi desteklediğinden yeni bir şemayı açmayı reddet.
     final rows = rawDb.select('PRAGMA user_version;');

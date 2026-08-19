@@ -357,15 +357,31 @@ Tamamlandığında kullanıcıya şunlar raporlanır, **ardından DURULUR:**
 
 ### 4.14 Fazlar ve branch ilişkisi
 
-Her faz otomatik olarak tek branch olmak zorunda **değildir.**
-Faz 3 (69 requirement) `docs/31 §3`'te 3a–3d'ye bölünmesi önerilmiştir:
+> **Proje sahibi talimatı: her faz TEK branch'tir.**
 
 ```text
-feature/faz-3a-auth
-feature/faz-3b-financial-lock
-feature/faz-3c-product
-feature/faz-3d-image-favorite
+feature/phase-1   feature/phase-2   feature/phase-3   …   feature/phase-12
 ```
+
+O faza ait **her şey** o branch'te geliştirilir ve faz tamamlandığında tek seferde
+push/merge edilir. Alt fazlar (örn. Faz 3 → 3a–3d) **planlama birimidir, branch birimi
+değildir**; ayrı branch'e bölünmezler.
+
+| Faz | Branch | İçindeki alt fazlar (`docs/31`) |
+|---|---|---|
+| Faz 3 | `feature/phase-3` | **3a** Auth + parola hash + finansal erişim kilidi + recovery code<br>**3b** Kategori · Tedarikçi · KDV<br>**3c** Ürün CRUD + barkod<br>**3d** Görsel + favori |
+
+> **Kaynak: [`docs/31-roadmap.md`](../../docs/31-roadmap.md) Faz 3 → "Not" satırı.**
+> Alt fazların **içeriği** oradan gelir; çelişki hâlinde `docs/31` geçerlidir.
+> Buradaki tablo yalnızca hangi işin hangi **branch**'te yapılacağını söyler.
+
+> Finansal erişim kilidi ve recovery code **3a'ya aittir**, ayrı bir alt faz değildir:
+> kurulum sihirbazının Adım 2–3'ü bunları zorunlu kılar (REQ-AUTH-016/022/024), yani
+> 3a onlarsız çalışan bir bütün bırakmaz. `docs/31` Faz 8 de *"servis Faz 3'te hazır"* der.
+
+**§4.1'deki "ayrı bir faz alt fazı" ibaresi bu talimatla sınırlanmıştır:** alt faz tek
+başına ayrı branch gerekçesi değildir. Bugfix ve kapsam dışı iş kuralları (§4.3, §4.7)
+değişmeden geçerlidir.
 
 ### 4.15 Docs / rules değişiklikleri
 

@@ -87,16 +87,31 @@ sale_items.line_total_minor      → KDV dahil (= unit_price × quantity)
 
 Oranlar **basis point** tam sayı olarak saklanır (BR-FIN-002): %20 → `2000`, %1 → `100`, %0,5 → `50`.
 
-### Seed politikası
+### Seed politikası — OD-017
 
-> **Hiçbir KDV oranı önceden seed edilmez.**
+> **Mevzuata bağlı hiçbir oran seed edilmez. Kurulumda yalnızca nötr `%0 — KDV Yok`
+> oranı oluşturulur ve varsayılan olur.**
 
-Güncel oranları varsayarak seed etmek, mevzuata bağlı bir değeri koda yazmak olur.
-Bunun yerine ilk kurulum sihirbazında kullanıcıdan **kendi kullandığı oranları tanımlaması** istenir
-(bu adım atlanabilir).
+Güncel oranları (%20, %10, %1 …) varsayarak seed etmek, mevzuata bağlı bir değeri koda yazmak
+olur — BR-VAT-001'in yasakladığı budur. `%0` ise mevzuata bağlı bir oran değil, KDV
+aritmetiğinin **nötr elemanıdır**: `vat = total × 0 / (10000 + 0) = 0`. Seed edilmesi hiçbir
+vergi varsayımı yapmaz.
 
-Kullanıcı hiç oran tanımlamazsa (BR-VAT-005):
-- `%0 — KDV Yok` adında tek bir varsayılan oran oluşturulur,
+Kurulumda (`Genel` kategorisiyle aynı idempotent seed yolunda) tek bir oran oluşturulur:
+
+```text
+name              : "%0 — KDV Yok"
+rate_basis_points : 0
+is_default        : true
+is_active         : true
+```
+
+Kullanıcı KDV takibi istiyorsa Ayarlar → KDV Oranları'ndan kendi oranlarını ekler ve
+ürünlerine atar. Kurulum sihirbazında oran tanımlama adımı **yoktur** — KDV takip etmek
+istemeyen kullanıcıya anlamsız bir adım dayatılmaz.
+
+Kullanıcı kendi oranlarını tanımlamadığı sürece (BR-VAT-005):
+- `%0 — KDV Yok` varsayılan oran olarak kalır,
 - ürün formunda ve satış ekranında KDV alanları **gizlenir**,
 - raporlarda KDV sütunları görünmez,
 - `sale_items.vat_rate_snapshot_bp = 0`, `line_vat_minor = 0`, `line_net_minor = line_total_minor` kaydedilir.
@@ -108,8 +123,26 @@ Ayarlar → KDV Oranları'ndan oran ekleyerek KDV takibini aktif edebilir.
 
 ## 4. Oran yönetimi
 
-Kullanıcı KDV oranlarını ekleyebilir, düzenleyebilir ve pasifleştirebilir.
+Kullanıcı KDV oranlarını ekleyebilir, düzenleyebilir, pasifleştirebilir ve
+**yeniden aktifleştirebilir** (OD-020 · `vatRateActivated`).
 Oran kaydı **silinemez** (geçmiş ürün ilişkileri korunur).
+
+### Varsayılan oran — BR-VAT-006 · OD-019
+
+Varsayılan oran araması aktiflik filtreler (`is_default AND is_active`). Bu nedenle:
+
+| Durum | Davranış |
+|---|---|
+| Aktif bir oran varsayılan yapılıyor | ✅ Eski varsayılan aynı transaction içinde devredilir |
+| **Pasif** bir oran varsayılan yapılıyor | ❌ **Reddedilir** — görünür hata |
+| Varsayılan olan oran pasifleştiriliyor | `is_default` bayrağına dokunulmaz; arama zaten aktiflik filtrelediği için sonuç "varsayılan yok" olur |
+
+> Pasif bir oranın varsayılan yapılmasına izin verilseydi sistem "varsayılan oran yok"
+> durumuna düşer ve aşağıdaki tabloya göre **KDV sessizce %0 kabul edilirdi.** Kullanıcı bir
+> oran seçtiğini sanırken ürünlerinin KDV'si sıfırlanırdı — para davranışındaki sessiz
+> değişiklik kabul edilemez.
+
+Aynı anda yalnızca **bir** kayıt `is_default = true` olabilir ([04 §3.4](04-domain-model.md)).
 
 ### Bir oranın değeri değiştirildiğinde
 
@@ -166,11 +199,13 @@ matrah üzerinden hesaplanır.** Bkz. [07 §4.5](07-financial-rules.md).
 
 | ID | Requirement |
 |---|---|
-| REQ-VAT-001 | KDV oranları kullanıcı tarafından eklenebilir, düzenlenebilir ve pasifleştirilebilir; silinemez. |
-| REQ-VAT-002 | Hiçbir KDV oranı koda gömülmez veya kurulumda varsayılan olarak seed edilmez. |
+| REQ-VAT-001 | KDV oranları kullanıcı tarafından eklenebilir, düzenlenebilir, pasifleştirilebilir ve yeniden aktifleştirilebilir; **silinemez**. |
+| REQ-VAT-002 | **Mevzuata bağlı** hiçbir KDV oranı koda gömülmez veya seed edilmez; kurulumda yalnızca nötr `%0 — KDV Yok` oranı oluşturulur ve varsayılan olur (OD-017). |
 | REQ-VAT-003 | Her satış satırı KDV oranını snapshot olarak saklar. |
 | REQ-VAT-004 | KDV oranı değişikliği geçmiş satışların KDV tutarlarını değiştirmez. |
-| REQ-VAT-005 | Sistemde tanımlı KDV oranı yoksa uygulama KDV'siz çalışır ve KDV alanları gizlenir. |
+| REQ-VAT-005 | Kullanıcı kendi oranlarını tanımlamadığı sürece uygulama KDV'siz çalışır (`%0` varsayılan) ve KDV alanları gizlenir. |
+| **REQ-VAT-010** | **Pasif bir KDV oranı varsayılan olarak atanamaz; işlem görünür bir hata ile reddedilir** (BR-VAT-006 · OD-019). |
+| **REQ-VAT-011** | **Pasifleştirilmiş KDV oranı yeniden aktifleştirilebilir** (OD-020). |
 | REQ-VAT-006 | KDV raporları oran snapshot'ı üzerinden gruplanır. |
 | REQ-VAT-007 | Ürün satış fiyatı KDV dahil olarak girilir; sepet ve satış toplamı girilen fiyatların toplamına eşittir. |
 | REQ-VAT-008 | KDV tutarı satır bazında, KDV dahil tutardan çıkarılarak hesaplanır. |
