@@ -287,10 +287,12 @@ void main() {
         AppRoutes.vatRates,
         // Faz 3c — docs/09.
         AppRoutes.products,
+        // Faz 4 — REQ-BARC-010.
+        AppRoutes.barcodeDiagnostics,
       });
       expect(
         routes.length,
-        9,
+        10,
         reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
       );
     });

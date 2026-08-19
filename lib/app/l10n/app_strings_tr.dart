@@ -537,6 +537,45 @@ class AppStringsTr {
   static const String sessionRequiredMessage =
       'Oturum bulunamadı. Bu işlem için tekrar giriş yapın.';
 
+  // ── Faz 4 — barkod tanılama (REQ-BARC-010 · docs/11) ─────────────────────
+  static const String barcodeDiagnosticsTitle = 'Barkod Tanılama';
+  static const String barcodeDiagnosticsDescription =
+      'Okuyucuyu bu ekranda test edin. Barkod okuttuğunuzda ham girdi '
+      'aşağıda görünür. Hiçbir şey görünmüyorsa okuyucu klavye modunda '
+      'olmayabilir veya sonuna Enter göndermiyor olabilir.';
+
+  static const String barcodeDiagnosticsLastScan = 'Son okunan';
+  static const String barcodeDiagnosticsNoScanYet = 'Henüz okuma yok';
+  static const String barcodeDiagnosticsLength = 'Uzunluk';
+  static const String barcodeDiagnosticsChecksum = 'Checksum';
+  static const String barcodeDiagnosticsChecksumValid = 'Geçerli';
+  static const String barcodeDiagnosticsChecksumInvalid =
+      'Geçersiz (kayda yine de izin verilir)';
+  static const String barcodeDiagnosticsChecksumUnknown =
+      'Bu uzunluk için checksum kuralı yok';
+
+  static const String barcodeDiagnosticsBuffer = 'Bekleyen girdi';
+  static const String barcodeDiagnosticsBufferEmpty = '(boş)';
+
+  /// OD-021 — zehirli girdi, sonraki Enter'a kadar barkod üretmez.
+  static const String barcodeDiagnosticsPoisoned = 'Girdi durumu';
+  static const String barcodeDiagnosticsPoisonedYes =
+      'Zaman aşımı — bu okuma yok sayılacak, tekrar okutun';
+  static const String barcodeDiagnosticsPoisonedNo = 'Normal';
+
+  static String barcodeDiagnosticsThresholds(
+    int gapMs,
+    int timeoutMs,
+    int minLength,
+    int maxLength,
+  ) =>
+      'Eşikler: karakterler arası en fazla $gapMs ms · tampon zaman aşımı '
+      '$timeoutMs ms · uzunluk $minLength–$maxLength karakter · sonlandırıcı Enter';
+
+  static const String barcodeDiagnosticsHistory = 'Okuma geçmişi';
+  static const String barcodeDiagnosticsClear = 'Geçmişi temizle';
+  static const String homeBarcodeDiagnosticsAction = 'Barkod Tanılama';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

@@ -39,6 +39,9 @@ class HomeScreen extends ConsumerWidget {
   );
   static const Key dashboardButtonKey = Key('home_dashboard_button');
   static const Key productsButtonKey = Key('home_products_button');
+  static const Key barcodeDiagnosticsButtonKey = Key(
+    'home_barcode_diagnostics_button',
+  );
   static const Key categoriesButtonKey = Key('home_categories_button');
   static const Key suppliersButtonKey = Key('home_suppliers_button');
   static const Key vatRatesButtonKey = Key('home_vat_rates_button');
@@ -147,6 +150,16 @@ class HomeScreen extends ConsumerWidget {
                           Navigator.of(context).pushNamed(AppRoutes.vatRates),
                       icon: const Icon(Icons.percent_outlined),
                       label: const Text(AppStringsTr.homeVatRatesAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.barcodeDiagnosticsButtonKey,
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed(AppRoutes.barcodeDiagnostics),
+                      icon: const Icon(Icons.qr_code_scanner_outlined),
+                      label: const Text(
+                        AppStringsTr.homeBarcodeDiagnosticsAction,
+                      ),
                     ),
                     OutlinedButton.icon(
                       key: HomeScreen.dashboardButtonKey,

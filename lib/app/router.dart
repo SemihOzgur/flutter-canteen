@@ -17,6 +17,7 @@ import '../presentation/settings/category_management_screen.dart';
 import '../presentation/settings/financial_access_settings_screen.dart';
 import '../presentation/settings/supplier_management_screen.dart';
 import '../presentation/settings/user_management_screen.dart';
+import '../presentation/barcode/barcode_diagnostics_screen.dart';
 import '../presentation/products/product_list_screen.dart';
 import '../presentation/settings/vat_rate_management_screen.dart';
 
@@ -58,6 +59,9 @@ class AppRoutes {
   /// Ürün yönetimi (docs/09 · REQ-PROD-001). Kilit dışındadır.
   static const String products = '/products';
 
+  /// Barkod tanılama (REQ-BARC-010). Finansal veri içermez, kilit dışındadır.
+  static const String barcodeDiagnostics = '/barcode-diagnostics';
+
   static Map<String, WidgetBuilder> routes() => {
     setup: (_) => const SetupWizardScreen(),
     login: (_) => const LoginScreen(),
@@ -68,5 +72,6 @@ class AppRoutes {
     suppliers: (_) => const SupplierManagementScreen(),
     vatRates: (_) => const VatRateManagementScreen(),
     products: (_) => const ProductListScreen(),
+    barcodeDiagnostics: (_) => const BarcodeDiagnosticsScreen(),
   };
 }
