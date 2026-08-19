@@ -58,12 +58,13 @@ Her edge case: **durum → beklenen davranış**. Bu liste test senaryolarının
 | ID | Durum | Beklenen davranış |
 |---|---|---|
 | EC-BARC-001 | Kullanıcı elle hızlı yazıyor, Enter'a basıyor | Barkod sayılmaz; normal arama çalışır |
-| EC-BARC-002 | Barkod okundu ama Enter gelmedi | 300 ms sonra buffer temizlenir; işlem yapılmaz |
+| EC-BARC-002 | Barkod okundu ama Enter gelmedi | 300 ms sonra buffer temizlenir ve girdi **zehirlenir**; sonraki `Enter`'a kadar barkod üretilmez (OD-021) |
 | EC-BARC-003 | Yarım barkod okundu (kısa hareket) | 4 karakterden kısaysa yok sayılır |
 | EC-BARC-004 | 64 karakterden uzun giriş | Buffer temizlenir; uyarı |
 | EC-BARC-005 | Dialog açıkken barkod okutuluyor | Yok sayılır (REQ-BARC-011) |
 | EC-BARC-006 | Aynı barkod 3 kez arka arkaya çok hızlı okutuluyor | 3 ayrı ekleme; miktar 3 olur; kayıp yaşanmaz |
 | EC-BARC-007 | Barkod pasif ürüne ait | "Ürün pasif" sorulur; aktifleştirme seçeneği |
+| **EC-BARC-008** | **Uzun kod yavaş okunuyor; toplam süre 300 ms'i aşıyor** | **Okuma üretilmez (zehirli girdi). Kırpılmış barkod ASLA döndürülmez — kullanıcı tekrar okutur (OD-021)** |
 | EC-BARC-008 | Barkod okutulurken sepet DB yazımı sürüyor | Sıraya alınır; kayıp olmaz |
 | EC-BARC-009 | Türkçe klavye düzeninde alfanümerik barkod | Yanlış karakter riski; tanılama ekranı ile tespit edilir ([RSK-006](29-risks.md)) |
 | EC-BARC-010 | Barkod okutuldu, ürün ekleme dialogu iptal edildi | Ürün oluşmaz; sepete ekleme olmaz; barkod alanı temizlenir |

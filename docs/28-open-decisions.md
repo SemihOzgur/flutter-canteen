@@ -1,6 +1,6 @@
 # 28 — Karar Kaydı (Decision Log)
 
-> **Doküman sürümü:** v4 (revizyon: 2026-08-18)
+> **Doküman sürümü:** v5 (revizyon: 2026-08-19)
 >
 > ## ✅ AÇIK KARAR KALMAMIŞTIR.
 >
@@ -35,6 +35,7 @@
 | **OD-018** | **Kategori taşıma audit adı** | **`categoryProductsMoved`** | **v4** |
 | **OD-019** | **Pasif KDV oranı varsayılan olabilir mi** | **Hayır — reddedilir** | **v4** |
 | **OD-020** | **Kategori/tedarikçi/KDV yeniden aktifleştirme** | **Desteklenir** | **v4** |
+| **OD-021** | **Barkod tamponu zaman aşımına uğradığında** | **Girdi "zehirlenir"; sonraki `Enter`'a kadar barkod üretilmez** | **v5** |
 
 **Ek olarak v3'te kesinleşen iki yeni gereksinim** (açık karar olarak hiç durmadılar):
 
@@ -325,6 +326,30 @@ kapsadığı için (REQ-CAT-005) kullanıcı aynı adla yenisini de oluşturamaz
 
 **Etki:** REQ-CAT-007, REQ-SUP-006, REQ-VAT-011 eklendi · [10 §1.1, §2.1](10-category-brand-supplier.md)
 tabloları güncellendi · [18 §3](18-audit-log.md)'e üç action eklendi.
+
+---
+
+### OD-021 — Zaman aşımına uğrayan barkod tamponu girdiyi "zehirler"
+
+**Karar:** Barkod tamponu 300 ms zaman aşımına uğradığında yalnızca temizlenmez; girdi
+**zehirlenmiş** sayılır ve **sonraki `Enter`'a kadar hiçbir barkod üretilmez.** `Enter`
+geldiğinde zehir temizlenir ve normal `Enter` olarak işlenir.
+
+**Çözülen çelişki:** [11 §2](11-barcode-system.md) akış şeması zaman aşımında "buffer'ı
+temizle, **yeni giriş başlat**" diyordu. [26](26-edge-cases.md) EC-BARC-002 ise aynı durum
+için "buffer temizlenir; **işlem yapılmaz**" diyordu. İkisi aynı anda doğru olamaz.
+
+**Neden bu yön:** Şemadaki davranış uzun okumalarda sessizce **kırpılmış barkod** üretir.
+40 karakterlik bir kod 10 ms aralıkla okutulduğunda 400 ms sürer; tampon ~300 ms'de sıfırlanır
+ve kalan ~10 karakter geçerli bir barkod gibi döner. Faz 5'te bilinmeyen barkod "yeni ürün"
+ekranını açacağı için bu, **yanlış barkodla ürün oluşturulmasına** yol açardı.
+
+Kayıp okuma ile yanlış okuma arasındaki asimetri belirleyicidir: kullanıcı okumanın
+gerçekleşmediğini **görür ve tekrar okutur**; kırpılmış barkod ise sessizdir ve yanlış veri
+üretir. EC-BARC-002'nin "işlem yapılmaz" ifadesi zaten bu yönü işaret ediyordu.
+
+**Etki:** [11 §2](11-barcode-system.md) akışı düzeltildi · EC-BARC-002 netleştirildi ·
+EC-BARC-008 eklendi · `BarcodeInputHandler` zehirli durumu uygular.
 
 ---
 

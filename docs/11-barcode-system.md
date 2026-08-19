@@ -59,10 +59,22 @@ Karakter geldi
 
 Enter geldi
      │
+     ├── girdi ZEHİRLİ ise → zehri temizle, normal Enter olarak işle   [OD-021]
+     │
      ├── buffer uzunluğu >= 4 ve tüm karakterler hızlı geldiyse → BARKOD OKUNDU
      │
      └── aksi halde → normal Enter olarak işle (form gönderimi vb.)
 ```
+
+### Zaman aşımı girdiyi zehirler — OD-021
+
+> Tampon 300 ms zaman aşımına uğrarsa yalnızca temizlenmez: girdi **zehirlenir** ve
+> **sonraki `Enter`'a kadar hiçbir barkod üretilmez.**
+
+Aksi hâlde uzun okumalar sessizce **kırpılırdı**: 40 karakterlik bir kod 10 ms aralıkla
+400 ms sürer, tampon ~300 ms'de sıfırlanır ve kalan ~10 karakter geçerli bir barkod gibi
+dönerdi. Kayıp okumayı kullanıcı görür ve tekrar okutur; kırpılmış barkod ise sessizce
+yanlış veri üretir.
 
 ### Global mi, odaklı mı?
 
