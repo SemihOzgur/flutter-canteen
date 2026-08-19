@@ -625,6 +625,24 @@ class SaleItemsDao extends DatabaseAccessor<CanteenDatabase>
             ..limit(limit))
           .get();
 
+  /// Bu ürünün geçtiği satış satırı sayısı.
+  ///
+  /// BR-PROD-014 · EC-PROD-020: **kalıcı silme** kararının diğer yarısıdır —
+  /// satılmış ürün silinemez, çünkü snapshot'lar anlamsızlaşır ve raporlar
+  /// bozulur. Sayım SQL tarafındadır (rules/01 §8).
+  ///
+  /// İptal edilmiş satışların satırları da sayılır: iptal, satış kaydını
+  /// **silmez** (BR-GEN-002) ve satır ürüne referans vermeye devam eder.
+  Future<int> countOfProduct(int productId) async {
+    final total = saleItems.id.count();
+    final row =
+        await (selectOnly(saleItems)
+              ..addColumns([total])
+              ..where(saleItems.productId.equals(productId)))
+            .getSingle();
+    return row.read(total) ?? 0;
+  }
+
   Future<int> insertItem(SaleItemsCompanion item) =>
       into(saleItems).insert(item);
 }
