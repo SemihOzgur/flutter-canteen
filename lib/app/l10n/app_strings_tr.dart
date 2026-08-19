@@ -703,6 +703,149 @@ class AppStringsTr {
     ('Esc', 'Dialogu kapatır'),
   ];
 
+  // ── Stok (docs/13) ───────────────────────────────────────────────────────
+  static const String stockEntryTitle = 'Stok Girişi';
+  static const String homeStockAction = 'Stok';
+  static const String stockEntrySupplier = 'Tedarikçi';
+  static const String stockEntryNoSupplier = 'Tedarikçi seçilmedi';
+  static const String stockEntryDocument = 'Belge no (opsiyonel)';
+  static const String stockEntrySearchHint = 'Barkod okut veya ürün ara...';
+  static const String stockEntryColumnProduct = 'Ürün';
+  static const String stockEntryColumnCurrent = 'Mevcut';
+  static const String stockEntryColumnQuantity = 'Giriş';
+  static const String stockEntryColumnCost = 'Alış Fiyatı';
+  static const String stockEntryColumnTotal = 'Tutar';
+  static const String stockEntryTotal = 'TOPLAM';
+  static const String stockEntrySave = 'Girişi Kaydet';
+  static const String stockEntryEmpty =
+      'Henüz satır yok. Barkod okutun veya ürün arayın.';
+  static const String stockEntrySaved = 'Stok girişi kaydedildi.';
+
+  /// BR-STOCK-009 · REQ-STOCK-008 — kararı kullanıcı verir.
+  static const String stockEntryCostChangedTitle = 'Alış fiyatı değişti';
+  static String stockEntryCostChangedBody(
+    String product,
+    String old,
+    String updated,
+  ) =>
+      '$product ürününün alış fiyatı $old idi, bu girişte $updated girdiniz.\n\n'
+      'Ürünün alış fiyatı da güncellensin mi? Güncellemezseniz yalnızca bu '
+      'giriş bu fiyatla kaydedilir.';
+  static const String stockEntryCostUpdateYes = 'Evet, güncelle';
+  static const String stockEntryCostUpdateNo = 'Hayır, sadece bu giriş';
+
+  // ── Fire ve düzeltme (docs/13 §6) ────────────────────────────────────────
+  static const String stockWasteTitle = 'Fire Kaydı';
+  static const String stockWasteQuantity = 'Fire miktarı';
+  static const String stockWasteReason = 'Sebep';
+  static const String stockWasteSave = 'Fire Kaydet';
+  static const String stockWasteSaved = 'Fire kaydedildi.';
+
+  /// docs/13 §6 — öneri listesi.
+  static const List<String> stockWasteReasons = [
+    'Bozulma',
+    'Kırılma',
+    'Son kullanma',
+    'Çalıntı',
+    'Diğer',
+  ];
+
+  static const String stockAdjustTitle = 'Stok Düzeltme';
+  static const String stockAdjustCurrent = 'Sistemdeki stok';
+  static const String stockAdjustNew = 'Sayım sonucu';
+  static const String stockAdjustReason = 'Sebep';
+  static const String stockAdjustSave = 'Düzeltmeyi Kaydet';
+  static const String stockAdjustSaved = 'Stok düzeltmesi kaydedildi.';
+  static const String stockReasonRequired = 'Sebep zorunludur.';
+  static const String stockQuantityInvalid = 'Miktar geçersiz. Örnek: 12';
+
+  // ── Hareket geçmişi (docs/13 §8) ─────────────────────────────────────────
+  static const String stockMovementsTitle = 'Stok Hareketleri';
+  static const String stockMovementsEmpty =
+      'Bu filtrelerle hareket bulunamadı.';
+  static const String stockMovementsAllTypes = 'Tüm hareketler';
+  static const String stockMovementsAllProducts = 'Tüm ürünler';
+  static const String stockMovementReverse = 'Ters Kayıt Oluştur';
+  static const String stockMovementReverseTitle = 'Ters kayıt oluştur';
+  static const String stockMovementReverseBody =
+      'Hareket kayıtları düzenlenemez ve silinemez. Bunun yerine ters yönde '
+      'yeni bir düzeltme hareketi oluşturulur; orijinal kayıt olduğu gibi '
+      'kalır.';
+  static const String stockMovementReversed = 'Ters kayıt oluşturuldu.';
+  static const String stockMovementResulting = 'Sonuç';
+
+  /// docs/13 §2 — hareket tipi adları.
+  static const Map<String, String> stockMovementTypeNames = {
+    'initial': 'Başlangıç',
+    'stockEntry': 'Stok Girişi',
+    'sale': 'Satış',
+    'saleCancellation': 'Satış İptali',
+    'return': 'İade',
+    'waste': 'Fire',
+    'adjustment': 'Düzeltme',
+    'importAdjustment': 'Import Düzeltmesi',
+    'restoreBaseline': 'Yedek Geri Yükleme',
+  };
+
+  // ── Kritik / negatif stok (docs/13 §7) ───────────────────────────────────
+  static const String stockCriticalTitle = 'Kritik Stok';
+  static const String stockNegativeTitle = 'Negatif Stok';
+  static const String stockCriticalEmpty = 'Kritik stokta ürün yok.';
+  static const String stockNegativeEmpty = 'Negatif stoklu ürün yok.';
+  static const String stockSearchHint = 'Fire veya düzeltme için ürün ara...';
+  static const String stockSearchResults = 'Arama sonuçları';
+  static const String stockCriticalBadge = 'kritik';
+  static const String stockNegativeBadge = 'negatif';
+  static String stockMinimumLabel(int minimum) => 'min. $minimum';
+
+  // ── Bakım · tutarlılık (docs/24 §3.3) ────────────────────────────────────
+  static const String maintenanceTitle = 'Bakım';
+  static const String consistencyTitle = 'Veri Tutarlılığı Kontrolü';
+  static const String consistencyRun = 'Kontrolü Çalıştır';
+  static const String consistencyRunning = 'Kontrol ediliyor...';
+  static const String consistencyClean =
+      'Sapma bulunamadı. Veriler tutarlı görünüyor.';
+  static String consistencySummary(int findings, int products, int sales) =>
+      '$findings sapma bulundu · $products ürün, $sales satış tarandı';
+  static const String consistencyRepair = 'Düzelt';
+  static const String consistencyRepaired = 'Sapma kapatıldı.';
+  static const String consistencyNotRepairable =
+      'Bu sapma otomatik kapatılamaz; kaydı inceleyin.';
+  static const String consistencyExpected = 'Olması gereken';
+  static const String consistencyActual = 'Bulunan';
+
+  /// docs/24 §3.3 — denetim adları.
+  static const Map<String, String> consistencyCheckNames = {
+    'stockQuantity': 'Stok miktarı defterle uyuşmuyor',
+    'saleTotals': 'Satış toplamı satırlarla uyuşmuyor',
+    'saleCounts': 'Satış satır/adet sayacı uyuşmuyor',
+    'returnedQuantity': 'İade edilen miktar uyuşmuyor',
+    'missingImage': 'Ürün görseli dosyası bulunamadı',
+    'foreignKeys': 'Kırık referans',
+    'databaseIntegrity': 'Veritabanı bütünlüğü',
+  };
+
+  /// REQ-DATA-007 — düzeltme kullanıcı onayı ister.
+  static const String consistencyRepairTitle = 'Stok sapmasını kapat';
+  static String consistencyRepairBody(
+    String label,
+    String ledger,
+    String cached,
+  ) =>
+      '$label\n\nDefterdeki toplam: $ledger\nKayıtlı stok: $cached\n\n'
+      'Raftaki gerçek miktarı girin. Defterdekiyle aynıysa yalnızca kayıtlı '
+      'stok tazelenir; farklıysa bir düzeltme hareketi oluşturulur.';
+  static const String consistencyRepairQuantity = 'Gerçek miktar';
+
+  // ── Tedarikçi detayı (REQ-SUP-003) ───────────────────────────────────────
+  static const String supplierDetailTitle = 'Tedarikçi Detayı';
+  static const String supplierDetailProducts = 'Ürünleri';
+  static const String supplierDetailEntries = 'Stok girişleri';
+  static const String supplierDetailNoProducts =
+      'Bu tedarikçiye bağlı ürün yok.';
+  static const String supplierDetailNoEntries =
+      'Bu tedarikçiden yapılmış stok girişi yok.';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

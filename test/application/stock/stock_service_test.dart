@@ -225,6 +225,27 @@ class _FailingCacheStockRepository implements StockRepository {
       _inner.readStockQuantity(productId);
 
   @override
+  Future<List<StockMovement>> list({
+    int? productId,
+    StockMovementType? type,
+    int? supplierId,
+    int? userId,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    int limit = 100,
+    int offset = 0,
+  }) => _inner.list(
+    productId: productId,
+    type: type,
+    supplierId: supplierId,
+    userId: userId,
+    fromUtc: fromUtc,
+    toUtc: toUtc,
+    limit: limit,
+    offset: offset,
+  );
+
+  @override
   Future<int> countMovements(int productId) => _inner.countMovements(productId);
 
   @override

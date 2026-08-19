@@ -174,6 +174,37 @@ class DriftProductRepository implements ProductRepository {
   }
 
   @override
+  Future<List<Product>> listCriticalStock({int limit = 100}) async {
+    // docs/13 §7 · REQ-STOCK-011 — `minimum_stock = 0` olan ürünler HARİÇ:
+    // kullanıcı o ürün için takip istemiyor demektir.
+    final rows =
+        await (_db.select(_db.products)
+              ..where(
+                (p) =>
+                    p.isActive.equals(true) &
+                    p.minimumStock.isBiggerThanValue(0) &
+                    p.stockQuantity.isSmallerOrEqual(p.minimumStock),
+              )
+              ..orderBy([(p) => OrderingTerm(expression: p.stockQuantity)])
+              ..limit(limit))
+            .get();
+    return rows.map(_toDomain).toList();
+  }
+
+  @override
+  Future<List<Product>> listNegativeStock({int limit = 100}) async {
+    // BR-STOCK-007 — pasif ürünler de DAHİLDİR: negatif stok bir hata
+    // sinyalidir ve pasifleştirilmiş olmak sinyali geçersiz kılmaz.
+    final rows =
+        await (_db.select(_db.products)
+              ..where((p) => p.stockQuantity.isSmallerThanValue(0))
+              ..orderBy([(p) => OrderingTerm(expression: p.stockQuantity)])
+              ..limit(limit))
+            .get();
+    return rows.map(_toDomain).toList();
+  }
+
+  @override
   Future<int> count({bool includeInactive = false, int? categoryId}) async {
     final total = _db.products.id.count();
     final row =

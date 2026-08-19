@@ -14,6 +14,7 @@ import '../../domain/enums/stock_reference_type.dart';
 import '../../domain/models/stock_movement.dart' as domain;
 import '../../domain/repositories/stock_repository.dart';
 import '../db/canteen_database.dart' as db;
+import '../db/converters.dart';
 import 'failures.dart';
 
 class DriftStockRepository implements StockRepository {
@@ -78,6 +79,53 @@ class DriftStockRepository implements StockRepository {
               ..where(_db.stockMovements.productId.equals(productId)))
             .getSingle();
     return row.read(total) ?? 0;
+  }
+
+  @override
+  Future<List<domain.StockMovement>> list({
+    int? productId,
+    StockMovementType? type,
+    int? supplierId,
+    int? userId,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    const toMillis = UtcMillisConverter();
+
+    final query = _db.select(_db.stockMovements)
+      ..where((m) {
+        // Filtre verilmediyse koşul EKLENMEZ; `1=1` gibi bir yer tutucu
+        // sorgu planını gereksiz yere bulandırırdı.
+        var condition = const Constant(true) as Expression<bool>;
+        if (productId != null) {
+          condition = condition & m.productId.equals(productId);
+        }
+        if (type != null) condition = condition & m.type.equalsValue(type);
+        if (supplierId != null) {
+          condition = condition & m.supplierId.equals(supplierId);
+        }
+        if (userId != null) condition = condition & m.userId.equals(userId);
+        if (fromUtc != null) {
+          condition =
+              condition &
+              m.createdAt.isBiggerOrEqualValue(toMillis.toSql(fromUtc));
+        }
+        if (toUtc != null) {
+          condition =
+              condition & m.createdAt.isSmallerThanValue(toMillis.toSql(toUtc));
+        }
+        return condition;
+      })
+      // En yeni üstte; eşit zamanlarda `id` deterministik sıra verir.
+      ..orderBy([
+        (m) => OrderingTerm(expression: m.createdAt, mode: OrderingMode.desc),
+        (m) => OrderingTerm(expression: m.id, mode: OrderingMode.desc),
+      ])
+      ..limit(limit, offset: offset);
+
+    return (await query.get()).map(_toDomain).toList();
   }
 
   @override

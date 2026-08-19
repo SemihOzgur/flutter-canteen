@@ -47,6 +47,9 @@ class ProductListScreen extends ConsumerStatefulWidget {
   static const Key previousPageKey = Key('products_previous_page');
   static const Key nextPageKey = Key('products_next_page');
 
+  /// docs/13 §7 — kritik/negatif stok işareti.
+  static Key stockWarningKey(int id) => Key('product_stock_warning_$id');
+
   static Key tileKey(int id) => ValueKey('product_tile_$id');
   static Key editButtonKey(int id) => ValueKey('product_edit_$id');
   static Key deleteButtonKey(int id) => ValueKey('product_delete_$id');
@@ -467,16 +470,46 @@ class _ProductTile extends StatelessWidget {
       '${MoneyFormatter.format(product.salePrice)} '
           '(${AppStringsTr.productPriceVatIncludedSuffix})',
       AppStringsTr.productStockValue(product.stockQuantity),
+      // docs/13 §7 — kritik ve negatif stok ürün listesinde GÖRÜNÜR.
+      // Koşul `domain/models/product.dart` içindedir (rules/01 §2).
+      if (product.isNegativeStock)
+        AppStringsTr.stockNegativeBadge
+      else if (product.isCriticalStock)
+        AppStringsTr.stockCriticalBadge,
       if (!product.isActive) AppStringsTr.userInactive,
     ].join(' · ');
+
+    // rules/05 §5 — renkle iletilen her durum ikon veya metinle de ifade
+    // edilir; burada hem rozet metni hem ikon vardır.
+    final stockWarning = product.isNegativeStock
+        ? Theme.of(context).colorScheme.error
+        : product.isCriticalStock
+        ? Theme.of(context).colorScheme.tertiary
+        : null;
 
     return ListTile(
       key: ProductListScreen.tileKey(product.id),
       // docs/21 §3 — liste satırı 40×40; görsel yoksa/okunamıyorsa varsayılan
       // ikon gösterilir, hata gösterilmez (REQ-IMG-009).
       leading: ProductImageView(relativePath: product.imagePath, size: 40),
-      title: Text(product.name),
-      subtitle: Text(subtitle),
+      title: Row(
+        children: [
+          Flexible(child: Text(product.name)),
+          if (stockWarning != null) ...[
+            const SizedBox(width: 6),
+            Icon(
+              Icons.warning_amber_rounded,
+              key: ProductListScreen.stockWarningKey(product.id),
+              size: 16,
+              color: stockWarning,
+            ),
+          ],
+        ],
+      ),
+      subtitle: Text(
+        subtitle,
+        style: stockWarning == null ? null : TextStyle(color: stockWarning),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

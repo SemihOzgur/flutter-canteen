@@ -66,6 +66,19 @@ abstract interface class ProductRepository {
     int offset,
   });
 
+  /// **docs/13 §7 — kritik stok.**
+  ///
+  /// ```text
+  /// minimum_stock > 0  AND  stock_quantity <= minimum_stock
+  /// ```
+  ///
+  /// REQ-STOCK-011: `minimum_stock = 0` olan ürünler **dahil edilmez** —
+  /// kullanıcı o ürün için takip istemiyor demektir.
+  Future<List<Product>> listCriticalStock({int limit});
+
+  /// **docs/13 §7 · BR-STOCK-007 — negatif stok GİZLENMEZ, vurgulanır.**
+  Future<List<Product>> listNegativeStock({int limit});
+
   /// [list] ile aynı filtrelerin toplam kayıt sayısı — sayfalama göstergesi
   /// için. Sayım **SQL tarafında** yapılır (rules/01 §8).
   Future<int> count({bool includeInactive, int? categoryId});

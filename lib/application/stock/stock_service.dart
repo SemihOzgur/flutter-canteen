@@ -39,6 +39,8 @@ import '../../core/result/result.dart';
 import '../../data/db/canteen_database.dart' show CanteenDatabase;
 import '../../domain/enums/stock_movement_type.dart';
 import '../../domain/enums/stock_reference_type.dart';
+import '../../domain/models/product.dart';
+import '../../domain/models/stock_movement.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../../domain/repositories/stock_repository.dart';
 import '../audit/audit_actions.dart';
@@ -101,6 +103,39 @@ class StockService {
        _products = products,
        _audit = audit,
        _clock = clock ?? db.clock;
+
+  // --- Okuma — ekranların TEK kapısı (rules/01 §1) ------------------------
+
+  /// Filtrelenebilir hareket listesi — docs/13 §8.
+  ///
+  /// Ekranlar `data/` katmanını tanımaz; defter buradan okunur.
+  Future<List<StockMovement>> movements({
+    int? productId,
+    StockMovementType? type,
+    int? supplierId,
+    int? userId,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    int limit = 100,
+    int offset = 0,
+  }) => _stock.list(
+    productId: productId,
+    type: type,
+    supplierId: supplierId,
+    userId: userId,
+    fromUtc: fromUtc,
+    toUtc: toUtc,
+    limit: limit,
+    offset: offset,
+  );
+
+  /// docs/13 §7 — kritik stok (REQ-STOCK-011: `minimum_stock = 0` hariç).
+  Future<List<Product>> criticalStock({int limit = 100}) =>
+      _products.listCriticalStock(limit: limit);
+
+  /// docs/13 §7 · BR-STOCK-007 — negatif stok gizlenmez.
+  Future<List<Product>> negativeStock({int limit = 100}) =>
+      _products.listNegativeStock(limit: limit);
 
   /// Ürün oluşturulurken girilen başlangıç stoğunu deftere yazar —
   /// **REQ-PROD-007 · BR-STOCK-003 · docs/13 §2.**

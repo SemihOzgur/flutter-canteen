@@ -291,10 +291,15 @@ void main() {
         AppRoutes.barcodeDiagnostics,
         // Faz 5 — docs/12 · REQ-UX-001.
         AppRoutes.sales,
+        // Faz 6 — docs/13 · docs/24 §3.3.
+        AppRoutes.stock,
+        AppRoutes.stockEntry,
+        AppRoutes.stockMovements,
+        AppRoutes.consistency,
       });
       expect(
         routes.length,
-        11,
+        15,
         reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
       );
     });
