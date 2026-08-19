@@ -17,6 +17,7 @@ Değerlendirme: **Olasılık × Etki**. Etki, veri kaybı ve finansal doğruluk 
 | [RSK-004](#rsk-004) | Rol/yetki sisteminin olmaması | Yüksek | Orta | 🟡 |
 | [RSK-006](#rsk-006) | Klavye düzeni barkod uyumsuzluğu | Orta | Orta | 🟡 |
 | [RSK-007](#rsk-007) | macOS'ta çalışanın Windows'ta çalışmaması | Yüksek | Orta | 🟡 |
+| [RSK-018](#rsk-018) | **Windows doğrulaması birikiyor — test edilecek cihaz yok** | **Yüksek** | Yüksek | 🔴 |
 | [RSK-008](#rsk-008) | Denormalize stok değerinin defterden sapması | Düşük | Yüksek | 🟡 |
 | [RSK-010](#rsk-010) | Negatif stoğun normalleşmesi | Yüksek | Orta | 🟡 |
 | [RSK-012](#rsk-012) | Kapsam büyümesi | Yüksek | Orta | 🟡 |
@@ -205,6 +206,40 @@ Raporlar erişilemez olur. Veri kaybı yaşanmaz.
 **Risk:** İmzasız installer SmartScreen uyarısı verir; antivirüs `.canteenbackup` dosyasını şüpheli görebilir.
 
 **Azaltma:** Yedek standart bir arşiv formatıdır (şifreli/özel değil) — taranabilir; kullanıcıya kurulumda ne bekleyeceği anlatılır; kod imzalama [OD-013](28-open-decisions.md) kapsamında.
+
+---
+
+## RSK-018
+### Windows doğrulaması birikiyor — test edilecek cihaz yok
+
+**Risk:** Geliştirme macOS'ta yapılıyor ve şu anda erişilebilir bir Windows cihazı yok.
+`docs/27 §8`'in W-serisi manuel testleri **hiçbir fazın sonunda çalıştırılamıyor**; borç
+faz faz birikiyor. Production Windows olduğu için, ilk gerçek çalıştırma Faz 12'ye kadar
+ertelenirse birikmiş hatalar aynı anda ve en pahalı noktada ortaya çıkar.
+
+RSK-007'nin ("macOS'ta çalışanın Windows'ta çalışmaması") somutlaşmış hâlidir: orada risk
+*ihtimaldi*, burada doğrulama **fiilen yapılamıyor**.
+
+**Kanıtlanmış örnek:** Faz 3d'de "Görsel Seç" butonu macOS'ta sessizce çalışmıyordu —
+sebep eksik bir sandbox entitlement'ıydı ve 822 otomatik testin hiçbiri yakalayamadı.
+Platform yapılandırması test kapsamının dışındadır; aynı sınıf Windows'ta da mevcuttur.
+
+**Azaltma — yapılanlar:**
+
+- `test/core/platform_path_safety_test.dart`: W6 ve W15'in **platformdan bağımsız hata
+  sınıfı** otomatikleştirildi — boşluklu ve Türkçe karakterli kök altında dizin oluşturma,
+  SQLite açma/yazma, türetilmiş yolların kök içinde kalması, elle string birleştirme
+  yapılmadığı.
+- Barkod tanılama ekranı (REQ-BARC-010) W1–W4'ü cihaz bulunduğunda hızlı yapılabilir kılar.
+
+**Azaltılamayan kısım:** `%APPDATA%` çözümlemesi · 260 karakter yol sınırı · gerçek HID
+okuyucu (W1–W4) · DPI ölçekleme (W7) · elektrik kesintisi (W9) · **ikinci örnek reddi
+(W11)** — POSIX'te `flock` süreç bazlı olduğu için tek süreçli testte kanıtlanamaz;
+Windows'ta `LockFile` handle bazlıdır ve reddeder.
+
+**Öneri:** `windows-latest` üzerinde `flutter build windows` + tüm test paketini koşturan
+bir CI. Donanım gerektirmez ve derlenmeme, yol çözümlemesi, dosya kilitleme farklarını
+yakalar. W1–W4 ve W7/W9 yine elde kalır.
 
 ---
 
