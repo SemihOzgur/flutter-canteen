@@ -359,14 +359,16 @@ class SaleService {
           productId: product.id,
           // 1/5 — ad.
           productNameSnapshot: product.name,
-          // docs/04 §3.9 — "okutulan barkod".
+          // docs/04 §3.9 · **OD-022** — ürünün **birincil** barkodu.
           //
-          // ⚠️ `cart_items` okutulan barkodu **taşımaz** (docs/05 §2.7), bu
-          // yüzden burada ürünün birincil barkodu yazılır. Tek barkodlu
-          // ürünlerde — yani neredeyse her üründe — ikisi aynıdır; çok
-          // barkodlu üründe hangi barkodun okutulduğu bilgisi kaybolur.
-          // Bu alan yalnızca raporlama amaçlıdır; hiçbir para, stok veya
-          // durum hesabına girmez.
+          // "Okutulan barkod" hedefinden vazgeçildi: `cart_items` okutulan
+          // barkodu taşımaz (docs/05 §2.7) ve sepetin çökme sonrası aynen
+          // geri gelmesi gerekir (REQ-CART-003). Alan yalnızca raporlama
+          // amaçlıdır; hiçbir para, stok, KDV veya durum hesabına girmez.
+          //
+          // `barcodesOf` sırası sözleşmenin parçasıdır (birincil başta);
+          // sırasız bir sonuç aynı ürünün satışlarında rastgele snapshot
+          // üretirdi.
           barcodeSnapshot: barcodes.isEmpty ? null : barcodes.first,
           // 2/5 — kategori.
           categoryIdSnapshot: product.categoryId,

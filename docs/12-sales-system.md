@@ -155,7 +155,7 @@ Satırda F2
 |---|---|
 | `Product.salePrice` değişmez | BR-SALE-003 |
 | `SaleItem.originalUnitPriceMinor` liste fiyatını saklar | BR-SALE-004 |
-| Audit log'a yazılır (`salePriceOverride`) | BR-SALE-004 |
+| Audit log'a yazılır (`salePriceOverridden`) | BR-SALE-004 · OD-023 |
 | Satır "fiyat değiştirildi" rozetiyle gösterilir | — |
 | Negatif fiyat girilemez | BR-PROD-006 |
 
