@@ -60,6 +60,7 @@
 /// yazım hâlinde parola doğrulanamaz hâle gelirdi.
 library;
 
+import '../audit/audit_actions.dart';
 import 'dart:convert';
 
 import '../../core/logging/app_logger.dart';
@@ -78,19 +79,20 @@ import 'recovery_code_service.dart';
 class FinancialAccessService {
   /// Throttle anahtarı — dashboard parolası **sistemde tektir** (BR-AUTH-008),
   /// kullanıcı başına değildir; bu yüzden tek sabit anahtar kullanılır.
-  static const String throttleKey = 'dashboard';
+  static const String throttleKey = AuditEntities.dashboard;
 
   /// Audit `entity_type` — dashboard parolası sistem geneli tek bir varlıktır,
   /// bu yüzden `entity_id` yoktur (docs/18 §2: sistem işlemlerinde `NULL`).
   ///
   /// Recovery olayları da aynı varlığa aittir; `RecoveryCodeService` bu sabiti
   /// yeniden kullanır (tek kaynak).
-  static const String auditEntityType = 'dashboard';
+  static const String auditEntityType = AuditEntities.dashboard;
 
   /// docs/18 §3 — parola/hash/salt **yazılmaz**, yalnızca olayın kendisi.
-  static const String actionUnlocked = 'dashboardUnlocked';
-  static const String actionUnlockFailed = 'dashboardUnlockFailed';
-  static const String actionPasswordChanged = 'dashboardPasswordChanged';
+  static const String actionUnlocked = AuditActions.dashboardUnlocked;
+  static const String actionUnlockFailed = AuditActions.dashboardUnlockFailed;
+  static const String actionPasswordChanged =
+      AuditActions.dashboardPasswordChanged;
 
   final CanteenDatabase _db;
   final AppSettingsDao _settings;

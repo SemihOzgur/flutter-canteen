@@ -25,6 +25,7 @@
 /// [create] `isDefault: true` ile çağrıldığında da aynı yol işletilir.
 library;
 
+import '../audit/audit_actions.dart';
 import 'dart:convert';
 
 import '../../core/logging/app_logger.dart';
@@ -38,15 +39,15 @@ import 'vat_rate_failures.dart';
 
 class VatRateService {
   /// docs/18 §2 — `entity_type`.
-  static const String auditEntityType = 'vat_rate';
+  static const String auditEntityType = AuditEntities.vatRate;
 
   // docs/18 §3.
-  static const String actionCreated = 'vatRateCreated';
-  static const String actionChanged = 'vatRateChanged';
-  static const String actionDeactivated = 'vatRateDeactivated';
+  static const String actionCreated = AuditActions.vatRateCreated;
+  static const String actionChanged = AuditActions.vatRateChanged;
+  static const String actionDeactivated = AuditActions.vatRateDeactivated;
 
   /// OD-020 — pasifleştirme tek yönlü değildir.
-  static const String actionActivated = 'vatRateActivated';
+  static const String actionActivated = AuditActions.vatRateActivated;
 
   final CanteenDatabase _db;
   final VatRatesDao _vatRates;

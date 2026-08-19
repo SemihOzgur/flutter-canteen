@@ -27,6 +27,7 @@
 /// çağrılar hiçbir şey değiştirmediği için kayıt üretmez.
 library;
 
+import '../audit/audit_actions.dart';
 import 'dart:convert';
 
 import '../../core/logging/app_logger.dart';
@@ -40,21 +41,21 @@ import 'category_failures.dart';
 
 class CategoryService {
   /// docs/18 §2 — `entity_type`.
-  static const String auditEntityType = 'category';
+  static const String auditEntityType = AuditEntities.category;
 
   // docs/18 §3 — Kategori / Tedarikçi / KDV tablosundaki action adları.
-  static const String actionCreated = 'categoryCreated';
-  static const String actionRenamed = 'categoryRenamed';
-  static const String actionDeactivated = 'categoryDeactivated';
+  static const String actionCreated = AuditActions.categoryCreated;
+  static const String actionRenamed = AuditActions.categoryRenamed;
+  static const String actionDeactivated = AuditActions.categoryDeactivated;
 
   /// OD-020 — pasifleştirme tek yönlü değildir.
-  static const String actionActivated = 'categoryActivated';
-  static const String actionDeleted = 'categoryDeleted';
+  static const String actionActivated = AuditActions.categoryActivated;
+  static const String actionDeleted = AuditActions.categoryDeleted;
 
   /// OD-018 — docs/10 §1.4 bu olayı `categoryMerge` diye anıyordu; audit
   /// action adları docs/18'in konusudur ve kategori silinmediği için
   /// "merge" yanıltıcıydı. Çelişki OD-018 ile bu ad lehine kapatıldı.
-  static const String actionProductsMoved = 'categoryProductsMoved';
+  static const String actionProductsMoved = AuditActions.categoryProductsMoved;
 
   final CanteenDatabase _db;
   final CategoriesDao _categories;

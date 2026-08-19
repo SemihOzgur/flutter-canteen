@@ -5,13 +5,14 @@
 /// `data/db/providers.dart` yalnızca bağlantı, repository ve DAO'ları verir
 /// (rules/01 §1 — bağımlılık yönü daima aşağı).
 ///
-/// Faz 6 stok ekranları bu provider'ı **genişleterek** kullanacaktır; bugün
-/// tek tüketicisi ürün oluşturma akışıdır (REQ-PROD-007).
+/// Tüketicileri: ürün oluşturma (REQ-PROD-007), satış (Faz 5) ve Faz 6'nın
+/// stok girişi / fire / düzeltme akışları.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/providers.dart';
+import '../audit/providers.dart';
 import 'stock_service.dart';
 
 /// Stok defterinin tek yazım noktası (rules/02 §4).
@@ -19,5 +20,7 @@ final stockServiceProvider = Provider<StockService>(
   (ref) => StockService(
     db: ref.watch(canteenDatabaseProvider),
     stock: ref.watch(stockRepositoryProvider),
+    products: ref.watch(productRepositoryProvider),
+    audit: ref.watch(auditServiceProvider),
   ),
 );

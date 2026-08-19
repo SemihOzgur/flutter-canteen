@@ -50,7 +50,12 @@ void main() {
       auditLogs: AuditLogsDao(db),
       products: DriftProductRepository(db),
       sales: sales ?? DriftSaleRepository(db),
-      stockService: StockService(db: db, stock: stockRepo, clock: () => now),
+      stockService: StockService(
+        db: db,
+        stock: stockRepo,
+        products: DriftProductRepository(db),
+        clock: () => now,
+      ),
       clock: () => now,
     );
   }

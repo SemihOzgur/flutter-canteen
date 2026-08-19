@@ -331,6 +331,16 @@ class DriftProductRepository implements ProductRepository {
   }
 
   @override
+  Future<int> updatePurchasePrice(int id, Money purchasePrice) {
+    return (_db.update(_db.products)..where((p) => p.id.equals(id))).write(
+      db.ProductsCompanion(
+        purchasePriceMinor: Value(purchasePrice.minor),
+        updatedAt: Value(_db.clock().toUtc()),
+      ),
+    );
+  }
+
+  @override
   Future<int> countFavorites() async {
     final count = _db.products.id.count();
     final row =

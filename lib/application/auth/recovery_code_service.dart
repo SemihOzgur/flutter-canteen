@@ -31,6 +31,7 @@
 /// kilitlenirdi (docs/17 §8).
 library;
 
+import '../audit/audit_actions.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -92,10 +93,11 @@ class RecoveryCodeService {
   static const String auditEntityType = FinancialAccessService.auditEntityType;
 
   /// docs/18 §3 — kod değeri **yazılmaz**, yalnızca olayın kendisi.
-  static const String actionRecoveryUsed = 'dashboardRecoveryUsed';
-  static const String actionRecoveryFailed = 'dashboardRecoveryFailed';
+  static const String actionRecoveryUsed = AuditActions.dashboardRecoveryUsed;
+  static const String actionRecoveryFailed =
+      AuditActions.dashboardRecoveryFailed;
   static const String actionRecoveryRegenerated =
-      'dashboardRecoveryRegenerated';
+      AuditActions.dashboardRecoveryRegenerated;
 
   final CanteenDatabase _db;
   final AppSettingsDao _settings;

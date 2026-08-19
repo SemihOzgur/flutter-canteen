@@ -17,6 +17,7 @@
 /// stok yalnızca `stock_movements` üzerinden oluşur (BR-STOCK-001).
 library;
 
+import '../../core/money/money.dart';
 import '../../core/result/result.dart';
 import '../models/product.dart';
 
@@ -101,6 +102,14 @@ abstract interface class ProductRepository {
   /// `is_favorite` (ve `updated_at`) yazılır; başka hiçbir alan değişmez.
   /// Etkilenen satır sayısını döner.
   Future<int> setFavorite(int id, bool isFavorite);
+
+  /// Yalnızca alış fiyatını günceller — **BR-STOCK-009 · REQ-STOCK-008.**
+  ///
+  /// Stok girişinde kullanıcı farklı bir alış fiyatı girdiğinde ürünün fiyatı
+  /// da güncellenebilir; bu güncelleme girişle **aynı transaction** içinde
+  /// olmak zorundadır. Tüm ürünü yeniden yazan [update] bunun için fazla
+  /// geniştir: aradaki başka bir değişikliği sessizce geri alabilirdi.
+  Future<int> updatePurchasePrice(int id, Money purchasePrice);
 
   /// docs/09 §5 — "30'dan fazla favori eklenirse kullanıcı uyarılır."
   ///

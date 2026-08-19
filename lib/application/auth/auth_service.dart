@@ -35,6 +35,8 @@
 library;
 
 import '../../core/result/result.dart';
+import '../audit/audit_actions.dart';
+import '../audit/audit_service.dart';
 import '../../data/dao/daos.dart';
 import '../../data/db/canteen_database.dart';
 import '../../data/repositories/failures.dart';
@@ -53,6 +55,14 @@ class AuthService {
   final PasswordHasher _hasher;
   final LoginThrottle _throttle;
   final FinancialAccessService _financialAccess;
+
+  /// docs/18 §3 "Kullanıcı" tablosu — REQ-AUDIT-001.
+  ///
+  /// Opsiyoneldir: denetim kaydı olmadan da kimlik doğrulama çalışır
+  /// (REQ-AUDIT-007 — audit hiçbir zaman ana işlemi bloklamaz). Testler ve
+  /// kurulum sihirbazı bunu vermeden servisi kurabilir.
+  final AuditService? _audit;
+
   final DateTime Function() _clock;
 
   /// [clock] `rules/06 §7` gereği enjekte edilir; verilmezse veritabanının
@@ -69,8 +79,10 @@ class AuthService {
     required FinancialAccessService financialAccess,
     PasswordHasher? hasher,
     LoginThrottle? throttle,
+    AuditService? audit,
     DateTime Function()? clock,
-  }) : _db = db,
+  }) : _audit = audit,
+       _db = db,
        _users = users,
        _session = session,
        _hasher = hasher ?? PasswordHasher(),
@@ -190,6 +202,20 @@ class AuthService {
       await _session.save(user.id);
     });
 
+    // docs/18 §7 — `userLoggedIn` "tek başına duran" olaylardandır ve kendi
+    // yazımına sahiptir. Giriş transaction'ının İÇİNE alınmadı: audit yazımı
+    // ana işlemi asla düşürmemelidir (REQ-AUDIT-007) ve giriş başarılı olduğu
+    // hâlde denetim yüzünden geri alınması kabul edilemez.
+    //
+    // ⚠️ Parola, hash ve salt yazılmaz (BR-SEC-001 · REQ-AUDIT-004).
+    await _audit?.record(
+      action: AuditActions.userLoggedIn,
+      entityType: AuditEntities.user,
+      entityId: user.id,
+      userId: user.id,
+      at: now,
+    );
+
     // Güncel satır döndürülür: lastLoginAt/updatedAt taze olsun.
     return Ok((await _users.findById(user.id) ?? user).toAuthUser());
   }
@@ -204,8 +230,19 @@ class AuthService {
   /// Kilit yalnızca bellekte olduğu için bu adım veritabanına dokunmaz ve
   /// başarısız olamaz; bu yüzden oturum temizliğinden **önce** yapılır.
   Future<void> logout() async {
+    // Kim çıktığı, oturum temizlenmeden önce okunur.
+    final user = await _session.load();
+
     _financialAccess.lock();
     await _session.clear();
+
+    await _audit?.record(
+      action: AuditActions.userLoggedOut,
+      entityType: AuditEntities.user,
+      entityId: user?.id,
+      userId: user?.id,
+      at: _clock().toUtc(),
+    );
   }
 
   /// Geçerli oturumdaki kullanıcı; oturum yoksa/geçersizse `null`.
@@ -275,6 +312,18 @@ class AuthService {
             updatedAt: now,
           ),
         );
+        // docs/18 §3 — `userCreated`. Kullanıcı oluşturmayla **aynı
+        // transaction** içindedir (REQ-AUDIT-006): kullanıcı oluşup denetim
+        // kaydı oluşmazsa iz kopar.
+        //
+        // ⚠️ `secret.hash` ve `secret.salt` YAZILMAZ (REQ-AUDIT-004).
+        await _audit?.record(
+          action: AuditActions.userCreated,
+          entityType: AuditEntities.user,
+          entityId: id,
+          at: now,
+          newValue: {'username': normalized, 'display_name': name},
+        );
         return Ok(id);
       } on Object catch (error) {
         // `ux_users_username` yarışı — kontrol ile insert arasında.
@@ -308,6 +357,17 @@ class AuthService {
       userId,
       passwordHash: secret.hash,
       passwordSalt: secret.salt,
+    );
+
+    // docs/18 §3 — ⚠️ **parola, hash ve salt değerleri asla yazılmaz.**
+    // Kayıt yalnızca "bu kullanıcının parolası şu an değişti" bilgisidir;
+    // `old_value`/`new_value` bilinçli olarak boştur (BR-SEC-001).
+    await _audit?.record(
+      action: AuditActions.passwordChanged,
+      entityType: AuditEntities.user,
+      entityId: userId,
+      userId: userId,
+      at: _clock().toUtc(),
     );
     return const Ok(null);
   }
@@ -345,6 +405,20 @@ class AuthService {
         if (hadSession) _financialAccess.lock();
       }
 
+      // docs/18 §3 — yalnızca `userDeactivated` tanımlıdır; yeniden
+      // aktifleştirme için bir action **yoktur** ve rules/00 §6 olmayanı
+      // uydurmayı yasaklar.
+      if (user.isActive && !isActive) {
+        await _audit?.record(
+          action: AuditActions.userDeactivated,
+          entityType: AuditEntities.user,
+          entityId: userId,
+          at: _clock().toUtc(),
+          oldValue: const {'is_active': true},
+          newValue: const {'is_active': false},
+        );
+      }
+
       return const Ok<void>(null);
     });
   }
@@ -354,8 +428,21 @@ class AuthService {
     final name = displayName.trim();
     if (name.isEmpty) return const Err(AuthFailures.displayNameRequired);
 
+    final existing = await _users.findById(userId);
+    if (existing == null) return const Err(AuthFailures.userNotFound);
+
     final affected = await _users.updateDisplayName(userId, name);
     if (affected == 0) return const Err(AuthFailures.userNotFound);
+
+    // REQ-AUDIT-003 — yalnızca DEĞİŞEN alanın eski/yeni değeri saklanır.
+    await _audit?.record(
+      action: AuditActions.userRenamed,
+      entityType: AuditEntities.user,
+      entityId: userId,
+      at: _clock().toUtc(),
+      oldValue: {'display_name': existing.displayName},
+      newValue: {'display_name': name},
+    );
     return const Ok(null);
   }
 
