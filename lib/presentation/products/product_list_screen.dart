@@ -7,6 +7,8 @@
 /// | Liste **sayfalıdır** | REQ-PERF-006 · rules/01 §8 |
 /// | "Pasifleri göster" varsayılan kapalı | docs/09 §4 |
 /// | Fiyat **KDV dahil** gösterilir | BR-VAT-003 |
+/// | Satır görseli 40×40, yoksa varsayılan ikon | docs/21 §3 · REQ-IMG-009 |
+/// | Yıldızla tek tıkla favori | REQ-PROD-009 · docs/09 §5 |
 ///
 /// ## Katlama burada yapılmaz
 ///
@@ -35,6 +37,7 @@ import '../../domain/models/product.dart';
 import '../common/current_user.dart';
 import '../common/form_message.dart';
 import 'product_form_screen.dart';
+import 'product_image_view.dart';
 
 class ProductListScreen extends ConsumerStatefulWidget {
   static const Key addButtonKey = Key('products_add_button');
@@ -48,6 +51,7 @@ class ProductListScreen extends ConsumerStatefulWidget {
   static Key editButtonKey(int id) => ValueKey('product_edit_$id');
   static Key deleteButtonKey(int id) => ValueKey('product_delete_$id');
   static Key activeSwitchKey(int id) => ValueKey('product_active_$id');
+  static Key favoriteButtonKey(int id) => ValueKey('product_favorite_$id');
 
   const ProductListScreen({super.key});
 
@@ -188,6 +192,34 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         _showInfo(
           value.isEmpty
               ? AppStringsTr.productDeactivated
+              : value.map((w) => w.message).join(' '),
+        );
+        await _load();
+    }
+  }
+
+  /// REQ-PROD-009 · docs/09 §5 — yıldızla tek tıkla favori.
+  ///
+  /// 30 favori uyarısı **servisten** gelir; ekran saymaz (rules/05 §8).
+  /// Favori değişikliği geri alınabilir olduğu için onay istenmez
+  /// (rules/05 §5).
+  Future<void> _toggleFavorite(Product product) async {
+    setState(() => _message = null);
+
+    final result = await ref
+        .read(productServiceProvider)
+        .setFavorite(product.id, isFavorite: !product.isFavorite);
+    if (!mounted) return;
+
+    switch (result) {
+      case Err(:final failure):
+        setState(() => _message = failure.userMessage);
+      case Ok(:final value):
+        _showInfo(
+          value.isEmpty
+              ? (product.isFavorite
+                    ? AppStringsTr.productFavoriteRemoved
+                    : AppStringsTr.productFavoriteAdded)
               : value.map((w) => w.message).join(' '),
         );
         await _load();
@@ -380,6 +412,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         onEdit: () => _openForm(product: product),
                         onDelete: () => _delete(product),
                         onActiveChanged: (value) => _setActive(product, value),
+                        onFavoriteToggled: () => _toggleFavorite(product),
                       );
                     },
                   ),
@@ -415,6 +448,7 @@ class _ProductTile extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final ValueChanged<bool> onActiveChanged;
+  final VoidCallback onFavoriteToggled;
 
   const _ProductTile({
     required this.product,
@@ -422,6 +456,7 @@ class _ProductTile extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onActiveChanged,
+    required this.onFavoriteToggled,
   });
 
   @override
@@ -437,14 +472,22 @@ class _ProductTile extends StatelessWidget {
 
     return ListTile(
       key: ProductListScreen.tileKey(product.id),
-      leading: Icon(
-        product.isActive ? Icons.inventory_2 : Icons.inventory_2_outlined,
-      ),
+      // docs/21 §3 — liste satırı 40×40; görsel yoksa/okunamıyorsa varsayılan
+      // ikon gösterilir, hata gösterilmez (REQ-IMG-009).
+      leading: ProductImageView(relativePath: product.imagePath, size: 40),
       title: Text(product.name),
       subtitle: Text(subtitle),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          IconButton(
+            key: ProductListScreen.favoriteButtonKey(product.id),
+            tooltip: product.isFavorite
+                ? AppStringsTr.productFavoriteRemoveAction
+                : AppStringsTr.productFavoriteAddAction,
+            onPressed: onFavoriteToggled,
+            icon: Icon(product.isFavorite ? Icons.star : Icons.star_border),
+          ),
           IconButton(
             key: ProductListScreen.editButtonKey(product.id),
             tooltip: AppStringsTr.editAction,

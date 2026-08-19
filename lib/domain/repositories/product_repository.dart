@@ -90,6 +90,22 @@ abstract interface class ProductRepository {
   /// değişmez. Etkilenen satır sayısını döner.
   Future<int> setActive(int id, bool isActive);
 
+  /// BR-PROD-008 · REQ-PROD-009 — favori bayrağını değiştirir.
+  ///
+  /// `Product.isFavorite` **boolean bir alandır**; ayrı bir `Favorite`
+  /// entity'si veya tablosu yoktur (rules/02 §11.5 · docs/04 §1). Yalnızca
+  /// `is_favorite` (ve `updated_at`) yazılır; başka hiçbir alan değişmez.
+  /// Etkilenen satır sayısını döner.
+  Future<int> setFavorite(int id, bool isFavorite);
+
+  /// docs/09 §5 — "30'dan fazla favori eklenirse kullanıcı uyarılır."
+  ///
+  /// Sayım **SQL tarafında** yapılır (rules/01 §8) ve `ix_products_favorite`
+  /// kısmi index'ini kullanır. Yalnızca **aktif** ürünler sayılır: pasif ürün
+  /// satış ekranındaki favoriler bölümünde görünmez, dolayısıyla ekran
+  /// karmaşasına da katkı vermez.
+  Future<int> countFavorites();
+
   /// BR-PROD-014 — **koşulsuz** siler.
   ///
   /// "Hiç satılmamış ve hiç stok hareketi yok" koşulunun kontrolü çağırana

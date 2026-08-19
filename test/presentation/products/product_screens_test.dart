@@ -28,7 +28,9 @@ import 'package:canteen/data/db/canteen_database.dart'
     hide Category, Product, Sale, SaleItem, StockMovement, Supplier, VatRate;
 import 'package:canteen/data/db/providers.dart';
 import 'package:canteen/presentation/products/product_form_screen.dart';
+import 'package:canteen/presentation/products/product_image_view.dart';
 import 'package:canteen/presentation/products/product_list_screen.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -370,5 +372,73 @@ void main() {
     ]) {
       expect(text, isNot(contains(leak)), reason: 'REQ-SEC-007 · REQ-UX-008');
     }
+  });
+
+  group('REQ-IMG-009 · BR-IMG-005 — görsel yoksa HATA GÖSTERİLMEZ', () {
+    testWidgets('görselsiz ürün sorunsuz listelenir', (tester) async {
+      await createProduct(name: 'Görselsiz');
+      await pumpList(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Görselsiz'), findsOneWidget);
+      expect(
+        find.byType(ProductImageView),
+        findsOneWidget,
+        reason: 'Varsayılan ikon gösterilir; hata değil.',
+      );
+    });
+
+    testWidgets('KIRIK görsel referansı da hata göstermez', (tester) async {
+      final id = await createProduct(name: 'Kırık Yol');
+      // Yedekten dönme veya elle silme sonrası oluşabilecek durum: DB'de yol
+      // var, dosya yok (docs/21 §4 — orphan/kırık referans).
+      await (db.update(db.products)..where((t) => t.id.equals(id))).write(
+        const ProductsCompanion(imagePath: Value('images/yok-boyle-dosya.jpg')),
+      );
+
+      await pumpList(tester);
+
+      // Dosya okuma asenkrondur; hata yolunun gerçekten koşması beklenir.
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'BR-IMG-005: görseli bulunamayan ürün hata göstermez.',
+      );
+      expect(
+        find.byKey(ProductImageView.fallbackKey),
+        findsOneWidget,
+        reason:
+            'Boş kutu değil, VARSAYILAN İKON gösterilir — kullanıcı ürünü '
+            'yine de görebilmelidir.',
+      );
+      expect(find.text('Kırık Yol'), findsOneWidget);
+    });
+  });
+
+  group('REQ-PROD-009 — favori yıldızı', () {
+    testWidgets('listeden tek tıkla favoriye alınır ve çıkarılır', (
+      tester,
+    ) async {
+      final id = await createProduct(name: 'Tost');
+      await pumpList(tester);
+
+      await tester.tap(find.byKey(ProductListScreen.favoriteButtonKey(id)));
+      await tester.pumpAndSettle();
+
+      final favorited = await withServices(
+        (c) => c.read(productServiceProvider).findById(id),
+      );
+      expect(favorited!.isFavorite, isTrue);
+
+      await tester.tap(find.byKey(ProductListScreen.favoriteButtonKey(id)));
+      await tester.pumpAndSettle();
+
+      final cleared = await withServices(
+        (c) => c.read(productServiceProvider).findById(id),
+      );
+      expect(cleared!.isFavorite, isFalse);
+    });
   });
 }

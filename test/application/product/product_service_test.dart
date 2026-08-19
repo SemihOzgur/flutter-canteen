@@ -22,6 +22,10 @@ import 'package:canteen/domain/enums/sale_status.dart';
 import 'package:canteen/domain/enums/stock_movement_type.dart';
 import 'package:canteen/domain/repositories/stock_repository.dart';
 import 'package:drift/drift.dart' show Value;
+import 'dart:io';
+
+import 'package:canteen/core/paths/app_paths.dart';
+import 'package:canteen/data/files/product_image_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database.dart';
@@ -33,7 +37,12 @@ void main() {
   late AuditLogsDao auditLogs;
   late int userId;
 
+  late Directory imageRoot;
+
   setUp(() async {
+    // Görsel deposu gerçek bir dizin ister; testler kullanıcı veri
+    // dizinine DOKUNMAZ (BR-DATA-001).
+    imageRoot = Directory.systemTemp.createTempSync('canteen_img_');
     db = memoryDatabase();
     stock = DriftStockRepository(db);
     auditLogs = AuditLogsDao(db);
@@ -49,12 +58,17 @@ void main() {
       categories: CategoriesDao(db),
       saleItems: SaleItemsDao(db),
       auditLogs: auditLogs,
+      appSettings: AppSettingsDao(db),
+      images: ProductImageStore(paths: AppPaths(rootPath: imageRoot.path)),
       clock: () => testEpochUtc,
     );
     userId = await insertTestUser(db);
   });
 
-  tearDown(() async => db.close());
+  tearDown(() async {
+    await db.close();
+    if (imageRoot.existsSync()) imageRoot.deleteSync(recursive: true);
+  });
 
   ProductDraft draft({
     String name = 'Kola 330ml',

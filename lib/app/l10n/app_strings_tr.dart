@@ -499,6 +499,35 @@ class AppStringsTr {
   static const String productPriceChangeTitle = 'Fiyat değişikliği';
   static const String productPriceChangeConfirmAction = 'Devam Et';
 
+  // ── Faz 3d — ürün görseli (docs/21) ──────────────────────────────────────
+  static const String productTabImage = 'Görsel';
+  static const String productImageDescription =
+      'Ürüne bir görsel ekleyebilirsiniz. Görsel kaydedilirken otomatik '
+      'olarak küçültülür; orijinal dosya saklanmaz.';
+  static const String productImageSelectAction = 'Görsel Seç';
+  static const String productImageChangeAction = 'Görseli Değiştir';
+  static const String productImageRemoveAction = 'Görseli Kaldır';
+  static const String productImageNone = 'Bu ürünün görseli yok.';
+
+  /// Kaydedilmeden önce `temp/` altında bekleyen görsel (docs/21 §2 adım 6).
+  static const String productImagePendingNotice =
+      'Görsel seçildi. Ürünü kaydettiğinizde uygulanacak.';
+  static const String productImageRemovePendingNotice =
+      'Görsel kaldırılacak. Ürünü kaydettiğinizde uygulanacak.';
+
+  /// Geri alınamaz sonucu olduğu için onay istenir (rules/05 §5).
+  static const String productImageRemoveTitle = 'Görseli kaldır';
+  static const String productImageRemoveConfirm =
+      'Bu ürünün görseli kaldırılacak. Kaydettiğinizde dosya çöp klasörüne '
+      'taşınır ve ürün varsayılan ikonla gösterilir.';
+  static const String productImageRemoveConfirmAction = 'Kaldır';
+
+  // ── Faz 3d — favoriler (REQ-PROD-009 · docs/09 §5) ───────────────────────
+  static const String productFavoriteAddAction = 'Favorilere ekle';
+  static const String productFavoriteRemoveAction = 'Favorilerden çıkar';
+  static const String productFavoriteAdded = 'Ürün favorilere eklendi.';
+  static const String productFavoriteRemoved = 'Ürün favorilerden çıkarıldı.';
+
   // ── Faz 3c — ana ekran gezinme ───────────────────────────────────────────
   static const String homeProductsAction = 'Ürünler';
 

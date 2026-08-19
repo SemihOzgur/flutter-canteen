@@ -43,6 +43,7 @@ import 'core/single_instance/instance_lock.dart';
 import 'data/db/canteen_database.dart';
 import 'data/db/database_bootstrap.dart';
 import 'data/db/providers.dart';
+import 'data/files/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -113,6 +114,9 @@ Future<void> main() async {
     overrides: [
       canteenDatabaseProvider.overrideWithValue(database),
       appLoggerProvider.overrideWithValue(logger),
+      // Veri dizini bootstrap'ta bir kez çözülür; servisler ikinci kez
+      // çözmez (BR-DATA-001 · docs/21 §1).
+      appPathsProvider.overrideWithValue(paths),
     ],
   );
 

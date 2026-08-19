@@ -24,6 +24,15 @@ abstract final class ProductRules {
   /// REQ-PROD-012 — satış fiyatı **%50'den fazla** değişirse onay istenir.
   static const int significantPriceChangePercent = 50;
 
+  /// docs/09 §5 — "Öneri: **30'dan fazla** favori eklenirse kullanıcı uyarılır
+  /// (ekran karmaşası)."
+  ///
+  /// Bir **uyarı eşiğidir**, kısıt değil: doküman "öneri" der ve favori
+  /// eklemeyi engelleyen hiçbir kural yoktur (BR-PROD-008). Eşik burada
+  /// yaşar ki servis ve gelecekteki satış ekranı (Faz 5) aynı sayıyı
+  /// kullansın (rules/01 §2).
+  static const int favoriteWarningThreshold = 30;
+
   /// docs/09 §1 · docs/04 §3.6 — gramaj birimi **önerileri**.
   ///
   /// ⚠️ Bu liste bir **kısıt değildir.** Doküman birimleri sayar ama "yalnızca

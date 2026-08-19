@@ -314,6 +314,29 @@ class DriftProductRepository implements ProductRepository {
   }
 
   @override
+  Future<int> setFavorite(int id, bool isFavorite) {
+    // REQ-PROD-009 — yalnızca bu iki kolon yazılır; favori işareti fiyat,
+    // stok veya aktiflik gibi hiçbir alana dokunmaz.
+    return (_db.update(_db.products)..where((p) => p.id.equals(id))).write(
+      db.ProductsCompanion(
+        isFavorite: Value(isFavorite),
+        updatedAt: Value(_db.clock().toUtc()),
+      ),
+    );
+  }
+
+  @override
+  Future<int> countFavorites() async {
+    final count = _db.products.id.count();
+    final row =
+        await (_db.selectOnly(_db.products)
+              ..addColumns([count])
+              ..where(_db.products.isFavorite & _db.products.isActive))
+            .getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  @override
   Future<int> deleteById(int id) =>
       (_db.delete(_db.products)..where((p) => p.id.equals(id))).go();
 

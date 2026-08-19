@@ -1,18 +1,31 @@
 /// Ürün yönetimi — **docs/09 · BR-PROD-001…014 · REQ-PROD-001…015**
 ///
-/// ## Kapsam sınırı (Faz 3c)
+/// ## Kapsam sınırı (Faz 3d)
 ///
 /// | Kapsamda | Kapsamda **değil** |
 /// |---|---|
-/// | Ürün oluşturma / düzenleme | Favoriler (REQ-PROD-009) → **Faz 3d** |
-/// | Barkod ekleme / silme | Görsel (REQ-IMG-*) → **Faz 3d** |
-/// | Pasifleştirme / aktifleştirme | Scanner / HID girdisi → **Faz 4** |
-/// | Koşullu kalıcı silme | Hızlı ekleme akışı (docs/09 §2.1) → **Faz 5** |
+/// | Ürün oluşturma / düzenleme | Scanner / HID girdisi → **Faz 4** |
+/// | Barkod ekleme / silme | Satış ekranı favoriler bölümü → **Faz 5** |
+/// | Pasifleştirme / aktifleştirme | Hızlı ekleme akışı (docs/09 §2.1) → **Faz 5** |
+/// | Koşullu kalıcı silme | Orphan / kırık referans taraması → **Faz 9** |
 /// | Arama ve sayfalı listeleme | Toplu import (docs/09 §2.3) → **Faz 10** |
+/// | **Görsel** (Faz 3d — docs/21) | Yedeğe görsel dahil etme → **Faz 9** |
+/// | **Favori** (Faz 3d — REQ-PROD-009) | |
 ///
-/// `is_favorite` ve `image_path` **okunur ama yazılmaz**: düzenleme bu iki
-/// alanı daima mevcut değeriyle korur. Bugün yazılsalardı, 3d'nin görsel
-/// yaşam döngüsü (orphan işaretleme — docs/21 §4) yarım kurulmuş olurdu.
+/// ## Görsel: dosya işi transaction'ın DIŞINDADIR
+///
+/// `rules/01 §5` transaction içinde dosya I/O'yu yasaklar; docs/21 §4 de
+/// dosya sisteminin transaction'a katılmadığını söyler. Sıra bu yüzden şudur:
+///
+/// ```text
+/// 1. temp/<uuid> → images/<uuid>      (transaction ÖNCESİ)
+/// 2. TRANSACTION: image_path + audit
+/// 3. eski dosya → images/.trash/      (transaction SONRASI, BR-IMG-003)
+/// ```
+///
+/// Adım 2 başarısız olursa adım 1'de taşınan dosya sahipsiz kalır — docs/21 §4
+/// bunu **öngörülen** bir durum sayar ve orphan taramasıyla (Faz 9) çözer.
+/// Ters sıra ise veri **kaybettirirdi**: silinen dosya geri gelmez.
 ///
 /// ## Transaction sınırı
 ///
@@ -48,7 +61,10 @@ import '../../core/money/money.dart';
 import '../../core/money/money_formatter.dart' show MoneyParser;
 import '../../core/result/result.dart';
 import '../../data/dao/daos.dart';
+import '../../data/db/app_setting_keys.dart';
 import '../../data/db/canteen_database.dart' show CanteenDatabase;
+import '../../data/files/image_optimization_policy.dart';
+import '../../data/files/product_image_store.dart';
 import '../../data/repositories/failures.dart';
 import '../../domain/models/product.dart';
 import '../../domain/repositories/product_repository.dart';
@@ -58,6 +74,7 @@ import '../../domain/services/product_rules.dart';
 import '../stock/stock_service.dart';
 import 'product_draft.dart';
 import 'product_failures.dart';
+import 'product_image_change.dart';
 import 'product_warnings.dart';
 
 /// docs/18 §3 — `productCreated` metadata'sı "oluşturma yolu"nu taşır.
@@ -133,6 +150,11 @@ class ProductService {
   static const String actionDeleted = 'productDeleted';
   static const String actionBarcodeAdded = 'barcodeAdded';
   static const String actionBarcodeRemoved = 'barcodeRemoved';
+  static const String actionImageChanged = 'productImageChanged';
+
+  // ⚠️ Favori değişikliğinin docs/18 §3'te **karşılığı yoktur** ve bu yüzden
+  // audit'e yazılmaz (rules/00 §6 — dokümanda olmayan action uydurulmaz).
+  // Aynı gerekçe ad/açıklama/marka değişiklikleri için de geçerlidir.
 
   final CanteenDatabase _db;
   final ProductRepository _products;
@@ -141,6 +163,8 @@ class ProductService {
   final CategoriesDao _categories;
   final SaleItemsDao _saleItems;
   final AuditLogsDao _auditLogs;
+  final AppSettingsDao _appSettings;
+  final ProductImageStore _images;
   final AppLogger? _logger;
   final DateTime Function() _clock;
 
@@ -152,6 +176,8 @@ class ProductService {
     required CategoriesDao categories,
     required SaleItemsDao saleItems,
     required AuditLogsDao auditLogs,
+    required AppSettingsDao appSettings,
+    required ProductImageStore images,
     AppLogger? logger,
     DateTime Function()? clock,
   }) : _db = db,
@@ -161,6 +187,8 @@ class ProductService {
        _categories = categories,
        _saleItems = saleItems,
        _auditLogs = auditLogs,
+       _appSettings = appSettings,
+       _images = images,
        _logger = logger,
        _clock = clock ?? db.clock;
 
@@ -298,6 +326,8 @@ class ProductService {
     int initialStock = 0,
     List<String> barcodes = const [],
     ProductCreationPath creationPath = ProductCreationPath.detailed,
+    PreparedProductImage? image,
+    bool isFavorite = false,
   }) async {
     final validated = _validate(draft);
     if (validated.isErr) return Err(validated.failureOrNull!);
@@ -305,6 +335,10 @@ class ProductService {
 
     final normalizedBarcodes = _normalizeBarcodes(barcodes);
     if (normalizedBarcodes.isErr) return Err(normalizedBarcodes.failureOrNull!);
+
+    // docs/21 §2 adım 7 — dosya taşıma transaction'ın DIŞINDA (rules/01 §5).
+    // REQ-IMG-011: ürün başına en fazla bir görsel; tip zaten tek değer alır.
+    final imagePath = image == null ? null : await _images.commit(image);
 
     final now = _clock().toUtc();
 
@@ -332,6 +366,11 @@ class ProductService {
           minimumStock: input.minimumStock,
           supplierId: input.supplierId,
           shelfLocation: input.shelfLocation,
+          // REQ-IMG-001 — veri dizinine **göreli** yol; mutlak yol asla.
+          imagePath: imagePath,
+          // BR-PROD-008 — varsayılan `false`; form yıldızı işaretlenmişse
+          // ürün favori olarak doğar (REQ-PROD-009).
+          isFavorite: isFavorite,
         ),
       );
       if (created.isErr) throw _Abort(created.failureOrNull!);
@@ -350,6 +389,14 @@ class ProductService {
             writeAudit: false,
           ),
         );
+      }
+
+      // docs/09 §5 — favori eşiği oluşturmada da geçerlidir.
+      if (isFavorite) {
+        final favoriteCount = await _products.countFavorites();
+        if (favoriteCount > ProductRules.favoriteWarningThreshold) {
+          warnings.add(ProductWarnings.tooManyFavorites(favoriteCount));
+        }
       }
 
       // REQ-PROD-007 · BR-STOCK-003 — stok DOĞRUDAN yazılmaz; defter yazar.
@@ -379,6 +426,9 @@ class ProductService {
           'creation_path': creationPath.wire,
           'initial_stock': initialStock,
           'barcode_count': normalizedBarcodes.valueOrNull!.length,
+          // Barkodlarda olduğu gibi: ürünle birlikte gelen görsel için ayrı
+          // `productImageChanged` yazılmaz; tek kullanıcı eylemi tek satırdır.
+          'has_image': imagePath != null,
         },
       );
 
@@ -391,23 +441,44 @@ class ProductService {
   /// Geçmiş satışlar **etkilenmez**: `sale_items` beş snapshot alanını taşır
   /// (rules/02 §3) ve buradan okunmaz da, yazılmaz da.
   ///
-  /// `stock_quantity`, `is_favorite` ve `image_path` **korunur** (yukarıdaki
-  /// kapsam notu).
+  /// `stock_quantity` ve `is_favorite` **korunur**: ilkinin tek yazım noktası
+  /// `StockService`'tir (rules/02 §4), ikincisi [setFavorite] ile değişir.
+  ///
+  /// [image] üç durumludur ([ProductImageChange]); varsayılan **dokunma**dır.
   Future<Result<ProductSaveOutcome>> update(
     int id,
     ProductDraft draft, {
     required int userId,
+    ProductImageChange image = const KeepProductImage(),
   }) async {
     final validated = _validate(draft);
     if (validated.isErr) return Err(validated.failureOrNull!);
     final input = validated.valueOrNull!;
 
+    // docs/21 §2 adım 7 — taşıma transaction'dan ÖNCE (rules/01 §5).
+    final committedImagePath = switch (image) {
+      SetProductImage(:final prepared) => await _images.commit(prepared),
+      KeepProductImage() || ClearProductImage() => null,
+    };
+
     final now = _clock().toUtc();
 
-    return _transactional(() async {
+    // Transaction BAŞARILI olursa çöpe taşınacak eski dosya (BR-IMG-003).
+    String? replacedImagePath;
+
+    final result = await _transactional(() async {
       final found = await _products.findById(id);
       if (found.isErr) throw const _Abort(ProductFailures.notFound);
       final current = found.valueOrNull!;
+
+      final nextImagePath = switch (image) {
+        KeepProductImage() => current.imagePath,
+        SetProductImage() => committedImagePath,
+        ClearProductImage() => null,
+      };
+      replacedImagePath = nextImagePath == current.imagePath
+          ? null
+          : current.imagePath;
 
       final categoryId = await _requireCategoryId(draft.categoryId);
 
@@ -433,9 +504,9 @@ class ProductService {
           minimumStock: input.minimumStock,
           supplierId: input.supplierId,
           shelfLocation: input.shelfLocation,
-          // Faz 3d'ye ait alanlar ve türetilmiş stok — olduğu gibi korunur.
+          // Türetilmiş stok ve favori bayrağı — olduğu gibi korunur.
           stockQuantity: current.stockQuantity,
-          imagePath: current.imagePath,
+          imagePath: nextImagePath,
           isFavorite: current.isFavorite,
           isActive: current.isActive,
           createdAt: current.createdAt,
@@ -452,7 +523,88 @@ class ProductService {
         userId: userId,
       );
 
+      // docs/18 §3 — `productImageChanged` metadata'sı eski/yeni dosya adını
+      // taşır. Yalnızca gerçekten değiştiyse yazılır (docs/18 §4).
+      if (nextImagePath != current.imagePath) {
+        await _writeAudit(
+          action: actionImageChanged,
+          now: now,
+          userId: userId,
+          entityId: id,
+          oldValue: {'image_path': current.imagePath},
+          newValue: {'image_path': nextImagePath},
+        );
+      }
+
       return ProductSaveOutcome(productId: id, warnings: warnings);
+    });
+
+    // BR-IMG-003 · docs/21 §4 — eski dosya SİLİNMEZ, çöpe taşınır. Bu adım
+    // yalnızca kayıt gerçekten tamamlandıysa yapılır: transaction geri
+    // alındıysa eski görsel hâlâ kullanımdadır.
+    if (result.isOk && replacedImagePath != null) {
+      await _images.moveToTrash(replacedImagePath);
+    }
+    return result;
+  }
+
+  // --- Görsel ---------------------------------------------------------------
+
+  /// OD-016 — yapılandırılmış optimizasyon profili.
+  ///
+  /// Değerler **koda gömülmez**: `app_settings['image_optimization']` varsa o
+  /// geçerlidir, yoksa başlangıç profili kullanılır (docs/21 §0, §5).
+  Future<ImageOptimizationPolicy> imageOptimizationPolicy() async =>
+      ImageOptimizationPolicy.decode(
+        await _appSettings.read(AppSettingKeys.imageOptimization),
+      );
+
+  /// docs/21 §2 adım 1–6 — seçilen dosyayı doğrular, optimize eder ve `temp/`
+  /// altına yazar. Ürüne bağlanması [create] / [update] ile olur.
+  ///
+  /// ⚠️ Orijinal büyük dosya **saklanmaz** (BR-IMG-002 · REQ-IMG-013).
+  ///
+  /// EC-PROD-017: kullanıcı formu kaydetmeden kapatırsa dosya `temp/`'te kalır
+  /// ve gecikmeli temizlikte (Faz 9) silinir — burada bir şey yapılmaz.
+  Future<Result<PreparedProductImage>> prepareImage(String sourcePath) async {
+    return _images.prepare(sourcePath, await imageOptimizationPolicy());
+  }
+
+  // --- Favori ---------------------------------------------------------------
+
+  /// REQ-PROD-009 · BR-PROD-008 · docs/09 §5 — favori bayrağını değiştirir.
+  ///
+  /// `Product.isFavorite` **boolean yeterlidir**; ayrı `Favorite` entity'si
+  /// veya tablosu oluşturulmaz (rules/02 §11.5).
+  ///
+  /// docs/09 §5 — "30'dan fazla favori eklenirse kullanıcı uyarılır": uyarı
+  /// **burada** üretilir, ekranda değil (rules/05 §8 — UI iş kuralı
+  /// değerlendirmez). Uyarı engellemez.
+  ///
+  /// Audit yazılmaz: docs/18 §3'te favori için tanımlı bir action yoktur
+  /// (rules/00 §6).
+  Future<Result<List<ProductWarning>>> setFavorite(
+    int id, {
+    required bool isFavorite,
+  }) async {
+    return _transactional(() async {
+      final found = await _products.findById(id);
+      if (found.isErr) throw const _Abort(ProductFailures.notFound);
+      final current = found.valueOrNull!;
+
+      // Değer aynıysa yazma yapılmaz; `updated_at` boş yere değişmez.
+      if (current.isFavorite == isFavorite) return const <ProductWarning>[];
+
+      await _products.setFavorite(id, isFavorite);
+      if (!isFavorite) return const <ProductWarning>[];
+
+      // Sayım yazma ile aynı transaction içindedir; aksi hâlde eşik yarışta
+      // yanlış hesaplanırdı.
+      final favoriteCount = await _products.countFavorites();
+      return [
+        if (favoriteCount > ProductRules.favoriteWarningThreshold)
+          ProductWarnings.tooManyFavorites(favoriteCount),
+      ];
     });
   }
 

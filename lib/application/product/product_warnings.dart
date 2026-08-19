@@ -14,6 +14,7 @@
 /// | EAN-13/EAN-8/UPC kontrol hanesi geçersiz | EC-PROD-015 · docs/11 §3 |
 /// | Satış fiyatı %50'den fazla değişiyor | REQ-PROD-012 |
 /// | Stoğu olan ürün pasifleştiriliyor | docs/09 §4 |
+/// | 30'dan fazla favori | docs/09 §5 |
 ///
 /// Uyarı **hata değildir**: `Result` `Ok` döner, işlem tamamlanır.
 library;
@@ -67,6 +68,17 @@ abstract final class ProductWarnings {
     message:
         'Bu barkod standart bir kontrol hanesine sahip değil. Mağaza içi '
         'barkodlarda bu normaldir; kayıt yapıldı.',
+  );
+
+  /// docs/09 §5 — "Öneri: 30'dan fazla favori eklenirse kullanıcı uyarılır."
+  ///
+  /// Engellemez: favori sayısına kısıt koyan bir kural yoktur.
+  static ProductWarning tooManyFavorites(int favoriteCount) => ProductWarning(
+    code: 'product_too_many_favorites',
+    message:
+        'Favori ürün sayısı $favoriteCount oldu. '
+        '${ProductRules.favoriteWarningThreshold}\'dan fazla favori satış '
+        'ekranını kalabalıklaştırabilir.',
   );
 
   /// docs/09 §4 — "Uyarılır ama engellenmez."

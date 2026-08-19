@@ -18,6 +18,18 @@
 /// yalnızca gösterir. Eşiği burada yeniden hesaplamak `rules/01 §2`'nin tek
 /// implementasyon kuralını bozardı.
 ///
+/// ## Görsel: seçilir, kaydedilirken uygulanır
+///
+/// docs/21 §2: seçilen dosya **hemen** doğrulanır ve optimize edilip `temp/`
+/// altına yazılır (kullanıcı sonucu görebilsin), ancak `images/` altına
+/// **ürün kaydedilirken** taşınır. Formu kaydetmeden kapatan kullanıcı
+/// `images/` klasörünü kirletmez (EC-PROD-017).
+///
+/// Bu ekran görseli **çözmez, boyutlandırmaz, diske yazmaz** — hepsi
+/// `ProductService.prepareImage` üzerinden `data/files/` katmanındadır
+/// (`rules/01 §1`). Sınır değerleri de burada bilinmez: `app_settings`
+/// üzerinden okunur (OD-016).
+///
 /// ## Stok alanı neden salt okunur
 ///
 /// docs/09 §1: "Ürün formundaki 'Stok' alanı düzenlenebilir değildir."
@@ -32,6 +44,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/l10n/app_strings_tr.dart';
 import '../../application/product/product_draft.dart';
+import '../../application/product/product_image_change.dart';
 import '../../application/product/product_service.dart';
 import '../../application/product/product_warnings.dart';
 import '../../application/product/providers.dart';
@@ -39,11 +52,14 @@ import '../../application/reference/providers.dart';
 import '../../core/money/money.dart';
 import '../../core/money/money_formatter.dart';
 import '../../core/result/result.dart';
+import '../../data/files/product_image_store.dart';
 import '../../domain/models/product.dart';
 import '../../domain/services/product_rules.dart';
 import '../common/current_user.dart';
 import '../common/form_message.dart';
+import '../common/image_file_picker.dart';
 import '../common/submit_button.dart';
+import 'product_image_view.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
   static const Key nameFieldKey = Key('product_form_name');
@@ -59,6 +75,12 @@ class ProductFormScreen extends ConsumerStatefulWidget {
   static const Key warningsKey = Key('product_form_warnings');
   static const Key priceChangeConfirmKey = Key('product_price_change_confirm');
   static const Key priceChangeCancelKey = Key('product_price_change_cancel');
+  static const Key imageSelectKey = Key('product_form_image_select');
+  static const Key imageRemoveKey = Key('product_form_image_remove');
+  static const Key imagePendingKey = Key('product_form_image_pending');
+  static const Key imageRemoveConfirmKey = Key('product_image_remove_confirm');
+  static const Key imageRemoveCancelKey = Key('product_image_remove_cancel');
+  static const Key favoriteToggleKey = Key('product_form_favorite');
 
   static Key barcodeRemoveKey(String barcode) =>
       ValueKey('product_barcode_remove_$barcode');
@@ -66,7 +88,14 @@ class ProductFormScreen extends ConsumerStatefulWidget {
   /// `null` ise ekleme, doluysa düzenleme formudur.
   final Product? product;
 
-  const ProductFormScreen({this.product, super.key});
+  /// Dosya seçme dialogu — testte enjekte edilir (emsal: `SaveLocationPicker`).
+  final ImageFilePicker imagePicker;
+
+  const ProductFormScreen({
+    this.product,
+    this.imagePicker = pickImageFile,
+    super.key,
+  });
 
   @override
   ConsumerState<ProductFormScreen> createState() => _ProductFormScreenState();
@@ -98,7 +127,35 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   String? _message;
   List<ProductWarning> _warnings = const [];
 
+  /// `temp/` altında hazır bekleyen görsel; kaydedilince `images/`'a taşınır.
+  PreparedProductImage? _pendingImage;
+
+  /// Kullanıcı mevcut görseli kaldırmayı seçti mi (henüz kaydedilmedi).
+  bool _imageCleared = false;
+
+  /// REQ-PROD-009 — yıldızın anlık durumu. Düzenlemede tıklandığı anda
+  /// servise gider; eklemede ürünle **birlikte** yazılır (barkodlarla aynı
+  /// desen).
+  late bool _isFavorite;
+
+  bool _busy = false;
+
   bool get _isEdit => widget.product != null;
+
+  /// Ekranda gösterilecek göreli yol — bekleyen seçim mevcut görseli gölgeler.
+  String? get _displayedImagePath {
+    if (_pendingImage != null) return _pendingImage!.temporaryRelativePath;
+    if (_imageCleared) return null;
+    return widget.product?.imagePath;
+  }
+
+  /// `ProductImageChange` üç durumludur; hangisinin geçerli olduğuna form
+  /// karar verir (bkz. `application/product/product_image_change.dart`).
+  ProductImageChange get _imageChange {
+    final pending = _pendingImage;
+    if (pending != null) return SetProductImage(pending);
+    return _imageCleared ? const ClearProductImage() : const KeepProductImage();
+  }
 
   @override
   void initState() {
@@ -122,6 +179,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     );
     _shelfLocation = TextEditingController(text: p?.shelfLocation ?? '');
     _netWeightUnit = p?.netWeightUnit;
+    _isFavorite = p?.isFavorite ?? false;
     _categoryId = p?.categoryId;
     _vatRateId = p?.vatRateId;
     _supplierId = p?.supplierId;
@@ -270,6 +328,110 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     }
   }
 
+  // --- Görsel --------------------------------------------------------------
+
+  /// docs/21 §2 — dosya seçilir, **servis** doğrular ve optimize eder.
+  ///
+  /// Ekran ne magic byte okur ne de boyut sınırı bilir; hata mesajı da
+  /// servisten gelir (`rules/01 §1`, `rules/05 §8`).
+  Future<void> _selectImage() async {
+    setState(() => _message = null);
+
+    final path = await widget.imagePicker();
+    // Kullanıcı iptal etti — hata gösterilmez.
+    if (path == null || !mounted) return;
+
+    // Optimizasyon ağır bir iştir (isolate'te çalışır); kullanıcı beklerken
+    // butonlar kilitlenir ki aynı dosya iki kez işlenmesin.
+    setState(() => _busy = true);
+    final result = await ref.read(productServiceProvider).prepareImage(path);
+    if (!mounted) return;
+
+    setState(() {
+      _busy = false;
+      switch (result) {
+        case Err(:final failure):
+          _message = failure.userMessage;
+        case Ok(:final value):
+          _pendingImage = value;
+          _imageCleared = false;
+      }
+    });
+  }
+
+  /// BR-IMG-003 — kaldırma kaydedilince dosyayı çöpe taşır; bu yüzden onay
+  /// istenir (rules/05 §5).
+  Future<void> _removeImage() async {
+    setState(() => _message = null);
+
+    // Henüz kaydedilmemiş bir seçim geri alınıyorsa dosya `images/`'a hiç
+    // taşınmadı; onay gereksizdir (geri alınamaz bir şey yok).
+    if (_pendingImage != null) {
+      setState(() => _pendingImage = null);
+      return;
+    }
+    if (widget.product?.imagePath == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(AppStringsTr.productImageRemoveTitle),
+        content: const Text(AppStringsTr.productImageRemoveConfirm),
+        actions: [
+          TextButton(
+            key: ProductFormScreen.imageRemoveCancelKey,
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(AppStringsTr.cancelAction),
+          ),
+          FilledButton(
+            key: ProductFormScreen.imageRemoveConfirmKey,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(AppStringsTr.productImageRemoveConfirmAction),
+          ),
+        ],
+      ),
+    );
+    // `Esc` ve bariyer `null` döndürür; ikisi de **vazgeçmedir**. `?? true`
+    // olsaydı `Esc`'e basan kullanıcının görseli sessizce silinirdi.
+    if (!mounted || !(confirmed ?? false)) return;
+    setState(() => _imageCleared = true);
+  }
+
+  // --- Favori --------------------------------------------------------------
+
+  /// REQ-PROD-009 · docs/09 §5 — yıldıza tek tıkla eklenir/çıkarılır.
+  ///
+  /// Düzenlemede işlem anında yazılır (barkod ekleme ile aynı desen);
+  /// eklemede ürünle birlikte yazılır. 30 favori uyarısı **servisten** gelir;
+  /// ekran saymaz (rules/05 §8).
+  Future<void> _toggleFavorite() async {
+    final next = !_isFavorite;
+    setState(() {
+      _message = null;
+      _isFavorite = next;
+    });
+    if (!_isEdit) return;
+
+    final result = await ref
+        .read(productServiceProvider)
+        .setFavorite(widget.product!.id, isFavorite: next);
+    if (!mounted) return;
+
+    switch (result) {
+      case Err(:final failure):
+        setState(() {
+          _isFavorite = !next;
+          _message = failure.userMessage;
+        });
+      case Ok(:final value):
+        for (final warning in value) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(warning.message)));
+        }
+    }
+  }
+
   // --- Kaydetme ------------------------------------------------------------
 
   Future<int?> _requireUserId() async {
@@ -310,12 +472,19 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     if (userId == null) return;
 
     final result = _isEdit
-        ? await service.update(widget.product!.id, draft, userId: userId)
+        ? await service.update(
+            widget.product!.id,
+            draft,
+            userId: userId,
+            image: _imageChange,
+          )
         : await service.create(
             draft,
             userId: userId,
             initialStock: _parseInt(_initialStock.text, allowEmpty: true) ?? 0,
             barcodes: _barcodes,
+            image: _pendingImage,
+            isFavorite: _isFavorite,
           );
     if (!mounted) return;
 
@@ -388,6 +557,17 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               ? AppStringsTr.productEditTitle
               : AppStringsTr.productAddTitle,
         ),
+        actions: [
+          // REQ-PROD-009 — tek tıkla favori; ayrı bir ekran/akış yoktur.
+          IconButton(
+            key: ProductFormScreen.favoriteToggleKey,
+            tooltip: _isFavorite
+                ? AppStringsTr.productFavoriteRemoveAction
+                : AppStringsTr.productFavoriteAddAction,
+            onPressed: _toggleFavorite,
+            icon: Icon(_isFavorite ? Icons.star : Icons.star_border),
+          ),
+        ],
       ),
       body: Form(
         key: _formKey,
@@ -628,6 +808,57 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     ? AppStringsTr.productIntegerInvalid
                     : null,
               ),
+
+            _section(AppStringsTr.productTabImage),
+            const Text(AppStringsTr.productImageDescription),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // docs/21 §3 — form önizlemesi 200×200.
+                ProductImageView(relativePath: _displayedImagePath, size: 200),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      OutlinedButton.icon(
+                        key: ProductFormScreen.imageSelectKey,
+                        onPressed: _busy ? null : _selectImage,
+                        icon: const Icon(Icons.image_outlined),
+                        label: Text(
+                          _displayedImagePath == null
+                              ? AppStringsTr.productImageSelectAction
+                              : AppStringsTr.productImageChangeAction,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_displayedImagePath != null)
+                        TextButton.icon(
+                          key: ProductFormScreen.imageRemoveKey,
+                          onPressed: _busy ? null : _removeImage,
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text(
+                            AppStringsTr.productImageRemoveAction,
+                          ),
+                        )
+                      else
+                        const Text(AppStringsTr.productImageNone),
+                      if (_pendingImage != null || _imageCleared)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            _pendingImage != null
+                                ? AppStringsTr.productImagePendingNotice
+                                : AppStringsTr.productImageRemovePendingNotice,
+                            key: ProductFormScreen.imagePendingKey,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
 
             _section(AppStringsTr.productTabBarcodes),
             const Text(AppStringsTr.productBarcodesDescription),

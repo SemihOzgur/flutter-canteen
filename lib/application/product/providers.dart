@@ -15,6 +15,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/providers.dart';
+import '../../data/files/providers.dart';
 import '../auth/providers.dart' show appLoggerProvider;
 import '../stock/providers.dart';
 import 'product_service.dart';
@@ -29,6 +30,8 @@ final productServiceProvider = Provider<ProductService>(
     categories: ref.watch(categoriesDaoProvider),
     saleItems: ref.watch(saleItemsDaoProvider),
     auditLogs: ref.watch(auditLogsDaoProvider),
+    appSettings: ref.watch(appSettingsDaoProvider),
+    images: ref.watch(productImageStoreProvider),
     logger: ref.watch(appLoggerProvider),
   ),
 );

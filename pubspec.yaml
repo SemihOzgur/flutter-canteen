@@ -56,6 +56,15 @@ dependencies:
   # rules/01 §7 karar kapsamı: ayrıca onay gerekmez.
   crypto: ^3.0.6
 
+  # Görsel optimizasyonu (yeniden boyutlandırma + yeniden kodlama) —
+  # BR-IMG-002 / REQ-IMG-003 / OD-016. rules/01 §7 karar kapsamındadır;
+  # dört soru: (1) gerekli — optimizasyon zorunlu bir gerekliliktir,
+  # (2) standart kütüphane yetmez — `dart:ui` seçilen kalitede JPEG
+  # kodlayamaz, (3) mevcut bağımlılıkların hiçbiri görsel çözmez/kodlamaz,
+  # (4) saf Dart olduğu için platform kanalı yoktur ve Windows'ta macOS ile
+  # aynı davranır.
+  image: ^4.5.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
