@@ -1,7 +1,7 @@
 /// [SaleRepository]'nin Drift implementasyonu.
 ///
-/// **Yazma yoktur:** satış oluşturma atomik transaction'dır ve application
-/// katmanına aittir (Faz 5). Bkz. `domain/repositories/sale_repository.dart`.
+/// Yazma metotları **transaction açmaz**: satışın atomikliği `SaleService`'e
+/// aittir (rules/01 §5). Bkz. `domain/repositories/sale_repository.dart`.
 library;
 
 import 'package:drift/drift.dart';
@@ -114,6 +114,55 @@ class DriftSaleRepository implements SaleRepository {
               ..limit(limit, offset: offset))
             .get();
     return rows.map(_toDomain).toList();
+  }
+
+  @override
+  Future<int> insertSale(domain.NewSale sale) {
+    return _db
+        .into(_db.sales)
+        .insert(
+          db.SalesCompanion.insert(
+            saleNumber: sale.saleNumber,
+            status: sale.status,
+            subtotalMinor: sale.subtotal.minor,
+            vatTotalMinor: sale.vatTotal.minor,
+            grandTotalMinor: sale.grandTotal.minor,
+            costTotalMinor: sale.costTotal.minor,
+            cashReceivedMinor: Value(sale.cashReceived?.minor),
+            changeMinor: Value(sale.change?.minor),
+            itemCount: sale.itemCount,
+            unitCount: sale.unitCount,
+            userId: sale.userId,
+            note: Value(sale.note),
+            completedAt: sale.completedAtUtc,
+            createdAt: sale.completedAtUtc,
+            updatedAt: sale.completedAtUtc,
+          ),
+        );
+  }
+
+  @override
+  Future<int> insertItem(int saleId, domain.NewSaleItem item) {
+    return _db
+        .into(_db.saleItems)
+        .insert(
+          db.SaleItemsCompanion.insert(
+            saleId: saleId,
+            productId: item.productId,
+            // BR-SALE-001 — beş snapshot alanı burada kalıcılaşır.
+            productNameSnapshot: item.productNameSnapshot,
+            barcodeSnapshot: Value(item.barcodeSnapshot),
+            categoryIdSnapshot: Value(item.categoryIdSnapshot),
+            quantity: item.quantity,
+            unitPriceMinor: item.unitPrice.minor,
+            originalUnitPriceMinor: item.originalUnitPrice.minor,
+            purchasePriceSnapshotMinor: item.purchasePriceSnapshot.minor,
+            vatRateSnapshotBp: item.vatRateSnapshotBp,
+            lineNetMinor: item.lineNet.minor,
+            lineVatMinor: item.lineVat.minor,
+            lineTotalMinor: item.lineTotal.minor,
+          ),
+        );
   }
 
   @override

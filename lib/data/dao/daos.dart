@@ -573,12 +573,48 @@ class CartsDao extends DatabaseAccessor<CanteenDatabase> with _$CartsDaoMixin {
   Future<Cart?> findById(int id) =>
       (select(carts)..where((c) => c.id.equals(id))).getSingleOrNull();
 
-  Future<int> insertCart(CartsCompanion cart) => into(carts).insert(cart);
+  /// Yeni **aktif** sepet açar ve `id`'sini döner.
+  ///
+  /// BR-CART-001'i `ux_carts_active` zorlar: ikinci bir aktif sepet açmaya
+  /// çalışmak burada veritabanı hatasıyla sonuçlanır — uygulama katmanının
+  /// unutabileceği bir kontrol değildir.
+  Future<int> insertActiveCart({required int userId, required DateTime now}) =>
+      into(carts).insert(
+        CartsCompanion.insert(
+          status: CartStatus.active,
+          userId: userId,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
   Future<int> updateStatus(int id, CartStatus status) =>
       (update(carts)..where((c) => c.id.equals(id))).write(
         CartsCompanion(status: Value(status), updatedAt: Value(_now())),
       );
+
+  /// Sepetin `updated_at` damgasını tazeler.
+  ///
+  /// Satır ekleme/çıkarma sepetin kendisini değiştirmez; "en son ne zaman
+  /// dokunuldu" bilgisi yine de sepet satırında yaşamalıdır — EC-CART-009
+  /// bozulma senaryosunda **en yenisinin** tutulması buna dayanır.
+  Future<int> touch(int id) => (update(carts)..where((c) => c.id.equals(id)))
+      .write(CartsCompanion(updatedAt: Value(_now())));
+
+  /// EC-CART-009 — bozulma sonucu birden fazla `active` sepet bulunursa.
+  ///
+  /// Kısmi benzersiz index bunu normalde imkânsız kılar; sorgu, index'in
+  /// bulunmadığı bir yedekten gelen veriye karşı savunmadır.
+  Future<List<Cart>> listActive() =>
+      (select(carts)
+            ..where((c) => c.status.equalsValue(CartStatus.active))
+            ..orderBy([
+              (c) => OrderingTerm(
+                expression: c.updatedAt,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+          .get();
 
   DateTime _now() => attachedDatabase.clock().toUtc();
 }
@@ -587,7 +623,42 @@ class CartsDao extends DatabaseAccessor<CanteenDatabase> with _$CartsDaoMixin {
 // 7 — cart_items
 // ---------------------------------------------------------------------------
 
-@DriftAccessor(tables: [CartItems])
+/// Sepet satırı + satırın gösterimi için gereken **güncel** ürün verisi.
+///
+/// Ürün alanları burada bilinçli olarak "o anki değer"dir; sepet snapshot
+/// taşımaz (BR-CART-003). Kalıcı snapshot yalnızca satış tamamlanırken
+/// `sale_items`'a yazılır (rules/02 §3).
+///
+/// [productVatRateBp] `null` ise ürüne oran atanmamıştır; **varsayılan orana
+/// düşme kararı business kuralıdır** (docs/08 §4) ve bu satırda değil,
+/// `CartService` içinde verilir — DAO iş kararı vermez (rules/01 §1).
+class CartItemRow {
+  final int id;
+  final int productId;
+  final int quantity;
+  final int unitPriceMinor;
+  final bool isPriceOverridden;
+  final String productName;
+  final int listPriceMinor;
+  final int? productVatRateBp;
+  final int stockQuantity;
+  final bool isProductActive;
+
+  const CartItemRow({
+    required this.id,
+    required this.productId,
+    required this.quantity,
+    required this.unitPriceMinor,
+    required this.isPriceOverridden,
+    required this.productName,
+    required this.listPriceMinor,
+    required this.productVatRateBp,
+    required this.stockQuantity,
+    required this.isProductActive,
+  });
+}
+
+@DriftAccessor(tables: [CartItems, Products, VatRates])
 class CartItemsDao extends DatabaseAccessor<CanteenDatabase>
     with _$CartItemsDaoMixin {
   CartItemsDao(super.db);
@@ -595,14 +666,150 @@ class CartItemsDao extends DatabaseAccessor<CanteenDatabase>
   Future<List<CartItem>> listOfCart(int cartId) =>
       (select(cartItems)..where((i) => i.cartId.equals(cartId))).get();
 
-  Future<int> insertItem(CartItemsCompanion item) =>
-      into(cartItems).insert(item);
+  /// Sepet satırlarını ürün verisiyle birlikte **tek sorguda** yükler.
+  ///
+  /// N+1 yerine tek join: EC-CART-005 (200 satırlık sepet) satır başına ürün
+  /// sorgusu kaldırmaz. `vat_rates` LEFT JOIN'dir — ürüne oran atanmamış
+  /// olabilir (docs/08 §4) ve **pasif oran da okunur**: satışta o oran
+  /// kullanılmaya devam eder, snapshot mantığı gereği doğru davranış budur.
+  ///
+  /// Sıra `id`'dir: kullanıcı ürünleri hangi sırayla eklediyse sepette o
+  /// sırayla görür.
+  Future<List<CartItemRow>> rowsOfCart(int cartId) async {
+    final query =
+        select(cartItems).join([
+            innerJoin(products, products.id.equalsExp(cartItems.productId)),
+            leftOuterJoin(vatRates, vatRates.id.equalsExp(products.vatRateId)),
+          ])
+          ..where(cartItems.cartId.equals(cartId))
+          ..orderBy([OrderingTerm(expression: cartItems.id)]);
+
+    final rows = await query.get();
+    return rows.map((row) {
+      final item = row.readTable(cartItems);
+      final product = row.readTable(products);
+      return CartItemRow(
+        id: item.id,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPriceMinor: item.unitPriceMinor,
+        isPriceOverridden: item.isPriceOverridden,
+        productName: product.name,
+        listPriceMinor: product.salePriceMinor,
+        productVatRateBp: row.readTableOrNull(vatRates)?.rateBasisPoints,
+        stockQuantity: product.stockQuantity,
+        isProductActive: product.isActive,
+      );
+    }).toList();
+  }
+
+  /// REQ-CART-006 — aynı ürün **aynı fiyatla** eklenirse mevcut satır bulunur.
+  ///
+  /// Üçlü `(cartId, productId, unitPriceMinor)` şemada da `UNIQUE`'tir; bu
+  /// sorgu o kısıtın okuma tarafıdır. Fiyat farklıysa satır bulunmaz ve
+  /// çağıran yeni satır açar (EC-CART-004).
+  Future<CartItem?> findLine({
+    required int cartId,
+    required int productId,
+    required int unitPriceMinor,
+  }) =>
+      (select(cartItems)
+            ..where(
+              (i) =>
+                  i.cartId.equals(cartId) &
+                  i.productId.equals(productId) &
+                  i.unitPriceMinor.equals(unitPriceMinor),
+            )
+            ..limit(1))
+          .getSingleOrNull();
+
+  Future<CartItem?> findById(int id) =>
+      (select(cartItems)..where((i) => i.id.equals(id))).getSingleOrNull();
+
+  Future<int> insertItem({
+    required int cartId,
+    required int productId,
+    required int quantity,
+    required int unitPriceMinor,
+    required DateTime now,
+    bool isPriceOverridden = false,
+  }) => into(cartItems).insert(
+    CartItemsCompanion.insert(
+      cartId: cartId,
+      productId: productId,
+      quantity: quantity,
+      unitPriceMinor: unitPriceMinor,
+      isPriceOverridden: Value(isPriceOverridden),
+      addedAt: now,
+      updatedAt: now,
+    ),
+  );
+
+  /// BR-SALE-011 — miktar pozitif tam sayıdır; `0` satırı **silmektir**
+  /// (EC-CART-003) ve bu metot değil, [deleteById] yapar. Şemadaki
+  /// `CHECK(quantity > 0)` ikinci savunmadır.
+  Future<int> updateQuantity(int id, int quantity) =>
+      (update(cartItems)..where((i) => i.id.equals(id))).write(
+        CartItemsCompanion(quantity: Value(quantity), updatedAt: Value(_now())),
+      );
+
+  /// docs/12 §4 — satır fiyatını değiştirir; **ürünün fiyatı değişmez**
+  /// (BR-SALE-003).
+  Future<int> updatePrice(
+    int id, {
+    required int unitPriceMinor,
+    required bool isPriceOverridden,
+  }) => (update(cartItems)..where((i) => i.id.equals(id))).write(
+    CartItemsCompanion(
+      unitPriceMinor: Value(unitPriceMinor),
+      isPriceOverridden: Value(isPriceOverridden),
+      updatedAt: Value(_now()),
+    ),
+  );
 
   Future<int> deleteById(int id) =>
       (delete(cartItems)..where((i) => i.id.equals(id))).go();
 
   Future<int> deleteOfCart(int cartId) =>
       (delete(cartItems)..where((i) => i.cartId.equals(cartId))).go();
+
+  /// Sepetteki **ham** satır sayısı — ürün join'i uygulanmadan.
+  ///
+  /// [rowsOfCart] ile farkı, ürünü artık var olmayan satırların sayısıdır
+  /// (EC-CART-010). Fark sıfır değilse sepette gösterilemeyen satır vardır.
+  Future<int> countOfCart(int cartId) async {
+    final total = cartItems.id.count();
+    final row =
+        await (selectOnly(cartItems)
+              ..addColumns([total])
+              ..where(cartItems.cartId.equals(cartId)))
+            .getSingle();
+    return row.read(total) ?? 0;
+  }
+
+  /// EC-CART-010 — ürünü bulunamayan satırları siler, silinen sayıyı döner.
+  ///
+  /// Normalde imkânsızdır: `cart_items.product_id` bir yabancı anahtardır ve
+  /// `foreign_keys=ON` altında sepetteki ürün silinemez. Bu yol bozulmuş veya
+  /// kısıtsız bir kaynaktan gelen veriye karşıdır — docs/12 §2.4 ("satırı
+  /// kaldır, kullanıcıyı bilgilendir, sepetin kalanını koru").
+  ///
+  /// Sepet **business history değildir** (BR-CART-003): satırı silmek hiçbir
+  /// satış, stok veya denetim kaydını etkilemez.
+  Future<int> deleteOrphanLines(int cartId) {
+    return (delete(cartItems)..where(
+          (i) =>
+              i.cartId.equals(cartId) &
+              notExistsQuery(
+                selectOnly(products)
+                  ..addColumns([products.id])
+                  ..where(products.id.equalsExp(i.productId)),
+              ),
+        ))
+        .go();
+  }
+
+  DateTime _now() => attachedDatabase.clock().toUtc();
 }
 
 // ---------------------------------------------------------------------------

@@ -150,17 +150,22 @@ class DriftProductRepository implements ProductRepository {
   Future<List<Product>> list({
     bool includeInactive = false,
     int? categoryId,
+    bool onlyFavorites = false,
     int limit = ProductRules.searchResultLimit,
     int offset = 0,
   }) async {
     final rows =
         await (_db.select(_db.products)
               ..where(
-                (p) => _listFilter(
-                  p,
-                  includeInactive: includeInactive,
-                  categoryId: categoryId,
-                ),
+                (p) =>
+                    _listFilter(
+                      p,
+                      includeInactive: includeInactive,
+                      categoryId: categoryId,
+                    ) &
+                    (onlyFavorites
+                        ? p.isFavorite.equals(true)
+                        : const Constant(true)),
               )
               ..orderBy([(p) => OrderingTerm(expression: p.name)])
               ..limit(limit, offset: offset))
@@ -363,9 +368,21 @@ class DriftProductRepository implements ProductRepository {
 
   @override
   Future<List<String>> barcodesOf(int productId) async {
-    final rows = await (_db.select(
-      _db.productBarcodes,
-    )..where((b) => b.productId.equals(productId))).get();
+    // Sıra deterministiktir ve **birincil barkod başta gelir**: satış anında
+    // `sale_items.barcode_snapshot`'a yazılacak değer listenin ilkidir
+    // (docs/04 §3.9). Sırasız bir sonuç, aynı ürünün satışlarında rastgele
+    // barkod snapshot'ı üretirdi.
+    final rows =
+        await (_db.select(_db.productBarcodes)
+              ..where((b) => b.productId.equals(productId))
+              ..orderBy([
+                (b) => OrderingTerm(
+                  expression: b.isPrimary,
+                  mode: OrderingMode.desc,
+                ),
+                (b) => OrderingTerm(expression: b.id),
+              ]))
+            .get();
     return rows.map((r) => r.barcode).toList();
   }
 }

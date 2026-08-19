@@ -125,6 +125,16 @@ class DriftStockRepository implements StockRepository {
   }
 
   @override
+  Future<int> readStockQuantity(int productId) async {
+    final row =
+        await (_db.selectOnly(_db.products)
+              ..addColumns([_db.products.stockQuantity])
+              ..where(_db.products.id.equals(productId)))
+            .getSingleOrNull();
+    return row?.read(_db.products.stockQuantity) ?? 0;
+  }
+
+  @override
   Future<int> writeStockQuantity(int productId, int quantity) {
     return (_db.update(
       _db.products,

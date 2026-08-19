@@ -241,14 +241,18 @@ class ProductService {
   }) => _products.search(query, includeInactive: includeInactive, limit: limit);
 
   /// REQ-PERF-006 — sayfalı ürün listesi.
+  ///
+  /// [onlyFavorites] satış ekranının favori şeridi içindir (docs/12 §1).
   Future<List<Product>> list({
     bool includeInactive = false,
     int? categoryId,
+    bool onlyFavorites = false,
     int limit = ProductRules.searchResultLimit,
     int offset = 0,
   }) => _products.list(
     includeInactive: includeInactive,
     categoryId: categoryId,
+    onlyFavorites: onlyFavorites,
     limit: limit,
     offset: offset,
   );

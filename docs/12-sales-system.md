@@ -12,7 +12,7 @@ Uygulamanın kalbi. Bu ekranda geçirilen süre toplam kullanım süresinin %90'
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
-│  🔍 BARKOD / ÜRÜN ARA           [F1 Yardım]  [F9 Ürünler] [Dashboard]│  ← daima odaklı
+│  🔍 BARKOD / ÜRÜN ARA           [F1 Yardım]  [F3 Ürünler] [Dashboard]│  ← daima odaklı
 ├───────────────────────────────────────┬──────────────────────────────┤
 │  ⭐ FAVORİLER                          │  SEPET                       │
 │  ┌──────┐┌──────┐┌──────┐┌──────┐     │  ┌────────────────────────┐  │
@@ -29,7 +29,7 @@ Uygulamanın kalbi. Bu ekranda geçirilen süre toplam kullanım süresinin %90'
 │  │ Çikolata              ₺30,00   │   │  TOPLAM          ₺95,00      │
 │  │ ...                            │   │                              │
 │  └────────────────────────────────┘   │  [F4 Nakit]  [F12 TAMAMLA]   │
-│                                        │  [Esc Sepeti Temizle]        │
+│                                        │  [Ctrl+Del Sepeti Temizle]   │
 └───────────────────────────────────────┴──────────────────────────────┘
 ```
 
@@ -124,7 +124,7 @@ Sepetteki fiyatı sessizce değiştirmek kasada tutarsızlık yaratır. Değişi
 | Satır sil | `Del` | Onay sorulmaz (geri alınabilir) |
 | Son işlemi geri al | `Ctrl+Z` | Sepet işlemleri için, son 10 adım |
 | Satır fiyatı değiştir | `F2` | §4 |
-| Sepeti temizle | `Esc` (uzun) | Onay sorulur |
+| Sepeti temizle | `Ctrl+Del` | Onay sorulur (OD-024) |
 | Nakit hesapla | `F4` | §5 |
 | Satışı tamamla | `F12` | §6 |
 
@@ -155,7 +155,7 @@ Satırda F2
 |---|---|
 | `Product.salePrice` değişmez | BR-SALE-003 |
 | `SaleItem.originalUnitPriceMinor` liste fiyatını saklar | BR-SALE-004 |
-| Audit log'a yazılır (`salePriceOverride`) | BR-SALE-004 |
+| Audit log'a yazılır (`salePriceOverridden`) | BR-SALE-004 · OD-023 |
 | Satır "fiyat değiştirildi" rozetiyle gösterilir | — |
 | Negatif fiyat girilemez | BR-PROD-006 |
 

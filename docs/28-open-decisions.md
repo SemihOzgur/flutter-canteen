@@ -351,6 +351,74 @@ gerçekleşmediğini **görür ve tekrar okutur**; kırpılmış barkod ise sess
 **Etki:** [11 §2](11-barcode-system.md) akışı düzeltildi · EC-BARC-002 netleştirildi ·
 EC-BARC-008 eklendi · `BarcodeInputHandler` zehirli durumu uygular.
 
+### OD-022 — `barcodeSnapshot` ürünün **birincil** barkodudur
+
+**Karar:** `SaleItem.barcodeSnapshot` satış anında ürünün **birincil barkodunu** taşır;
+ürünün hiç barkodu yoksa `NULL` olur. "Okutulan barkod" hedefinden **vazgeçilmiştir.**
+
+**Çözülen çelişki:** [04 §3.9](04-domain-model.md) alanı *"okutulan barkod"* olarak
+tanımlıyordu. Ancak [05 §2.7](05-database-architecture.md)'deki `cart_items` tablosu
+okutulan barkodu taşıyacak bir kolon içermiyor — sepet hangi barkodun okutulduğunu
+**hatırlayamaz**, üstelik çökme sonrası aynen geri yüklenmesi de gerekir (REQ-CART-003).
+İki doküman aynı anda sağlanamıyordu.
+
+**Seçenekler:**
+
+| | Seçenek | Sonuç |
+|---|---|---|
+| **A** | `04 §3.9` düzeltilir: "ürünün birincil barkodu" | Şema değişmez, migration yok |
+| B | `cart_items`'a `scanned_barcode` kolonu eklenir | Şema değişikliği + migration; sepet kalıcılığı büyür |
+
+**Neden A:** Alan **yalnızca raporlama amaçlıdır** — hiçbir para, stok, KDV veya durum
+hesabına girmez. Tek barkodlu üründe (V1'de neredeyse her ürün) iki seçenek **aynı değeri**
+üretir; fark yalnızca aynı ürünün birden fazla barkodu olduğunda görünür ve orada da
+kaybedilen şey "hangi ambalaj okutuldu" ayrıntısıdır. Şema *final* kararını
+([rules/03 §1](../.claude/rules/03-data-and-persistence.md)) bir raporlama ayrıntısı için
+bozmak orantısızdır. B ileride geriye dönük olarak eklenebilir; A bunu engellemez.
+
+**Etki:** [04 §3.9](04-domain-model.md) alan açıklaması düzeltildi ·
+`SaleService` birincil barkodu yazar · `ProductRepository.barcodesOf` sırası
+**sözleşmenin parçası** oldu (birincil başta) — sırasız bir sonuç aynı ürünün
+satışlarında rastgele snapshot üretirdi.
+
+---
+
+### OD-023 — Fiyat override audit action adı: `salePriceOverridden`
+
+**Karar:** Satış sırasındaki fiyat değişikliğinin audit action adı **`salePriceOverridden`**'dır.
+
+**Çözülen çelişki:** [12 §4](12-sales-system.md) `salePriceOverride`, [18 §3](18-audit-log.md)
+ise `salePriceOverridden` yazıyordu. Audit action adları [18](18-audit-log.md)'in konusudur
+(rules/00 §1 — her doküman kendi konusunda bağlayıcıdır), bu yüzden `12 §4` düzeltilmiştir.
+
+**Neden önemli:** `audit_logs.action` **kalıcı veridir**. İki ad arasında salınmak, denetim
+izini action adına göre filtreleyen her sorguyu sessizce eksik sonuç verir hâle getirirdi.
+
+**Etki:** [12 §4](12-sales-system.md) düzeltildi · `SaleService.actionPriceOverridden`.
+
+### OD-024 — Kısayol çelişkilerinde `23-ux-requirements.md` bağlayıcıdır
+
+**Karar:** Satış ekranında sepeti temizleme kısayolu **`Ctrl+Del`**, Ürünler ekranına
+gidiş **`F3`**'tür. Genel kural: bir kısayol iki dokümanda farklı tanımlanırsa
+[23 §2](23-ux-requirements.md) geçerlidir.
+
+**Çözülen çelişki:**
+
+| Konu | [12](12-sales-system.md) | [23 §2](23-ux-requirements.md) | Uygulanan |
+|---|---|---|---|
+| Sepeti temizle | `Esc` (uzun) | `Ctrl+Del` | **`Ctrl+Del`** |
+| Ürünler ekranı | `F9` (§1 düzeni) | `F3` | **`F3`** |
+
+**Neden 23:** Klavye kısayolları bir **etkileşim** konusudur ve `rules/00 §1` her
+dokümanı kendi konusunda bağlayıcı sayar; kısayolların konusu `23`'tür. Ayrıca `Esc`
+aynı tabloda zaten *"geri / dialog kapat"*tır — "uzun basış" ile ayrıştırmak masaüstü
+uygulamasında bulunmayan bir etkileşimdir ve `Esc`'in tek anlamlı davranışını
+belirsizleştirirdi. `12 §1`'deki `F9` bir ASCII düzen çiziminde geçen tek bir etikettir;
+`23 §2` ise kısayol **tablosudur**.
+
+**Etki:** [12 §1](12-sales-system.md) ve [12 §3](12-sales-system.md) düzeltildi ·
+`SaleScreen` kısayolları `23 §2`'yi uygular.
+
 ---
 
 ## 3. Kararların faz üzerindeki etkisi
@@ -360,7 +428,8 @@ Faz 0  →  ARTIK BOŞ. Bekleyen karar yok.
 Faz 1  →  Riverpod + merkezî metin yapısı kurulur
 Faz 2  →  Şema final; blokaj yok
 Faz 3  →  Recovery code, finansal erişim kilidi, görsel politikası
-Faz 5  →  Son alış fiyatı snapshot'ı, indirim yok, nakit yuvarlama yok
+Faz 5  →  Son alış fiyatı snapshot'ı, indirim yok, nakit yuvarlama yok,
+          barkod snapshot'ı birincil barkoddur (OD-022)
 Faz 8  →  fl_chart; Raporlar kilit arkasında
 Faz 9  →  ZIP yedek
 Faz 10 →  CSV birincil + Excel abstraction
@@ -373,7 +442,7 @@ Faz 12 →  Inno Setup
 
 Geliştirme sırasında kararlaştırılmamış bir konu ortaya çıkarsa:
 
-1. Bu dokümana `OD-017`'den başlayarak yeni bir kayıt açılır.
+1. Bu dokümana `OD-025`'ten başlayarak yeni bir kayıt açılır.
 2. `Decision / Options / Recommendation / Impact` formatı kullanılır.
 3. Karar kapanmadan ilgili kod yazılmaz.
 4. Kapandığında bu dokümandaki karar kaydına ve ilgili business rule'a dönüştürülür.

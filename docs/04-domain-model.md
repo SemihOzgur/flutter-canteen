@@ -236,7 +236,7 @@ aksi halde pasifleştirme (BR-PROD-009).
 | saleId | FK Sale | | |
 | productId | FK Product | | referans (raporlama) |
 | **productNameSnapshot** | string | ✅ | Satış anındaki ürün adı |
-| barcodeSnapshot | string? | ✅ | Okutulan barkod |
+| barcodeSnapshot | string? | ✅ | Ürünün satış anındaki **birincil** barkodu; barkodsuz üründe `NULL` (OD-022) |
 | **categoryIdSnapshot** | int? | ✅ | Kategori raporu geçmişi bozulmasın diye |
 | quantity | **int** | | `> 0` (BR-SALE-011) |
 | **unitPriceMinor** | int | ✅ | **Satış anındaki birim satış fiyatı (KDV dahil)** |

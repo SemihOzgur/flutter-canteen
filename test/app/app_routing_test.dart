@@ -13,6 +13,7 @@ import 'package:canteen/data/db/canteen_database.dart'
 import 'package:canteen/data/db/providers.dart';
 import 'package:canteen/presentation/auth/financial_access_dialog.dart';
 import 'package:canteen/presentation/home/home_screen.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,6 +26,13 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> pumpApp(WidgetTester tester, String initialRoute) async {
+    // docs/23 §4 — desteklenen **minimum** çözünürlük 1366×768. Flutter'ın
+    // 800×600 varsayılanı ürünün hiç desteklemediği bir boyuttur; orada
+    // kaydırma gerektiren bir düğme "bulunamadı" gibi görünür.
+    tester.view.physicalSize = const Size(1366, 768);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [canteenDatabaseProvider.overrideWithValue(db)],

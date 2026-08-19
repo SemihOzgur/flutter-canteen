@@ -54,9 +54,13 @@ abstract interface class ProductRepository {
   ///
   /// [includeInactive] yönetim ekranının "Pasifleri göster" filtresidir
   /// (docs/09 §4); varsayılan olarak pasif ürünler **gizlidir**.
+  /// [onlyFavorites] satış ekranının favori şeridi içindir (docs/12 §1 ·
+  /// BR-PROD-008). Favoriler ayrı bir entity değildir (rules/02 §11.5), bu
+  /// yüzden ayrı bir sorgu değil, aynı listenin bir filtresidir.
   Future<List<Product>> list({
     bool includeInactive,
     int? categoryId,
+    bool onlyFavorites,
     int limit,
     int offset,
   });
@@ -134,5 +138,9 @@ abstract interface class ProductRepository {
   /// docs/04 §3.6 — ürün başına en fazla bir `is_primary = true`.
   Future<int> clearPrimaryBarcodes(int productId);
 
+  /// Ürünün barkodları — **birincil barkod başta**, sonra ekleniş sırasında.
+  ///
+  /// Sıra sözleşmenin parçasıdır: `sale_items.barcode_snapshot` listenin
+  /// ilkinden yazılır (docs/04 §3.9).
   Future<List<String>> barcodesOf(int productId);
 }

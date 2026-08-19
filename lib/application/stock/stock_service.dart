@@ -17,9 +17,9 @@
 /// | Var | Yok (**Faz 6**) |
 /// |---|---|
 /// | `initial` hareketi | Stok girişi (`stockEntry`) |
-/// | | Fire (`waste`) |
+/// | `sale` hareketi (Faz 5) | Fire (`waste`) |
 /// | | Düzeltme / sayım (`adjustment`) |
-/// | | Satış / iptal / iade hareketleri (Faz 5, 7) |
+/// | | İptal / iade hareketleri (Faz 7) |
 /// | | Import düzeltmesi (Faz 10), restore tabanı (Faz 9) |
 ///
 /// Bu sınıf Faz 6'nın genişleteceği **dikiş noktasıdır**: kalan sekiz hareket
@@ -40,6 +40,7 @@ import '../../core/money/money.dart';
 import '../../core/result/result.dart';
 import '../../data/db/canteen_database.dart' show CanteenDatabase;
 import '../../domain/enums/stock_movement_type.dart';
+import '../../domain/enums/stock_reference_type.dart';
 import '../../domain/repositories/stock_repository.dart';
 import 'stock_failures.dart';
 
@@ -117,5 +118,55 @@ class StockService {
 
       return Ok<int>(quantity);
     });
+  }
+
+  /// Satılan miktarı deftere düşer — **docs/12 §6.2 adım 3c–3d · docs/13 §2.**
+  ///
+  /// ```text
+  ///   stock_movements          type=sale, delta=-N, reference=(sale, saleId)
+  ///   products.stock_quantity  önceki − N
+  /// ```
+  ///
+  /// | Kural | Davranış |
+  /// |---|---|
+  /// | **BR-STOCK-006** — negatif stok satışı engellemez | Stok yetersizse **yine de** yazılır; sonuç negatif olabilir |
+  /// | BR-STOCK-010 | `reference_type=sale` + `reference_id` zorunlu taşınır |
+  /// | docs/13 §2 — `sale` için `unit_cost` ❌ | Birim maliyet yazılmaz; maliyet snapshot'ı `sale_items`'tadır |
+  /// | BR-STOCK-008 | `resulting_stock` her harekette yazılır |
+  ///
+  /// ⚠️ **Transaction AÇMAZ.** Çağıran (`SaleService`) satışın tamamını tek
+  /// transaction'da tutar (BR-SALE-005); burada ikinci bir sınır açmak
+  /// EC-SALE-002'nin istediği tam rollback'i belirsizleştirirdi.
+  ///
+  /// Önbellek her çağrıda **yeniden okunur**: aynı ürün sepette iki ayrı
+  /// satırda olabilir (EC-CART-004) ve ikinci satırın `resulting_stock`'u
+  /// birincisini görmek zorundadır.
+  Future<Result<int>> recordSale({
+    required int productId,
+    required int quantity,
+    required int saleId,
+    required int userId,
+    required DateTime nowUtc,
+  }) async {
+    // BR-STOCK-004: delta `0` olamaz. Sepet satırı zaten pozitiftir
+    // (BR-SALE-011 · şema CHECK); bu savunma çağıranı değil veriyi korur.
+    if (quantity <= 0) return const Err(StockFailures.nonPositiveSaleQuantity);
+
+    final before = await _stock.readStockQuantity(productId);
+    final resulting = before - quantity;
+
+    await _stock.appendMovement(
+      productId: productId,
+      type: StockMovementType.sale,
+      quantityDelta: -quantity,
+      resultingStock: resulting,
+      userId: userId,
+      createdAtUtc: nowUtc,
+      referenceType: StockReferenceType.sale,
+      referenceId: saleId,
+    );
+    await _stock.writeStockQuantity(productId, resulting);
+
+    return Ok<int>(resulting);
   }
 }
