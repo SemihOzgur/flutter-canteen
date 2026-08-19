@@ -17,6 +17,7 @@ import '../presentation/settings/category_management_screen.dart';
 import '../presentation/settings/financial_access_settings_screen.dart';
 import '../presentation/settings/supplier_management_screen.dart';
 import '../presentation/settings/user_management_screen.dart';
+import '../presentation/products/product_list_screen.dart';
 import '../presentation/settings/vat_rate_management_screen.dart';
 
 class AppRoutes {
@@ -54,6 +55,9 @@ class AppRoutes {
   /// KDV oranı yönetimi (docs/08 §4 · REQ-VAT-001).
   static const String vatRates = '/vat-rates';
 
+  /// Ürün yönetimi (docs/09 · REQ-PROD-001). Kilit dışındadır.
+  static const String products = '/products';
+
   static Map<String, WidgetBuilder> routes() => {
     setup: (_) => const SetupWizardScreen(),
     login: (_) => const LoginScreen(),
@@ -63,5 +67,6 @@ class AppRoutes {
     categories: (_) => const CategoryManagementScreen(),
     suppliers: (_) => const SupplierManagementScreen(),
     vatRates: (_) => const VatRateManagementScreen(),
+    products: (_) => const ProductListScreen(),
   };
 }

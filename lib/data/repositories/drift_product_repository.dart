@@ -82,6 +82,7 @@ class DriftProductRepository implements ProductRepository {
   @override
   Future<List<Product>> search(
     String query, {
+    bool includeInactive = false,
     int limit = ProductRules.searchResultLimit,
   }) async {
     final folded = TurkishText.fold(query.trim());
@@ -106,8 +107,10 @@ class DriftProductRepository implements ProductRepository {
     final rows = await _db
         .customSelect(
           'SELECT p.* FROM products p '
-          'WHERE p.is_active = 1 '
-          "AND ($fold(p.name) LIKE ?1 ESCAPE '\\' "
+          // docs/09 §4 — "Ürün arama: varsayılan gizli; 'Pasifleri göster'
+          // filtresi ile görünür." Filtre aramayı da kapsamalıdır.
+          '${includeInactive ? '' : 'WHERE p.is_active = 1 '}'
+          "${includeInactive ? 'WHERE' : 'AND'} ($fold(p.name) LIKE ?1 ESCAPE '\\' "
           "     OR $fold(p.brand) LIKE ?1 ESCAPE '\\') "
           "ORDER BY ($fold(p.name) LIKE ?1 ESCAPE '\\') DESC, "
           '  (SELECT COALESCE(SUM(si.quantity - si.returned_quantity), 0) '

@@ -332,6 +332,182 @@ class AppStringsTr {
   static const String homeSuppliersAction = 'Tedarikçiler';
   static const String homeVatRatesAction = 'KDV Oranları';
 
+  // ── Faz 3c — ürünler (docs/09 · REQ-PROD-001…015) ────────────────────────
+  static const String productsTitle = 'Ürünler';
+  static const String productsDescription =
+      'Satış fiyatları KDV dahildir. Satılmış veya stok hareketi olan ürün '
+      'silinemez; pasife alınır ve raporlarda görünmeye devam eder.';
+
+  /// docs/23 §7 — boş durum eyleme yönlendirir.
+  ///
+  /// Doküman burada "[Excel'den İçe Aktar]" eylemini de sayar; import **Faz
+  /// 10** kapsamındadır (docs/25) ve var olmayan bir ekrana buton konmaz.
+  static const String productsEmpty =
+      'Henüz ürün eklemediniz. İlk ürününüzü ekleyin.';
+  static String productsSearchEmpty(String query) =>
+      '"$query" için ürün bulunamadı. Farklı bir ad veya marka deneyin.';
+
+  static const String productSearchLabel = 'Ürün adı veya marka ara';
+  static const String productShowInactiveLabel = 'Pasifleri göster';
+
+  static const String productAddAction = 'Ürün Ekle';
+  static const String productAddTitle = 'Yeni ürün';
+  static const String productEditTitle = 'Ürünü düzenle';
+  static const String productCreated = 'Ürün eklendi.';
+  static const String productUpdated = 'Ürün güncellendi.';
+  static const String productDeleted = 'Ürün silindi.';
+  static const String productDeactivated = 'Ürün pasife alındı.';
+  static const String productActivated = 'Ürün yeniden aktifleştirildi.';
+
+  /// REQ-PERF-006 — liste sayfalanır; sayfa göstergesi bunu görünür kılar.
+  static String productPageIndicator(int page, int pageCount) =>
+      'Sayfa $page / $pageCount';
+  static String productTotalCount(int total) => 'Toplam $total ürün';
+  static const String previousPageAction = 'Önceki';
+  static const String nextPageAction = 'Sonraki';
+
+  /// Liste satırı — stok negatif olabilir (BR-STOCK-006).
+  static String productStockValue(int quantity) => 'Stok: $quantity';
+
+  /// BR-VAT-003 — listede gösterilen fiyat KDV dahildir.
+  static const String productPriceVatIncludedSuffix = 'KDV dahil';
+
+  /// EC-PROD-005 · EC-PROD-006 · EC-VAT-002 — pasif referans kaydı seçili
+  /// kalabilir; etiketle işaretlenir (rules/05 §5 — renk tek başına yetmez).
+  static String inactiveOptionLabel(String name) => '$name (pasif)';
+
+  // ── Faz 3c — ürün formu (docs/09 §1, §2.2) ───────────────────────────────
+  static const String productTabGeneral = 'Genel';
+  static const String productTabPricing = 'Fiyat & KDV';
+  static const String productTabStock = 'Stok';
+  static const String productTabBarcodes = 'Barkodlar';
+
+  static const String productNameLabel = 'Ürün adı';
+  static const String productNameRequired = 'Ürün adı boş olamaz.';
+  static const String productDescriptionLabel = 'Açıklama (opsiyonel)';
+  static const String productCategoryLabel = 'Kategori';
+  static const String productCategoryDefaultHint =
+      'Seçilmezse "Genel" kategorisi kullanılır.';
+  static const String productCategoryDefaultOption = 'Genel (varsayılan)';
+  static const String productBrandLabel = 'Marka (opsiyonel)';
+  static const String productSalesUnitLabel = 'Satış birimi (opsiyonel)';
+  static const String productSalesUnitHint =
+      'Nasıl satıldığını anlatır; miktar daima tam sayıdır.';
+  static const String productNetWeightValueLabel = 'Net ağırlık (opsiyonel)';
+  static const String productNetWeightUnitLabel = 'Ağırlık birimi';
+  static const String productNetWeightHint =
+      'Örnek: 150 g. Yalnızca açıklayıcıdır; fiyat ve stok hesabına girmez.';
+  static const String productNetWeightInvalid =
+      'Net ağırlık sayı olmalı. Örnek: 150 veya 1,5';
+  static const String productShelfLocationLabel = 'Raf konumu (opsiyonel)';
+  static const String productSupplierLabel = 'Tedarikçi (opsiyonel)';
+  static const String productSupplierNone = 'Tedarikçi seçilmedi';
+  static const String suggestionsTooltip = 'Önerilenler';
+
+  /// **REQ-PROD-014 — bu etiket bir gereksinimdir, tercih değildir.**
+  ///
+  /// docs/09 §1: girilen tutar müşteriden alınan tutardır; KDV bu tutarın
+  /// **içinden** çıkarılır, üzerine eklenmez (BR-VAT-003).
+  static const String productSalePriceLabel = 'Satış Fiyatı (KDV Dahil)';
+  static const String productSalePriceHint =
+      'Müşteriden alınan tutar. KDV bu tutarın içinden çıkarılır. '
+      'Örnek: 25,50';
+  static const String productPurchasePriceLabel = 'Alış fiyatı';
+  static const String productPurchasePriceHint =
+      'Boş bırakılırsa ₺0,00 kaydedilir.';
+
+  /// REQ-FIN-006 — hem `,` hem `.` kabul edilir; mesaj örnekle biter
+  /// (rules/05 §5: "ne oldu + ne yapmalıyım").
+  static const String productSalePriceInvalid =
+      'Fiyat geçersiz. Örnek: 25,50 veya 25.50';
+  static const String productVatRateLabel = 'KDV oranı';
+  static const String productVatRateDefaultOption = 'Varsayılan oran';
+
+  /// docs/08 §3 — hiç aktif oran yoksa KDV alanları gizlenir (BR-VAT-005).
+  static const String productVatDisabledNotice =
+      'KDV takibi kapalı: tanımlı bir KDV oranı yok. Satış fiyatının tamamı '
+      'matrah kabul edilir. Ayarlar → KDV Oranları\'ndan oran ekleyebilirsiniz.';
+
+  static const String productMinimumStockLabel = 'Minimum stok';
+  static const String productMinimumStockHint =
+      '0 ise kritik stok uyarısı verilmez.';
+  static const String productInitialStockLabel = 'Başlangıç stoğu';
+
+  /// REQ-PROD-007 — değer doğrudan yazılmaz, `initial` stok hareketi üretir.
+  static const String productInitialStockHint =
+      'Girilen miktar bir stok hareketi olarak kaydedilir; stok geçmişinde '
+      'görünür.';
+  static const String productStockLabel = 'Stok';
+
+  /// docs/09 §1 — "Stok alanı düzenlenebilir değildir."
+  static const String productStockReadOnlyHint =
+      'Stok elle düzenlenemez. Yalnızca stok hareketleriyle değişir.';
+  static const String productIntegerInvalid =
+      'Miktar tam sayı olmalı. Örnek: 0, 1, 12';
+
+  // ── Faz 3c — barkodlar (docs/09 §1 · EC-PROD-001/002/003/016) ────────────
+  static const String productBarcodesDescription =
+      'Ürün barkodsuz olabilir; arama ve favorilerle satılır. Bir ürüne '
+      'birden fazla barkod eklenebilir.';
+  static const String productBarcodesEmpty =
+      'Bu ürünün barkodu yok. Barkod eklemek zorunlu değildir.';
+  static const String productBarcodeLabel = 'Barkod';
+  static const String productBarcodeAddAction = 'Barkod Ekle';
+  static const String productBarcodeRemoveAction = 'Barkodu sil';
+  static const String productBarcodeAdded = 'Barkod eklendi.';
+  static const String productBarcodeRemoved = 'Barkod silindi.';
+
+  /// REQ-PROD-005 · EC-PROD-001 — sahip ürüne gitme seçeneği sunulur.
+  static const String productBarcodeGoToOwnerAction = 'Ürüne Git';
+
+  /// Kaydedilmemiş ürüne eklenen barkodlar ürünle **birlikte** yazılır.
+  static const String productBarcodePendingNotice =
+      'Barkodlar ürünle birlikte kaydedilir.';
+
+  // ── Faz 3c — silme / pasifleştirme (docs/09 §4 · EC-PROD-019/020/021) ────
+  static const String productDeleteTitle = 'Ürünü sil';
+  static const String productDeactivateAction = 'Pasife Al';
+  static const String productDeletePermanentAction = 'Kalıcı Olarak Sil';
+
+  /// BR-PROD-014 · EC-PROD-019 — geri alınamaz; onay zorunludur.
+  static String productDeleteConfirm(String name) =>
+      '"$name" ürünü hiç satılmamış ve hiç stok hareketi yok. Kalıcı olarak '
+      'silinecek. Bu işlem geri alınamaz.';
+
+  /// BR-PROD-009 · EC-PROD-020/021 — kalıcı silme **sunulmaz**.
+  ///
+  /// Sayılar `ProductUsage`'dan gelir; silinip silinemeyeceğine karar veren
+  /// **servistir** (`ProductUsage.canDeletePermanently`), bu metin değil.
+  static const String productDeleteBlockedTitle = 'Ürün silinemez';
+  static String productDeleteBlockedMessage(
+    String name,
+    int saleItemCount,
+    int stockMovementCount,
+  ) {
+    final reasons = <String>[
+      if (saleItemCount > 0) '$saleItemCount satışta kullanılmış',
+      if (stockMovementCount > 0)
+        '$stockMovementCount stok hareketi kayıtlı (başlangıç stoğu dâhil)',
+    ];
+    return '"$name" ürünü ${reasons.join(' ve ')}. Geçmiş kayıtların '
+        'bozulmaması için ürün silinmez, pasife alınır. Pasif ürünler satış '
+        'ekranında görünmez, raporlarda görünmeye devam eder.';
+  }
+
+  /// REQ-PROD-012 — %50'den fazla fiyat değişikliğinde onay istenir.
+  /// Uyarı metni servisten gelir (`ProductWarnings.largePriceChange`).
+  static const String productPriceChangeTitle = 'Fiyat değişikliği';
+  static const String productPriceChangeConfirmAction = 'Devam Et';
+
+  // ── Faz 3c — ana ekran gezinme ───────────────────────────────────────────
+  static const String homeProductsAction = 'Ürünler';
+
+  /// Ürün işlemleri stok hareketi yazabildiği için (`user_id` NOT NULL)
+  /// oturumsuz yürütülemez. Normal akışta görülmez: bu ekranlara yalnızca
+  /// oturum açıkken ulaşılır (REQ-AUTH-001).
+  static const String sessionRequiredMessage =
+      'Oturum bulunamadı. Bu işlem için tekrar giriş yapın.';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

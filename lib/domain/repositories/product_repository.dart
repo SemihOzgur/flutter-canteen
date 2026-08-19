@@ -43,7 +43,11 @@ abstract interface class ProductRepository {
   /// implementasyonun işidir. (Kullanıcı adı eşleşmesinden farkı budur:
   /// orada hangi kuralın uygulanacağı bir iş kararıdır ve çağıran normalize
   /// eder; burada kural tektir ve `TurkishText.fold`'dur.)
-  Future<List<Product>> search(String query, {int limit});
+  /// [includeInactive] "Pasifleri göster" filtresidir — docs/09 §4 tablosu
+  /// aramanın da bu filtreye uymasını ister ("varsayılan gizli; filtre ile
+  /// görünür"). Aksi hâlde kullanıcı filtreyi açıp arama yazdığında pasif
+  /// ürünler sessizce kaybolurdu.
+  Future<List<Product>> search(String query, {bool includeInactive, int limit});
 
   /// Ürün listesi — **REQ-PERF-006**: sayfalıdır, tüm kayıtlar belleğe alınmaz
   /// (rules/01 §8).

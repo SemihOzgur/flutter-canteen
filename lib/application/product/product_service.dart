@@ -208,8 +208,9 @@ class ProductService {
   /// arama; en fazla 50 sonuç, satış adedine göre sıralı.
   Future<List<Product>> search(
     String query, {
+    bool includeInactive = false,
     int limit = ProductRules.searchResultLimit,
-  }) => _products.search(query, limit: limit);
+  }) => _products.search(query, includeInactive: includeInactive, limit: limit);
 
   /// REQ-PERF-006 — sayfalı ürün listesi.
   Future<List<Product>> list({

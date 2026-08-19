@@ -299,4 +299,39 @@ void main() {
     expect(await service.findByBarcode('123456789012'), isNull);
     expect(await service.findByBarcode(''), isNull);
   });
+
+  group('docs/09 §4 — "Pasifleri göster" filtresi ARAMAYI da kapsar', () {
+    test('varsayılan: pasif ürün arama sonucunda GÖRÜNMEZ', () async {
+      final id = await create('Ayran');
+      await service.deactivate(id, userId: userId);
+
+      expect(await service.search('ayran'), isEmpty);
+    });
+
+    test('filtre açıkken pasif ürün GÖRÜNÜR', () async {
+      final id = await create('Ayran');
+      await service.deactivate(id, userId: userId);
+
+      final found = await service.search('ayran', includeInactive: true);
+
+      expect(
+        found.map((p) => p.id),
+        [id],
+        reason:
+            'docs/09 §4: "Varsayılan gizli; Pasifleri göster filtresi ile '
+            'görünür." Filtre listeye uyup aramaya uymazsa kullanıcı filtreyi '
+            'açıp arama yazdığında pasif ürünler sessizce kaybolur.',
+      );
+    });
+
+    test('filtre açıkken aktif ürünler de görünmeye devam eder', () async {
+      final aktif = await create('Ayran Küçük');
+      final pasif = await create('Ayran Büyük');
+      await service.deactivate(pasif, userId: userId);
+
+      final found = await service.search('ayran', includeInactive: true);
+
+      expect(found.map((p) => p.id), containsAll(<int>[aktif, pasif]));
+    });
+  });
 }

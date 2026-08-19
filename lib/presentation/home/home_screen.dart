@@ -38,6 +38,7 @@ class HomeScreen extends ConsumerWidget {
     'home_financial_access_button',
   );
   static const Key dashboardButtonKey = Key('home_dashboard_button');
+  static const Key productsButtonKey = Key('home_products_button');
   static const Key categoriesButtonKey = Key('home_categories_button');
   static const Key suppliersButtonKey = Key('home_suppliers_button');
   static const Key vatRatesButtonKey = Key('home_vat_rates_button');
@@ -118,6 +119,13 @@ class HomeScreen extends ConsumerWidget {
                       ).pushNamed(AppRoutes.financialAccessSettings),
                       icon: const Icon(Icons.tune_outlined),
                       label: const Text(AppStringsTr.homeFinancialAccessAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.productsButtonKey,
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.products),
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: const Text(AppStringsTr.homeProductsAction),
                     ),
                     OutlinedButton.icon(
                       key: HomeScreen.categoriesButtonKey,

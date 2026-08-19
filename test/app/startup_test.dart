@@ -285,10 +285,12 @@ void main() {
         AppRoutes.categories,
         AppRoutes.suppliers,
         AppRoutes.vatRates,
+        // Faz 3c — docs/09.
+        AppRoutes.products,
       });
       expect(
         routes.length,
-        8,
+        9,
         reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
       );
     });
