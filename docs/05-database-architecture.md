@@ -9,7 +9,7 @@
 
 | Seçenek | Artı | Eksi |
 |---|---|---|
-| **Drift** (SQLite üzerinde) | Tip güvenli sorgu, derleme zamanı kontrol, **yerleşik migration + schema versiyon test araçları**, transaction desteği, `Stream` tabanlı reaktif sorgular, isolate desteği, Windows/macOS masaüstünde `sqlite3_flutter_libs` ile sorunsuz | Kod üretimi (build_runner) gerekir, öğrenme eğrisi |
+| **Drift** (SQLite üzerinde) | Tip güvenli sorgu, derleme zamanı kontrol, **yerleşik migration + schema versiyon test araçları**, transaction desteği, `Stream` tabanlı reaktif sorgular, isolate desteği, Windows/macOS masaüstünde sorunsuz (native SQLite'ı `sqlite3` 3.x kendi build hook'uyla sağlar) | Kod üretimi (build_runner) gerekir, öğrenme eğrisi |
 | `sqflite_common_ffi` (ham SQL) | Basit, bağımlılık az | Tip güvenliği yok, migration'ı elle yazılır, karmaşık raporlarda hata riski yüksek |
 | `sqlite3` (doğrudan) | En düşük seviye, en hızlı | Her şey elle; bu projenin ölçeğinde bakım maliyeti yüksek |
 | Isar / Hive (NoSQL) | Hızlı basit okuma | **Relational raporlama ve aggregation zayıf** — bu projenin en ağır işi tam olarak bu. JOIN/GROUP BY gerektiren onlarca rapor var. Elenmiştir. |
