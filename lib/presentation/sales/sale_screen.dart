@@ -55,6 +55,7 @@ import 'sale_dialogs.dart';
 class SaleScreen extends ConsumerStatefulWidget {
   static const Key searchFieldKey = Key('sale_search_field');
   static const Key shortcutsButtonKey = Key('sale_shortcuts_button');
+  static const Key productsButtonKey = Key('sale_products_button');
 
   /// Barkod zaman eşiklerinin saati — **rules/06 §7.**
   ///
@@ -475,6 +476,11 @@ class _SaleScreenState extends ConsumerState<SaleScreen> {
       unawaited(_complete());
       return KeyEventResult.handled;
     }
+    // docs/23 §2 · OD-024 — Ürünler ekranı.
+    if (key == LogicalKeyboardKey.f3) {
+      unawaited(_openProducts());
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.f4) {
       unawaited(_completeWithCash());
       return KeyEventResult.handled;
@@ -586,6 +592,14 @@ class _SaleScreenState extends ConsumerState<SaleScreen> {
       );
   }
 
+  /// Ürün yönetimine gider ve dönüşte odağı geri alır (docs/23 §3).
+  Future<void> _openProducts() async {
+    await Navigator.of(context).pushNamed(AppRoutes.products);
+    if (!mounted) return;
+    _focusSearch();
+    await _reloadCatalog();
+  }
+
   /// `Enter` — aramadaki ilk ürünü ekler (docs/23 §2).
   void _submitSearch() {
     final first = _products.firstOrNull;
@@ -637,16 +651,10 @@ class _SaleScreenState extends ConsumerState<SaleScreen> {
                 ),
               ),
               IconButton(
-                tooltip: AppStringsTr.homeProductsAction,
+                key: SaleScreen.productsButtonKey,
+                tooltip: 'F3 ${AppStringsTr.homeProductsAction}',
                 icon: const Icon(Icons.inventory_2_outlined),
-                onPressed: () => unawaited(
-                  Navigator.of(context).pushNamed(AppRoutes.products).then((_) {
-                    // docs/23 §3 — başka ekrandan dönüldü → odak arama
-                    // girişinde.
-                    _focusSearch();
-                    unawaited(_reloadCatalog());
-                  }),
-                ),
+                onPressed: () => unawaited(_openProducts()),
               ),
             ],
           ),
@@ -668,9 +676,7 @@ class _SaleScreenState extends ConsumerState<SaleScreen> {
                         },
                         onPickProduct: (product) =>
                             unawaited(_addProduct(product)),
-                        onOpenProducts: () => unawaited(
-                          Navigator.of(context).pushNamed(AppRoutes.products),
-                        ),
+                        onOpenProducts: () => unawaited(_openProducts()),
                       ),
                     ),
                     // rules/05 §2 · REQ-UX-005 — sepet paneli hiçbir

@@ -23,6 +23,7 @@
 library;
 
 import 'package:canteen/app/l10n/app_strings_tr.dart';
+import 'package:canteen/app/router.dart';
 import 'package:canteen/application/auth/providers.dart';
 import 'package:canteen/application/product/product_draft.dart';
 import 'package:canteen/application/product/product_service.dart';
@@ -678,6 +679,27 @@ void main() {
 
       expect((await activeCartLines()).single.quantity, 1);
     });
+  });
+
+  testWidgets('OD-024 — F3 ürün yönetimini açar', (tester) async {
+    await createProduct();
+    useSalesSurface(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [canteenDatabaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          home: SaleScreen(clock: () => now),
+          routes: {
+            AppRoutes.products: (_) => const Scaffold(body: Text('ÜRÜNLER')),
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await press(tester, LogicalKeyboardKey.f3);
+
+    expect(find.text('ÜRÜNLER'), findsOneWidget);
   });
 
   testWidgets('REQ-UX-010 — F1 kısayol listesini açar', (tester) async {

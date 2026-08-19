@@ -396,6 +396,29 @@ izini action adına göre filtreleyen her sorguyu sessizce eksik sonuç verir h�
 
 **Etki:** [12 §4](12-sales-system.md) düzeltildi · `SaleService.actionPriceOverridden`.
 
+### OD-024 — Kısayol çelişkilerinde `23-ux-requirements.md` bağlayıcıdır
+
+**Karar:** Satış ekranında sepeti temizleme kısayolu **`Ctrl+Del`**, Ürünler ekranına
+gidiş **`F3`**'tür. Genel kural: bir kısayol iki dokümanda farklı tanımlanırsa
+[23 §2](23-ux-requirements.md) geçerlidir.
+
+**Çözülen çelişki:**
+
+| Konu | [12](12-sales-system.md) | [23 §2](23-ux-requirements.md) | Uygulanan |
+|---|---|---|---|
+| Sepeti temizle | `Esc` (uzun) | `Ctrl+Del` | **`Ctrl+Del`** |
+| Ürünler ekranı | `F9` (§1 düzeni) | `F3` | **`F3`** |
+
+**Neden 23:** Klavye kısayolları bir **etkileşim** konusudur ve `rules/00 §1` her
+dokümanı kendi konusunda bağlayıcı sayar; kısayolların konusu `23`'tür. Ayrıca `Esc`
+aynı tabloda zaten *"geri / dialog kapat"*tır — "uzun basış" ile ayrıştırmak masaüstü
+uygulamasında bulunmayan bir etkileşimdir ve `Esc`'in tek anlamlı davranışını
+belirsizleştirirdi. `12 §1`'deki `F9` bir ASCII düzen çiziminde geçen tek bir etikettir;
+`23 §2` ise kısayol **tablosudur**.
+
+**Etki:** [12 §1](12-sales-system.md) ve [12 §3](12-sales-system.md) düzeltildi ·
+`SaleScreen` kısayolları `23 §2`'yi uygular.
+
 ---
 
 ## 3. Kararların faz üzerindeki etkisi
@@ -419,7 +442,7 @@ Faz 12 →  Inno Setup
 
 Geliştirme sırasında kararlaştırılmamış bir konu ortaya çıkarsa:
 
-1. Bu dokümana `OD-024`'ten başlayarak yeni bir kayıt açılır.
+1. Bu dokümana `OD-025`'ten başlayarak yeni bir kayıt açılır.
 2. `Decision / Options / Recommendation / Impact` formatı kullanılır.
 3. Karar kapanmadan ilgili kod yazılmaz.
 4. Kapandığında bu dokümandaki karar kaydına ve ilgili business rule'a dönüştürülür.

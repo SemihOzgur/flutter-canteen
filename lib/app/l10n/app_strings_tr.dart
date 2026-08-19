@@ -695,6 +695,7 @@ class AppStringsTr {
     ('Del', 'Seçili satırı siler'),
     ('Alt+1…9', 'Favori ürünü sepete ekler'),
     ('F2', 'Seçili satırın fiyatını değiştirir'),
+    ('F3', 'Ürün yönetimini açar'),
     ('F4', 'Nakit hesaplama'),
     ('F12', 'Satışı tamamlar'),
     ('Ctrl+Del', 'Sepeti temizler (onaylı)'),
