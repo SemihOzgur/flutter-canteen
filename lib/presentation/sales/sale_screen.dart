@@ -46,6 +46,7 @@ import '../../domain/models/cart.dart';
 import '../../domain/models/category.dart';
 import '../../domain/models/product.dart';
 import '../../domain/services/barcode_input_handler.dart';
+import '../backup/backup_screen.dart' show BackupReminderBanner;
 import '../barcode/barcode_listener.dart';
 import '../common/current_user.dart';
 import 'cart_panel.dart';
@@ -660,47 +661,55 @@ class _SaleScreenState extends ConsumerState<SaleScreen> {
           ),
           body: _loading || cart == null
               ? const Center(child: CircularProgressIndicator())
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              : Column(
                   children: [
+                    // REQ-BKUP-016 · docs/19 §3 — hatırlatma çubuğu satış
+                    // ekranının ÜSTÜNDEDİR: kullanıcının %90'ını burada
+                    // geçirdiği ekran, uyarının görüleceği tek yerdir.
+                    const BackupReminderBanner(),
                     Expanded(
-                      child: ProductPicker(
-                        favorites: _favorites,
-                        categories: _categories,
-                        products: _products,
-                        selectedCategoryId: _selectedCategoryId,
-                        searching: _search.text.trim().isNotEmpty,
-                        onSelectCategory: (id) {
-                          setState(() => _selectedCategoryId = id);
-                          unawaited(_reloadCatalog());
-                        },
-                        onPickProduct: (product) =>
-                            unawaited(_addProduct(product)),
-                        onOpenProducts: () => unawaited(_openProducts()),
-                      ),
-                    ),
-                    // rules/05 §2 · REQ-UX-005 — sepet paneli hiçbir
-                    // çözünürlükte gizlenmez veya sekmeye dönüşmez. Genişlik
-                    // ekranın ~%38'idir (docs/12 §1) ve alt sınırı vardır:
-                    // 1366×768'de daralır ama korunur (docs/23 §4).
-                    SizedBox(
-                      width: (MediaQuery.sizeOf(context).width * 0.38).clamp(
-                        320.0,
-                        520.0,
-                      ),
-                      child: CartPanel(
-                        cart: cart,
-                        selectedLineId: _selectedLineId,
-                        onSelectLine: (id) =>
-                            setState(() => _selectedLineId = id),
-                        onChangeQuantity: (id, by) =>
-                            unawaited(_changeQuantity(id, by)),
-                        onRemoveLine: (id) => unawaited(_removeLine(id)),
-                        onEditPrice: (id) => unawaited(_editPrice(id)),
-                        onComplete: () => unawaited(_complete()),
-                        onCash: () => unawaited(_completeWithCash()),
-                        onClear: () => unawaited(_clearCart()),
-                        busy: _busy,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: ProductPicker(
+                              favorites: _favorites,
+                              categories: _categories,
+                              products: _products,
+                              selectedCategoryId: _selectedCategoryId,
+                              searching: _search.text.trim().isNotEmpty,
+                              onSelectCategory: (id) {
+                                setState(() => _selectedCategoryId = id);
+                                unawaited(_reloadCatalog());
+                              },
+                              onPickProduct: (product) =>
+                                  unawaited(_addProduct(product)),
+                              onOpenProducts: () => unawaited(_openProducts()),
+                            ),
+                          ),
+                          // rules/05 §2 · REQ-UX-005 — sepet paneli hiçbir
+                          // çözünürlükte gizlenmez veya sekmeye dönüşmez. Genişlik
+                          // ekranın ~%38'idir (docs/12 §1) ve alt sınırı vardır:
+                          // 1366×768'de daralır ama korunur (docs/23 §4).
+                          SizedBox(
+                            width: (MediaQuery.sizeOf(context).width * 0.38)
+                                .clamp(320.0, 520.0),
+                            child: CartPanel(
+                              cart: cart,
+                              selectedLineId: _selectedLineId,
+                              onSelectLine: (id) =>
+                                  setState(() => _selectedLineId = id),
+                              onChangeQuantity: (id, by) =>
+                                  unawaited(_changeQuantity(id, by)),
+                              onRemoveLine: (id) => unawaited(_removeLine(id)),
+                              onEditPrice: (id) => unawaited(_editPrice(id)),
+                              onComplete: () => unawaited(_complete()),
+                              onCash: () => unawaited(_completeWithCash()),
+                              onClear: () => unawaited(_clearCart()),
+                              busy: _busy,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

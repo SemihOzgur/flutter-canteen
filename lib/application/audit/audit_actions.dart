@@ -170,8 +170,6 @@ abstract final class AuditActions {
   static const Map<String, String> futurePhaseActions = {
     saleCancelled: 'Faz 7 — satış iptali',
     saleReturned: 'Faz 7 — iade',
-    backupCreated: 'Faz 9 — yedekleme',
-    backupRestored: 'Faz 9 — restore',
     dataImported: 'Faz 10 — import',
     dataExported: 'Faz 10 — export',
     // Şema v1'den başka sürüm yok; migration adımı hiç çalışmıyor. Yazım

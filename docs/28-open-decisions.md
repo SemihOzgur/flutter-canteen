@@ -476,6 +476,47 @@ bir **önbellektir** (BR-STOCK-002); onu kaynağıyla eşitlemek bir stok deği�
 **değişmedi**) · `ConsistencyService.repairStockQuantity` bunu çağırır ·
 denetim kaydı `metadata.source = "consistencyRepair"` taşır.
 
+### OD-027 — `restore_in_progress` işareti veritabanının DIŞINDA tutulur
+
+**Karar:** Yarım kalan geri yükleme işareti `app_settings` yerine veri dizinindeki
+`restore_in_progress.json` **dosyasında** tutulur.
+
+**Düzeltilen hata:** [19 §4](19-backup-restore.md) adım 10
+*"`app_settings['restore_in_progress'] = {...}`"* der. Ama bu, tam da tespit etmesi
+gereken senaryoda **işlemez**:
+
+```text
+adım 10  bayrak app_settings'e yazılır      → MEVCUT veritabanının içine
+adım 13  canteen.sqlite → canteen.old_<ts>  → bayrak veritabanıyla birlikte gider
+         ⚡ KESİNTİ — yerinde veritabanı YOK
+açılış   app_settings okunacak…             → okunacak veritabanı yok
+         → boş bir veritabanı oluşur, bayrak hiç bulunmaz
+         → REQ-BKUP-012 kurtarması HİÇ ÇALIŞMAZ
+```
+
+Başarılı restore'da da bayrak "kendiliğinden" kaybolur (yedeğin `app_settings`'i onu
+içermez), yani mekanizma iki durumu birbirinden ayıramaz.
+
+**Neden `migration_in_progress` için sorun değil:** Migration veritabanı **dosyasını
+değiştirmez**, içeriğini dönüştürür. Bayrak orada hayatta kalır. Restore ise dosyanın
+kendisini takas eder — kural aynı görünse de mekanizma farklıdır.
+
+**Seçenekler:**
+
+| | Seçenek | Sonuç |
+|---|---|---|
+| **A** | Veri dizininde işaret dosyası | Veritabanı hiç açılmadan okunabilir; dosya takasından etkilenmez |
+| B | Bayrağı yedeğin kendi `app_settings`'ine yazmak | Restore edilen yedek "yarım restore" işaretli açılırdı — anlamsız |
+| C | Ayrı bir durum veritabanı | İkinci bir kalıcılık mekanizması, ikinci bir bozulma kaynağı (docs/12 §2.1 aynı gerekçeyle reddetti) |
+
+**Neden A:** Kurtarmanın çalışması gereken an, veritabanının **açılamadığı** andır. İşaretin
+veritabanından bağımsız olması bir tercih değil, ön koşuldur.
+
+**Etki:** [19 §4](19-backup-restore.md) adım 10 ve 20 düzeltildi ·
+`AppPaths.restoreMarkerFile` eklendi · `AppSettingKeys.restoreInProgress` **artık
+kullanılmıyor** ama kaldırılmadı: yayınlanmış bir anahtarın silinmesi eski kurulumlarda
+okunamayan bir kalıntı bırakırdı.
+
 ---
 
 ## 3. Kararların faz üzerindeki etkisi
@@ -489,7 +530,7 @@ Faz 5  →  Son alış fiyatı snapshot'ı, indirim yok, nakit yuvarlama yok,
           barkod snapshot'ı birincil barkoddur (OD-022)
 Faz 6  →  Fire birim maliyeti saklar (OD-025); sapma düzeltmesi defterden (OD-026)
 Faz 8  →  fl_chart; Raporlar kilit arkasında
-Faz 9  →  ZIP yedek
+Faz 9  →  ZIP yedek; restore işareti veritabanı dışında (OD-027)
 Faz 10 →  CSV birincil + Excel abstraction
 Faz 12 →  Inno Setup
 ```
@@ -500,7 +541,7 @@ Faz 12 →  Inno Setup
 
 Geliştirme sırasında kararlaştırılmamış bir konu ortaya çıkarsa:
 
-1. Bu dokümana `OD-027`'den başlayarak yeni bir kayıt açılır.
+1. Bu dokümana `OD-028`'den başlayarak yeni bir kayıt açılır.
 2. `Decision / Options / Recommendation / Impact` formatı kullanılır.
 3. Karar kapanmadan ilgili kod yazılmaz.
 4. Kapandığında bu dokümandaki karar kaydına ve ilgili business rule'a dönüştürülür.

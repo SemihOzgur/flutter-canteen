@@ -41,6 +41,7 @@ class HomeScreen extends ConsumerWidget {
   static const Key salesButtonKey = Key('home_sales_button');
   static const Key stockButtonKey = Key('home_stock_button');
   static const Key consistencyButtonKey = Key('home_consistency_button');
+  static const Key backupButtonKey = Key('home_backup_button');
   static const Key productsButtonKey = Key('home_products_button');
   static const Key barcodeDiagnosticsButtonKey = Key(
     'home_barcode_diagnostics_button',
@@ -169,6 +170,13 @@ class HomeScreen extends ConsumerWidget {
                           Navigator.of(context).pushNamed(AppRoutes.vatRates),
                       icon: const Icon(Icons.percent_outlined),
                       label: const Text(AppStringsTr.homeVatRatesAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.backupButtonKey,
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.backup),
+                      icon: const Icon(Icons.save_outlined),
+                      label: const Text(AppStringsTr.homeBackupAction),
                     ),
                     OutlinedButton.icon(
                       key: HomeScreen.consistencyButtonKey,

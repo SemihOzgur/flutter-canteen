@@ -58,6 +58,14 @@ class AppPaths {
   /// Single-instance kilit dosyası (BR-GEN-005).
   String get lockFile => p.join(rootPath, 'app.lock');
 
+  /// docs/19 §4 adım 10 · **OD-027** — yarım kalan geri yükleme işareti.
+  ///
+  /// Veritabanının **dışındadır** ve bu zorunludur: restore veritabanı
+  /// dosyasını değiştirir, dolayısıyla `app_settings` içindeki bir bayrak tam
+  /// da tespit etmesi gereken anda (dosya taşınırken kesinti) kaybolur.
+  /// Dosya, veritabanı hiç açılamadan okunabilir.
+  String get restoreMarkerFile => p.join(rootPath, 'restore_in_progress.json');
+
   /// Çalışılan platforma göre veri kökünü çözer.
   ///
   /// [environment] ve [operatingSystem] test edilebilirlik için enjekte edilebilir
