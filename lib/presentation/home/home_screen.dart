@@ -38,6 +38,7 @@ class HomeScreen extends ConsumerWidget {
     'home_financial_access_button',
   );
   static const Key dashboardButtonKey = Key('home_dashboard_button');
+  static const Key salesButtonKey = Key('home_sales_button');
   static const Key productsButtonKey = Key('home_products_button');
   static const Key barcodeDiagnosticsButtonKey = Key(
     'home_barcode_diagnostics_button',
@@ -122,6 +123,15 @@ class HomeScreen extends ConsumerWidget {
                       ).pushNamed(AppRoutes.financialAccessSettings),
                       icon: const Icon(Icons.tune_outlined),
                       label: const Text(AppStringsTr.homeFinancialAccessAction),
+                    ),
+                    // Satış ekranı uygulamanın asıl işidir; ana ekranda
+                    // birincil eylem olarak durur (docs/22 · docs/12).
+                    FilledButton.icon(
+                      key: HomeScreen.salesButtonKey,
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.sales),
+                      icon: const Icon(Icons.point_of_sale),
+                      label: const Text(AppStringsTr.homeSaleAction),
                     ),
                     OutlinedButton.icon(
                       key: HomeScreen.productsButtonKey,

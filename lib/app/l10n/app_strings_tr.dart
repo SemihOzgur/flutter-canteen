@@ -576,6 +576,132 @@ class AppStringsTr {
   static const String barcodeDiagnosticsClear = 'Geçmişi temizle';
   static const String homeBarcodeDiagnosticsAction = 'Barkod Tanılama';
 
+  // ── Satış ekranı (docs/12 · docs/23) ─────────────────────────────────────
+  static const String saleTitle = 'Satış';
+  static const String homeSaleAction = 'Satış Ekranı';
+  static const String saleSearchHint = 'Barkod okutun veya ürün arayın';
+  static const String saleSearchLabel = 'Barkod / Ürün ara';
+
+  /// docs/23 §6 — her liste ekranının eyleme yönlendiren boş durumu vardır.
+  static const String saleCartEmptyTitle = 'Sepet boş';
+  static const String saleCartEmptyHint =
+      'Barkod okutun, ürün arayın veya soldaki listeden seçin.';
+  static const String saleProductsEmptyTitle = 'Henüz ürün yok';
+  static const String saleProductsEmptyHint =
+      'Satış yapabilmek için önce ürün eklemelisiniz.';
+  static const String saleProductsEmptyAction = 'Ürün Ekle';
+  static const String saleSearchEmpty = 'Aramanıza uyan ürün bulunamadı.';
+
+  static const String saleFavorites = 'Favoriler';
+  static const String saleAllCategories = 'Tümü';
+  static const String saleCartTitle = 'Sepet';
+  static const String saleSubtotal = 'Matrah';
+  static const String saleVat = 'KDV';
+  static const String saleGrandTotal = 'TOPLAM';
+  static const String saleCompleteAction = 'TAMAMLA';
+  static const String saleCashAction = 'Nakit';
+  static const String saleClearAction = 'Sepeti Temizle';
+  static const String saleRemoveLine = 'Satırı sil';
+  static const String saleIncrease = 'Miktarı artır';
+  static const String saleDecrease = 'Miktarı azalt';
+
+  /// docs/12 §4 — satır rozetleri.
+  static const String salePriceOverriddenBadge = 'fiyat değiştirildi';
+  static const String salePriceStaleBadge = 'fiyat güncellendi';
+  static const String saleInactiveBadge = 'pasif ürün';
+  static const String saleOutOfStockBadge = 'stok yok';
+
+  // ── Sepeti temizleme onayı (REQ-UX-009) ──────────────────────────────────
+  static const String saleClearTitle = 'Sepeti temizle';
+  static const String saleClearMessage =
+      'Sepetteki tüm satırlar silinecek. Bu işlem geri alınamaz.';
+  static const String saleClearConfirm = 'Temizle';
+
+  // ── Fiyat değiştirme (docs/12 §4) ────────────────────────────────────────
+  static String salePriceDialogTitle(String productName) =>
+      'Fiyat Değiştir — $productName';
+  static String salePriceListLabel(String price) =>
+      'Liste fiyatı (KDV dahil): $price';
+  static const String salePriceNewLabel = 'Yeni fiyat (KDV dahil)';
+  static const String salePriceDialogNotice =
+      'Bu değişiklik yalnızca bu satışa uygulanır. Ürünün fiyatı değişmez.';
+  static const String salePriceApply = 'Uygula';
+  static const String salePriceInvalid = 'Fiyat geçersiz. Örnek: 25,50';
+
+  // ── Nakit hesaplama (docs/12 §5) ─────────────────────────────────────────
+  static const String saleCashTitle = 'Nakit Hesaplama';
+  static const String saleCashTotal = 'Toplam';
+  static const String saleCashReceived = 'Alınan';
+  static const String saleCashChange = 'PARA ÜSTÜ';
+  static const String saleCashQuick = 'Hızlı';
+  static const String saleCashExact = 'Tam tutar';
+  static const String saleCashInvalid = 'Tutar geçersiz. Örnek: 200,00';
+
+  /// BR-SALE-008 · EC-SALE-009 — alınan toplamdan azsa tamamlama kapalıdır.
+  static const String saleCashInsufficient = 'Alınan tutar toplamdan az.';
+
+  // ── Stok uyarısı (docs/13 §4 · BR-STOCK-006) ─────────────────────────────
+  static const String saleStockWarningTitle = 'Stok Uyarısı';
+  static String saleStockWarningBody(String productName, int stock) =>
+      '$productName\nSistemdeki stok: $stock\n\n'
+      'Bu ürünün stoğu tükenmiş görünüyor. Devam ederseniz stok eksiye '
+      'düşecek.';
+  static const String saleStockWarningContinue = 'Devam Et';
+
+  // ── Bilinmeyen barkod → hızlı ürün (docs/11 §4.2 · REQ-BARC-006/007) ─────
+  static const String saleQuickAddTitle = 'Yeni Ürün (Hızlı)';
+  static const String saleQuickAddIntro =
+      'Bu barkod hiçbir ürüne ait değil. Ürünü şimdi oluşturup sepete '
+      'ekleyebilirsiniz.';
+  static const String saleQuickAddBarcode = 'Barkod';
+  static const String saleQuickAddName = 'Ürün adı';
+  static const String saleQuickAddPrice = 'Satış fiyatı (KDV dahil)';
+  static const String saleQuickAddSubmit = 'Kaydet ve Sepete Ekle';
+  static const String saleQuickAddNameRequired = 'Ürün adı zorunludur.';
+
+  // ── Pasif ürün okutuldu (docs/11 §4.3) ───────────────────────────────────
+  static String saleInactiveProductTitle(String productName) =>
+      'Bu ürün pasif durumda: $productName';
+  static const String saleInactiveProductBody =
+      'Pasif ürünler satış ekranında listelenmez. Aktifleştirirseniz ürün '
+      'sepete eklenir ve listelerde yeniden görünür.';
+  static const String saleInactiveProductActivate =
+      'Aktifleştir ve Sepete Ekle';
+
+  // ── Satış tamamlandı (docs/12 §6.3) ──────────────────────────────────────
+  static String saleCompletedMessage(String saleNumber, String total) =>
+      'Satış tamamlandı — Fiş No: $saleNumber · Toplam $total';
+  static String saleCompletedWithChange(
+    String saleNumber,
+    String total,
+    String change,
+  ) =>
+      'Satış tamamlandı — Fiş No: $saleNumber · Toplam $total · '
+      'Para üstü $change';
+
+  /// EC-CART-010 — bozuk satırlar düştü.
+  static String saleCartRepaired(int count) =>
+      'Sepetteki $count satır açılamadığı için kaldırıldı. Sepetin kalanı '
+      'korundu.';
+
+  // ── Kısayollar (REQ-UX-010 · docs/23 §2) ─────────────────────────────────
+  static const String saleShortcutsTitle = 'Klavye Kısayolları';
+  static const String saleShortcutsClose = 'Kapat';
+  static const List<(String, String)> saleShortcuts = [
+    ('yazma', 'Odak nerede olursa olsun barkod/arama girişine döner'),
+    ('Enter', 'Aramadaki ilk ürünü sepete ekler'),
+    ('↑ ↓', 'Sepet satırları arasında gezinir'),
+    ('+ / -', 'Seçili satırın miktarını değiştirir'),
+    ('Del', 'Seçili satırı siler'),
+    ('Alt+1…9', 'Favori ürünü sepete ekler'),
+    ('F2', 'Seçili satırın fiyatını değiştirir'),
+    ('F4', 'Nakit hesaplama'),
+    ('F12', 'Satışı tamamlar'),
+    ('Ctrl+Del', 'Sepeti temizler (onaylı)'),
+    ('F1', 'Bu listeyi açar'),
+    ('Esc', 'Dialogu kapatır'),
+  ];
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

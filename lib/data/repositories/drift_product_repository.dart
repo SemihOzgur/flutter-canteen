@@ -150,17 +150,22 @@ class DriftProductRepository implements ProductRepository {
   Future<List<Product>> list({
     bool includeInactive = false,
     int? categoryId,
+    bool onlyFavorites = false,
     int limit = ProductRules.searchResultLimit,
     int offset = 0,
   }) async {
     final rows =
         await (_db.select(_db.products)
               ..where(
-                (p) => _listFilter(
-                  p,
-                  includeInactive: includeInactive,
-                  categoryId: categoryId,
-                ),
+                (p) =>
+                    _listFilter(
+                      p,
+                      includeInactive: includeInactive,
+                      categoryId: categoryId,
+                    ) &
+                    (onlyFavorites
+                        ? p.isFavorite.equals(true)
+                        : const Constant(true)),
               )
               ..orderBy([(p) => OrderingTerm(expression: p.name)])
               ..limit(limit, offset: offset))

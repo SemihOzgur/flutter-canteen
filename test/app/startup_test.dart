@@ -289,10 +289,12 @@ void main() {
         AppRoutes.products,
         // Faz 4 — REQ-BARC-010.
         AppRoutes.barcodeDiagnostics,
+        // Faz 5 — docs/12 · REQ-UX-001.
+        AppRoutes.sales,
       });
       expect(
         routes.length,
-        10,
+        11,
         reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
       );
     });

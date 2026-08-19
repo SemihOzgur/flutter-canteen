@@ -111,6 +111,12 @@ class CartService {
     // listActive() `updated_at` azalan sıradadır — ilki en yenisidir.
     for (final stale in active.skip(1)) {
       await _carts.updateStatus(stale.id, CartStatus.abandoned);
+      // Satırlar da silinir. Terk edilmiş sepetin satırı hiçbir şeye
+      // yaramaz ama `cart_items.product_id` bir yabancı anahtardır: hiç
+      // satılmamış bir ürünü **kalıcı silmek** (BR-PROD-014) o referans
+      // yüzünden veritabanı hatasıyla düşerdi. Kullanıcı, dokümanın izin
+      // verdiği bir işlemin açıklanamayan bir hatayla reddedildiğini görürdü.
+      await _cartItems.deleteOfCart(stale.id);
     }
     return (id: active.first.id, userId: active.first.userId);
   }
