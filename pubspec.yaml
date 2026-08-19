@@ -56,6 +56,12 @@ dependencies:
   # rules/01 §7 karar kapsamı: ayrıca onay gerekmez.
   crypto: ^3.0.6
 
+  # Yedek arşivleme — OD-012 (ZIP, tek dosya `.canteenbackup`).
+  # rules/01 §7: karar kapsamındadır, yeniden onay gerektirmez.
+  # Yedek arşivleme — OD-012 (ZIP, tek dosya `.canteenbackup`).
+  # rules/01 §7: karar kapsamındadır, yeniden onay gerektirmez.
+  archive: ^4.1.0
+
   # Görsel optimizasyonu (yeniden boyutlandırma + yeniden kodlama) —
   # BR-IMG-002 / REQ-IMG-003 / OD-016. rules/01 §7 karar kapsamındadır;
   # dört soru: (1) gerekli — optimizasyon zorunlu bir gerekliliktir,
@@ -64,6 +70,10 @@ dependencies:
   # (4) saf Dart olduğu için platform kanalı yoktur ve Windows'ta macOS ile
   # aynı davranır.
   image: ^4.5.4
+  # SHA-256'yı akış halinde hesaplamak için (`AccumulatorSink`) — 50 MB'lık
+  # veritabanı belleğe alınmadan özetlenir. `crypto`'nun zaten geçişli
+  # bağımlılığıdır; doğrudan import edildiği için açıkça yazılır.
+  convert: ^3.1.2
 
 dev_dependencies:
   flutter_test:

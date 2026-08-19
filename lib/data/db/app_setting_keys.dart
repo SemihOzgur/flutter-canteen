@@ -23,10 +23,23 @@ abstract final class AppSettingKeys {
   static const String migrationInProgress = 'migration_in_progress';
 
   /// Yarım kalmış restore bayrağı — docs/19 (Faz 9).
+  /// ⚠️ **OD-027 — ARTIK KULLANILMIYOR.**
+  ///
+  /// Yarım kalan restore işareti veri dizinindeki `restore_in_progress.json`
+  /// dosyasındadır: restore veritabanı **dosyasını takas eder** ve içerideki
+  /// bir bayrak tam da kesinti anında kaybolurdu.
+  ///
+  /// Anahtar kaldırılmadı: yayınlanmış bir anahtarı silmek eski kurulumlarda
+  /// okunamayan bir kalıntı bırakırdı.
   static const String restoreInProgress = 'restore_in_progress';
 
   /// Görsel optimizasyon profili (OD-016).
   static const String imageOptimization = 'image_optimization';
+
+  /// docs/19 §3 — son yedek zamanı (UTC ms).
+  ///
+  /// REQ-BKUP-016: 7 günden uzun süredir yedek alınmadıysa kullanıcı uyarılır.
+  static const String lastBackupAt = 'last_backup_at';
 
   /// `sale_counter_<yıl>` anahtarını üretir.
   static String saleCounter(int year) => 'sale_counter_$year';

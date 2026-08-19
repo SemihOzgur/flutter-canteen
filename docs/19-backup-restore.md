@@ -187,7 +187,9 @@ Ayarlar → Yedekleme → [Yedekten Geri Yükle] → dosya seç
 
 ```text
 ─── UYGULAMA AŞAMASI ───
-10. app_settings['restore_in_progress'] = {startedAt, sourceFile}
+10. <veri dizini>/restore_in_progress.json = {startedAt, sourceFile, stamp}
+       ↳ VERİTABANININ DIŞINDA — adım 13 veritabanı dosyasını takas eder ve
+         içerideki bir bayrak tam da kesinti anında kaybolurdu (OD-027)
 11. GÜVENLİK YEDEĞİ:
        mevcut DB + görseller → <veri dizini>/backups/auto/pre_restore_<ts>.canteenbackup
        (aynı BackupService, doğrulanır)
@@ -203,7 +205,7 @@ Ayarlar → Yedekleme → [Yedekten Geri Yükle] → dosya seç
        ↳ tutmuyorsa: GERİ AL (adım 13'teki dosyaları geri koy)
 18. Satış numarası sayacını düzelt (§5)
 19. Oturumu sonlandır → login ekranına dön
-20. app_settings['restore_in_progress'] temizle
+20. restore_in_progress.json sil
 21. audit_logs: backupRestored (restore ÖNCESİ sayılarla birlikte)
 22. .old_<ts> dosyaları 7 gün sonra otomatik temizlenir
 ```
@@ -213,7 +215,8 @@ başarısız olsa bile veri diskte durur ve elle kurtarılabilir.
 
 ### Restore sırasında çökme
 
-Açılışta `restore_in_progress` bulunursa:
+Açılışta `restore_in_progress.json` bulunursa (**veritabanı açılmadan önce** —
+OD-027):
 
 ```text
 "Geri yükleme yarım kaldı."
