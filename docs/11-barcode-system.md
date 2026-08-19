@@ -76,6 +76,17 @@ Aksi hâlde uzun okumalar sessizce **kırpılırdı**: 40 karakterlik bir kod 10
 dönerdi. Kayıp okumayı kullanıcı görür ve tekrar okutur; kırpılmış barkod ise sessizce
 yanlış veri üretir.
 
+**Sıra önemlidir — 35 ms kuralı 300 ms kuralından önce gelir:**
+
+| Durum | Davranış |
+|---|---|
+| Son karakterden **> 35 ms** geçti | Tampon **terk edilmiş** sayılır → temizlenir, **zehir YOK** |
+| Akış **kesintisiz** (≤ 35 ms) ama toplam süre 300 ms'i aştı | Tek bir uzun okuma kırpılıyor → temizlenir **ve zehirlenir** |
+
+Bu ayrım olmasaydı, kullanıcı arama kutusuna yazıp duraksadıktan sonra okuttuğunda okuma
+**yutulur** ve ikinci kez okutmak zorunda kalırdı — zehir yalnızca kırpılma riski gerçekken
+uygulanır.
+
 ### Global mi, odaklı mı?
 
 **Karar: Satış ekranında global dinleme, diğer ekranlarda alan odaklı.**

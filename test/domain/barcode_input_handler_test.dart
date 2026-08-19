@@ -121,9 +121,8 @@ void main() {
     });
 
     test('64 karakteri aşan girdi tamponu TEMİZLER', () {
-      // 1 ms aralık bilinçlidir: 65 karakter 5 ms ile yazılsaydı toplam
-      // 325 ms ederdi ve uzunluk sınırına varmadan 300 ms'lik buffer zaman
-      // aşımı devreye girerdi. Burada sınanan şey UZUNLUK kuralıdır.
+      // 1 ms aralık bilinçlidir: 65 karakter 5 ms ile yazılsaydı 325 ms
+      // ederdi ve uzunluk sınırına varmadan zaman aşımı devreye girerdi.
       scan('9' * 65, gapMs: 1);
 
       expect(
@@ -132,7 +131,6 @@ void main() {
         reason:
             'Barkod olamayacak kadar uzun dizi sonraki okumayı kirletmemeli.',
       );
-      expect(handler.handleEnter().outcome, BarcodeInputOutcome.passThrough);
     });
   });
 
@@ -150,36 +148,55 @@ void main() {
       );
     });
 
-    test('bayat tamponun üzerine gelen karakter yeni giriş başlatır', () {
+    test('TERK EDİLMİŞ tampondan sonraki okuma zehirlenmez', () {
+      // Kullanıcı arama kutusuna yazıp duraksadı, sonra okuttu. Bu yeni bir
+      // giriştir; zehirlenirse okuma yutulur ve ikinci kez okutmak gerekir.
       scan('1111');
       advance(400);
       scan('8690000000001');
 
+      expect(handler.isPoisoned, isFalse);
       expect(handler.handleEnter().barcode, '8690000000001');
     });
   });
 
   group('zaman aşımı ile uzunluk sınırının ETKİLEŞİMİ — docs/11 §2', () {
-    test('uzun okuma 300 ms\'i aşınca barkod KIRPILIR — bilinen risk', () {
-      // docs/11 §2 iki bağımsız sınır koyar: karakter başına 35 ms ve tampon
-      // için 300 ms. Uzun kodlarda çatışırlar: 40 karakter × 10 ms = 400 ms.
-      //
-      // Dokümandaki akış "buffer'ı temizle, yeni giriş başlat" der; sonuç
-      // okumanın REDDEDİLMESİ değil, KUYRUĞUNUN geçerli bir barkod gibi
-      // dönmesidir. Bu test o davranışı sabitler ki sessizce değişmesin.
-      final code = '1234567890' * 4; // 40 karakter
-      scan(code, gapMs: 10);
+    test('OD-021 — uzun okuma KIRPILMIŞ barkod ÜRETMEZ', () {
+      // 40 karakter × 10 ms = 400 ms > 300 ms. Şema "yeni giriş başlat"
+      // deseydi kalan ~10 karakter geçerli bir barkod gibi dönerdi; OD-021
+      // bunu yasaklar (EC-BARC-002/008).
+      scan('1234567890' * 4, gapMs: 10);
 
       final result = handler.handleEnter();
 
-      expect(result.isScanned, isTrue);
       expect(
-        result.barcode!.length,
-        lessThan(code.length),
+        result.outcome,
+        BarcodeInputOutcome.passThrough,
         reason:
-            'Okumanın başı atılır. Gerçek EAN-13 (13 hane) etkilenmez; '
-            'uzun Code 128 kodları etkilenir — OD adayı.',
+            'Kayıp okumayı kullanıcı görür ve tekrar okutur; kırpılmış '
+            'barkod sessizce yanlış veri üretir.',
       );
+      expect(result.barcode, isNull);
+    });
+
+    test('zehir yalnızca Enter ile temizlenir', () {
+      // Kesintisiz uzun akış: zehirlenir.
+      scan('1234567890' * 4, gapMs: 10);
+
+      expect(handler.isPoisoned, isTrue);
+      expect(handler.handleEnter().outcome, BarcodeInputOutcome.passThrough);
+
+      // Enter sayfayı temizledi: sonraki okuma normal çalışır.
+      expect(handler.isPoisoned, isFalse);
+      scan('8690000000001');
+      expect(handler.handleEnter().barcode, '8690000000001');
+    });
+
+    test('64 karakter aşımı da zehirler — kırpılma kaynağı aynı', () {
+      scan('9' * 65, gapMs: 1);
+
+      expect(handler.isPoisoned, isTrue);
+      expect(handler.handleEnter().outcome, BarcodeInputOutcome.passThrough);
     });
 
     test('EAN-13 en yavaş scanner hızında bile okunur', () {

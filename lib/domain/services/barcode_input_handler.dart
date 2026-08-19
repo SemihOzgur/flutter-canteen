@@ -19,6 +19,15 @@
 /// gibi deterministiktir — test sahte bir saatle 35 ms ile 36 ms arasındaki
 /// farkı hiçbir gerçek beklemeye girmeden doğrulayabilir.
 ///
+/// ## Zaman aşımı girdiyi "zehirler" — OD-021
+///
+/// Tampon 300 ms'i aşarsa yalnızca temizlenmez; girdi **zehirlenir** ve
+/// sonraki `Enter`'a kadar barkod üretilmez. Aksi hâlde uzun okumalar
+/// sessizce **kırpılırdı**: 40 karakterlik bir kod 10 ms aralıkla 400 ms
+/// sürer, tampon ~300 ms'de sıfırlanır ve kalan ~10 karakter geçerli bir
+/// barkod gibi dönerdi. Kayıp okumayı kullanıcı görür ve tekrar okutur;
+/// kırpılmış barkod sessizce yanlış veri üretir (EC-BARC-002/008).
+///
 /// ## Neden barkod yalnızca `Enter`'da tamamlanır
 ///
 /// docs/11 §2 sonlandırıcıyı **zorunlu** kılar. Uzunluğa bakıp erken
@@ -73,6 +82,10 @@ class BarcodeInputHandler {
   DateTime? _startedAt;
   DateTime? _lastCharacterAt;
 
+  /// OD-021 — zaman aşımı sonrası girdi, `Enter` gelene kadar barkod
+  /// üretemez. Kırpılmış barkodun tek panzehiri budur.
+  bool _poisoned = false;
+
   BarcodeInputHandler({DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
 
@@ -81,7 +94,18 @@ class BarcodeInputHandler {
 
   bool get isBuffering => _buffer.isNotEmpty;
 
+  /// OD-021 — girdi zehirli mi? Tanılama ekranı bunu gösterir.
+  bool get isPoisoned => _poisoned;
+
   void reset() {
+    _buffer.clear();
+    _startedAt = null;
+    _lastCharacterAt = null;
+    _poisoned = false;
+  }
+
+  /// Tamponu temizler ama **zehri korur** — OD-021.
+  void _discardBuffer() {
     _buffer.clear();
     _startedAt = null;
     _lastCharacterAt = null;
@@ -105,7 +129,20 @@ class BarcodeInputHandler {
     // İnsan hızında bir aralık, o ana kadarki tamponu geçersiz kılar.
     final slowGap = last != null && now.difference(last) > maxInterCharacterGap;
 
-    if (staleBuffer || slowGap) reset();
+    // Sıra kritiktir. İnsan hızındaki bir aralık, o ana kadarki tamponun
+    // **terk edildiği** anlamına gelir (docs/11 §2): kullanıcı arama
+    // kutusuna yazıp duraksamış, sonra okutmuştur. Bu yeni bir giriştir ve
+    // zehirlenmemelidir — aksi hâlde okuma yutulur ve kullanıcı ikinci kez
+    // okutmak zorunda kalır.
+    //
+    // Zehir yalnızca **kesintisiz** bir akış 300 ms'i aştığında gerekir:
+    // orada tek bir uzun okuma kırpılıyor demektir (OD-021 · EC-BARC-008).
+    if (slowGap) {
+      _discardBuffer();
+    } else if (staleBuffer) {
+      _discardBuffer();
+      _poisoned = true;
+    }
 
     _buffer.write(character);
     _startedAt ??= now;
@@ -113,7 +150,12 @@ class BarcodeInputHandler {
 
     // docs/11 §2 — azami uzunluk aşılırsa tampon temizlenir. Barkod
     // olamayacak kadar uzun bir dizi, sonraki gerçek okumayı kirletmemelidir.
-    if (_buffer.length > maxLength) reset();
+    // docs/11 §2 — azami uzunluk aşılırsa tampon temizlenir. Bu da bir
+    // kırpılma kaynağıdır, dolayısıyla girdi aynı şekilde zehirlenir.
+    if (_buffer.length > maxLength) {
+      _discardBuffer();
+      _poisoned = true;
+    }
 
     return BarcodeInputResult.buffered;
   }
@@ -127,13 +169,15 @@ class BarcodeInputHandler {
     final started = _startedAt;
     final value = _buffer.toString();
     final now = _clock();
+    final poisoned = _poisoned;
 
     final tooShort = value.length < minLength;
     final stale = started == null || now.difference(started) > bufferTimeout;
 
+    // `Enter` her koşulda temiz bir sayfa açar — zehir dahil (OD-021).
     reset();
 
-    if (tooShort || stale) return BarcodeInputResult.passThrough;
+    if (poisoned || tooShort || stale) return BarcodeInputResult.passThrough;
     return BarcodeInputResult._(BarcodeInputOutcome.scanned, value);
   }
 }
