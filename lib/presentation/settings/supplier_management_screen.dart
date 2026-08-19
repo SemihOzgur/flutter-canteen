@@ -34,6 +34,7 @@
 /// (REQ-UX-008 · REQ-SEC-007).
 library;
 
+import 'supplier_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -223,6 +224,12 @@ class _SupplierManagementScreenState
 
         return ListTile(
           key: SupplierManagementScreen.tileKey(supplier.id),
+          // REQ-SUP-003 — satıra tıklamak tedarikçi detayını açar.
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => SupplierDetailScreen(supplierId: supplier.id),
+            ),
+          ),
           // rules/05 §5: durum renkle değil, ikon + metinle de anlatılır.
           leading: Icon(
             supplier.isActive

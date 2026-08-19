@@ -39,6 +39,8 @@ class HomeScreen extends ConsumerWidget {
   );
   static const Key dashboardButtonKey = Key('home_dashboard_button');
   static const Key salesButtonKey = Key('home_sales_button');
+  static const Key stockButtonKey = Key('home_stock_button');
+  static const Key consistencyButtonKey = Key('home_consistency_button');
   static const Key productsButtonKey = Key('home_products_button');
   static const Key barcodeDiagnosticsButtonKey = Key(
     'home_barcode_diagnostics_button',
@@ -134,6 +136,13 @@ class HomeScreen extends ConsumerWidget {
                       label: const Text(AppStringsTr.homeSaleAction),
                     ),
                     OutlinedButton.icon(
+                      key: HomeScreen.stockButtonKey,
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.stock),
+                      icon: const Icon(Icons.inventory_outlined),
+                      label: const Text(AppStringsTr.homeStockAction),
+                    ),
+                    OutlinedButton.icon(
                       key: HomeScreen.productsButtonKey,
                       onPressed: () =>
                           Navigator.of(context).pushNamed(AppRoutes.products),
@@ -160,6 +169,14 @@ class HomeScreen extends ConsumerWidget {
                           Navigator.of(context).pushNamed(AppRoutes.vatRates),
                       icon: const Icon(Icons.percent_outlined),
                       label: const Text(AppStringsTr.homeVatRatesAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.consistencyButtonKey,
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed(AppRoutes.consistency),
+                      icon: const Icon(Icons.fact_check_outlined),
+                      label: const Text(AppStringsTr.consistencyTitle),
                     ),
                     OutlinedButton.icon(
                       key: HomeScreen.barcodeDiagnosticsButtonKey,

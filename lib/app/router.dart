@@ -19,7 +19,11 @@ import '../presentation/settings/supplier_management_screen.dart';
 import '../presentation/settings/user_management_screen.dart';
 import '../presentation/barcode/barcode_diagnostics_screen.dart';
 import '../presentation/products/product_list_screen.dart';
+import '../presentation/maintenance/consistency_screen.dart';
 import '../presentation/sales/sale_screen.dart';
+import '../presentation/stock/stock_entry_screen.dart';
+import '../presentation/stock/stock_movements_screen.dart';
+import '../presentation/stock/stock_overview_screen.dart';
 import '../presentation/settings/vat_rate_management_screen.dart';
 
 class AppRoutes {
@@ -63,6 +67,18 @@ class AppRoutes {
   /// Barkod tanılama (REQ-BARC-010). Finansal veri içermez, kilit dışındadır.
   static const String barcodeDiagnostics = '/barcode-diagnostics';
 
+  /// Stok yönetimi (docs/13). Kilit dışındadır (rules/04 §4).
+  static const String stock = '/stock';
+
+  /// Mal kabul (docs/13 §5).
+  static const String stockEntry = '/stock/entry';
+
+  /// Hareket geçmişi (docs/13 §8 · REQ-STOCK-010).
+  static const String stockMovements = '/stock/movements';
+
+  /// Ayarlar → Bakım → Veri Tutarlılığı Kontrolü (docs/24 §3.3).
+  static const String consistency = '/maintenance/consistency';
+
   /// Satış ekranı (docs/12 · REQ-UX-001). **Kilit dışındadır** — satış
   /// finansal bir ekran değil, uygulamanın asıl işidir (rules/04 §4).
   static const String sales = '/sales';
@@ -79,5 +95,9 @@ class AppRoutes {
     products: (_) => const ProductListScreen(),
     barcodeDiagnostics: (_) => const BarcodeDiagnosticsScreen(),
     sales: (_) => const SaleScreen(),
+    stock: (_) => const StockOverviewScreen(),
+    stockEntry: (_) => const StockEntryScreen(),
+    stockMovements: (_) => const StockMovementsScreen(),
+    consistency: (_) => const ConsistencyScreen(),
   };
 }

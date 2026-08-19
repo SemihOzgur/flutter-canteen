@@ -41,20 +41,25 @@ Bu eşitlik **her zaman** doğru olmalıdır (BR-STOCK-003) ve doğrulanabilir o
 
 ## 2. Hareket tipleri
 
-| Tip | Yön | Kim oluşturur | `unit_cost` | Not |
+| Tip | Yön | Kim oluşturur | `unit_cost` **kullanıcı girer mi** | Not |
 |---|---|---|---|---|
 | `initial` | + | Ürün oluşturma (başlangıç stoğu) | opsiyonel | Ürün başına en fazla bir kez |
 | `stockEntry` | + | Kullanıcı (stok girişi ekranı) | ✅ girilebilir | Tedarikçi bağlanabilir |
 | `sale` | − | Satış tamamlama (otomatik) | ❌ | `reference: sale` |
 | `saleCancellation` | + | Satış iptali (otomatik) | ❌ | `reference: sale` |
 | `return` | + | İade (otomatik) | ❌ | `reference: return` |
-| `waste` | − | Kullanıcı (fire) | ❌ | Sebep zorunlu |
+| `waste` | − | Kullanıcı (fire) | ❌ — sistem ürünün o anki alış fiyatını **yazar** (OD-025) | Sebep zorunlu |
 | `adjustment` | ± | Kullanıcı (sayım düzeltmesi) | ❌ | Sebep zorunlu |
 | — | | | | *Tüm miktarlar tam sayıdır (BR-SALE-011)* |
 | `importAdjustment` | ± | Excel/CSV import | ❌ | `reference: import` |
 | `restoreBaseline` | ± | Backup restore sonrası (gerekirse) | ❌ | Bkz. [19](19-backup-restore.md) |
 
 **Kural:** `quantity_delta` asla `0` olamaz (BR-STOCK-004 / şema CHECK).
+
+> **`unit_cost` sütunu hakkında:** ❌ işareti *"kullanıcı bu değeri girmez"* demektir,
+> *"alan boş kalır"* değil. Fire için değer sistem tarafından yazılır — §6 fire tutarının
+> `qty × unitCost` ile raporlanmasını şart koşar ve maliyet sonradan türetilemez
+> ([OD-025](28-open-decisions.md)).
 
 ---
 

@@ -419,6 +419,63 @@ belirsizleştirirdi. `12 §1`'deki `F9` bir ASCII düzen çiziminde geçen tek b
 **Etki:** [12 §1](12-sales-system.md) ve [12 §3](12-sales-system.md) düzeltildi ·
 `SaleScreen` kısayolları `23 §2`'yi uygular.
 
+### OD-025 — `waste` hareketi birim maliyeti SAKLAR
+
+**Karar:** Fire hareketi `unit_cost` alanını **yazar**; değer kullanıcıdan değil, fire
+anındaki `products.purchase_price_minor` değerinden gelir.
+
+**Çözülen çelişki:** [13 §2](13-stock-system.md) hareket tipleri tablosu `waste` satırında
+`unit_cost` sütununu ❌ işaretliyor. Ama aynı dokümanın [§6](13-stock-system.md)'sı
+*"Fire tutarı (`qty × unitCost`) kâr raporunda **gider olarak** gösterilir"* diyor.
+Alan yazılmazsa §6 uygulanamaz.
+
+**Neden saklanır:** Alternatif, fire tutarını rapor anında ürünün **güncel** alış
+fiyatından türetmektir. Bu, snapshot ilkesini ihlal eder (`rules/02 §3`): alış fiyatı
+sonradan değişince geçmiş fire giderleri de değişir ve kapanmış bir ayın kârı kendiliğinden
+oynar. Maliyet **olay anında** bilinir ve sonradan türetilemez — tıpkı
+`sale_items.purchase_price_snapshot_minor` gibi.
+
+**§2'deki ❌ nasıl okunmalı:** Sütun *"kullanıcı girer mi"* sorusunu yanıtlar. `stockEntry`
+satırında ✅ *"girilebilir"* yazması bunu doğrular: orada değeri kullanıcı verir, fire'da
+sistem türetir. İşaret **"alan boş bırakılır"** anlamına gelmez.
+
+**Etki:** [13 §2](13-stock-system.md) sütun başlığı netleştirildi ·
+`StockService.recordWaste` alış fiyatını yazar · fire raporu (Faz 8) bu alandan hesaplar.
+
+### OD-026 — Tutarlılık sapmasını kapatan düzeltme deltayı DEFTERDEN hesaplar
+
+**Karar:** `products.stock_quantity` sapması kapatılırken düzeltme miktarı **defterden**
+(`Σ quantity_delta`) hesaplanır, önbellekten değil. Kullanıcı gerçek miktarı onaylar;
+onaylanan miktar defterle **aynıysa hiç hareket yazılmaz**, yalnızca önbellek tazelenir.
+
+**Doldurulan boşluk:** `rules/03 §2` ve [24 §3.3](24-non-functional-requirements.md)
+*"her sapma için ayrı `adjustment` hareketi oluşturularak düzeltilir"* der ama sapmanın
+**hangi tarafının** yanlış olduğunu ve deltanın neye göre hesaplanacağını söylemez.
+Normal düzeltmenin kuralı (önbellekten hesapla — mevcut sapma **korunsun ve görünür kalsın**)
+buraya uygulanınca düzeltme sapmayı yeniden üretir:
+
+```text
+Sapma: defter = 10, önbellek = 99
+önbellekten:  delta = 10 − 99 = −89  →  defter −79, önbellek 10   ❌ hâlâ ayrı
+defterden:    delta = 10 − 10 =   0  →  hareket yok, önbellek 10  ✅ tutar
+```
+
+**Neden hareket yazılmayabilir:** Sapma iki şeyden biridir — önbellek bozulmuştur (rafta
+defterin dediği kadar var) veya bir hareket yazılamamıştır (rafta önbelleğin dediği kadar var).
+Birincisinde ortada bir **stok olayı yoktur**; hareket yazmak denetim izine gerçekleşmemiş bir
+olay eklerdi ve "bu ürünün stoğu neden 12?" sorusunun cevabını bozardı (BR-STOCK-010).
+Hangisi olduğunu yalnızca kullanıcı bilir, bu yüzden miktarı **o onaylar** (rules/03 §2 —
+otomatik düzeltme yok).
+
+**Neden önbellek doğrudan yazılabiliyor:** Yazım yine `StockService` üzerindendir
+(`rules/02 §4` korunur) ve defterle aynı transaction içindedir. `stock_quantity` türetilmiş
+bir **önbellektir** (BR-STOCK-002); onu kaynağıyla eşitlemek bir stok değişikliği değil,
+önbellek tazelemesidir.
+
+**Etki:** `StockService.repairFromLedger` eklendi (normal `recordAdjustment` davranışı
+**değişmedi**) · `ConsistencyService.repairStockQuantity` bunu çağırır ·
+denetim kaydı `metadata.source = "consistencyRepair"` taşır.
+
 ---
 
 ## 3. Kararların faz üzerindeki etkisi
@@ -430,6 +487,7 @@ Faz 2  →  Şema final; blokaj yok
 Faz 3  →  Recovery code, finansal erişim kilidi, görsel politikası
 Faz 5  →  Son alış fiyatı snapshot'ı, indirim yok, nakit yuvarlama yok,
           barkod snapshot'ı birincil barkoddur (OD-022)
+Faz 6  →  Fire birim maliyeti saklar (OD-025); sapma düzeltmesi defterden (OD-026)
 Faz 8  →  fl_chart; Raporlar kilit arkasında
 Faz 9  →  ZIP yedek
 Faz 10 →  CSV birincil + Excel abstraction
@@ -442,7 +500,7 @@ Faz 12 →  Inno Setup
 
 Geliştirme sırasında kararlaştırılmamış bir konu ortaya çıkarsa:
 
-1. Bu dokümana `OD-025`'ten başlayarak yeni bir kayıt açılır.
+1. Bu dokümana `OD-027`'den başlayarak yeni bir kayıt açılır.
 2. `Decision / Options / Recommendation / Impact` formatı kullanılır.
 3. Karar kapanmadan ilgili kod yazılmaz.
 4. Kapandığında bu dokümandaki karar kaydına ve ilgili business rule'a dönüştürülür.

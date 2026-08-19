@@ -16,6 +16,7 @@
 /// transaction'dır (rules/03 §9/1).
 library;
 
+import '../audit/audit_actions.dart';
 import 'dart:convert';
 
 import '../../core/logging/app_logger.dart';
@@ -28,15 +29,15 @@ import 'supplier_failures.dart';
 
 class SupplierService {
   /// docs/18 §2 — `entity_type`.
-  static const String auditEntityType = 'supplier';
+  static const String auditEntityType = AuditEntities.supplier;
 
   // docs/18 §3.
-  static const String actionCreated = 'supplierCreated';
-  static const String actionUpdated = 'supplierUpdated';
-  static const String actionDeactivated = 'supplierDeactivated';
+  static const String actionCreated = AuditActions.supplierCreated;
+  static const String actionUpdated = AuditActions.supplierUpdated;
+  static const String actionDeactivated = AuditActions.supplierDeactivated;
 
   /// OD-020 — pasifleştirme tek yönlü değildir.
-  static const String actionActivated = 'supplierActivated';
+  static const String actionActivated = AuditActions.supplierActivated;
 
   final CanteenDatabase _db;
   final SuppliersDao _suppliers;

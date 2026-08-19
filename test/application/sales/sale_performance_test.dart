@@ -79,6 +79,7 @@ void main() {
       stockService: StockService(
         db: db,
         stock: DriftStockRepository(db),
+        products: DriftProductRepository(db),
         clock: () => testEpochUtc,
       ),
       clock: () => testEpochUtc,

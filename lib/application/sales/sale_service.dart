@@ -35,6 +35,7 @@
 /// burada ikinci bir formül yoktur (rules/01 §2).
 library;
 
+import '../audit/audit_actions.dart';
 import 'dart:convert';
 
 import '../../core/logging/app_logger.dart';
@@ -86,13 +87,13 @@ class _Abort implements Exception {
 
 class SaleService {
   /// docs/18 §2 — `entity_type`.
-  static const String auditEntityType = 'sale';
+  static const String auditEntityType = AuditEntities.sale;
 
   /// docs/18 §3.
-  static const String actionCompleted = 'saleCompleted';
+  static const String actionCompleted = AuditActions.saleCompleted;
 
   /// docs/18 §3 — satış sırasında fiyat değiştirildi (BR-SALE-004).
-  static const String actionPriceOverridden = 'salePriceOverridden';
+  static const String actionPriceOverridden = AuditActions.salePriceOverridden;
 
   final CanteenDatabase _db;
   final CartService _cartService;

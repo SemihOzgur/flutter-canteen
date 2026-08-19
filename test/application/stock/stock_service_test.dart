@@ -5,6 +5,7 @@
 /// Test önceliği rules/06 §2: **Stock — defter tutarlılığı** 🔴.
 library;
 
+import 'package:canteen/data/repositories/drift_product_repository.dart';
 import 'package:canteen/application/stock/stock_service.dart';
 import 'package:canteen/core/money/money.dart';
 import 'package:canteen/core/result/result.dart';
@@ -29,7 +30,12 @@ void main() {
   setUp(() async {
     db = memoryDatabase();
     stock = DriftStockRepository(db);
-    service = StockService(db: db, stock: stock, clock: () => testEpochUtc);
+    service = StockService(
+      db: db,
+      stock: stock,
+      products: DriftProductRepository(db),
+      clock: () => testEpochUtc,
+    );
     userId = await insertTestUser(db);
     productId = await insertTestProduct(db);
   });
@@ -136,6 +142,7 @@ void main() {
       final service = StockService(
         db: db,
         stock: failing,
+        products: DriftProductRepository(db),
         clock: () => testEpochUtc,
       );
 
@@ -216,6 +223,27 @@ class _FailingCacheStockRepository implements StockRepository {
   @override
   Future<int> readStockQuantity(int productId) =>
       _inner.readStockQuantity(productId);
+
+  @override
+  Future<List<StockMovement>> list({
+    int? productId,
+    StockMovementType? type,
+    int? supplierId,
+    int? userId,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    int limit = 100,
+    int offset = 0,
+  }) => _inner.list(
+    productId: productId,
+    type: type,
+    supplierId: supplierId,
+    userId: userId,
+    fromUtc: fromUtc,
+    toUtc: toUtc,
+    limit: limit,
+    offset: offset,
+  );
 
   @override
   Future<int> countMovements(int productId) => _inner.countMovements(productId);

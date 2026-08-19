@@ -254,6 +254,39 @@ void main() {
       );
     });
 
+    test('application/ altinda drift import ve HAM SQL YOK', () {
+      // rules/01 §1: Application katmani "widget bilgisi · **ham SQL detayi**"
+      // iceremez. Faz 6'da tutarlilik kontrolu once burada yazildi ve sekiz
+      // aggregation sorgusunu application katmanina tasidi; sorgular
+      // `data/dao/consistency_dao.dart`'a alindi. Kural artik test edilir —
+      // ayni kayma bir daha sessiz olamaz.
+      final offenders = <String>[];
+      final rawSql = RegExp(
+        r'customSelect\(|customStatement\(|SELECT .* FROM ',
+      );
+
+      for (final entity in Directory(
+        'lib/application',
+      ).listSync(recursive: true)) {
+        if (entity is! File || !entity.path.endsWith('.dart')) continue;
+        final source = entity.readAsStringSync();
+        if (source.contains("import 'package:drift/")) {
+          offenders.add('${entity.path} -> drift import');
+        }
+        if (rawSql.hasMatch(source)) {
+          offenders.add('${entity.path} -> ham SQL');
+        }
+      }
+
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'rules/01 §1: sorgular data/ katmanina, KARARLAR application '
+            'katmanina aittir -> $offenders',
+      );
+    });
+
     test('domain/ altında drift · Flutter · dart:io import\'u YOK', () {
       final offenders = <String>[];
 

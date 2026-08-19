@@ -69,6 +69,25 @@ class Product {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  /// **docs/13 §7 — kritik stok.**
+  ///
+  /// ```text
+  /// minimum_stock > 0  AND  stock_quantity <= minimum_stock
+  /// ```
+  ///
+  /// REQ-STOCK-011: `minimum_stock = 0` olan ürün kritik **sayılmaz** —
+  /// kullanıcı o ürün için takip istemiyor demektir.
+  ///
+  /// Sınır dahildir: stok tam eşiğe düştüğünde ürün zaten kritiktir.
+  ///
+  /// Kural burada **tek** yerde yaşar (rules/01 §2): ürün listesi rozeti,
+  /// satır ikonu ve stok ekranı aynı ifadeyi kullanır. Kopyalandığında biri
+  /// `<` diğeri `<=` olur ve fark yalnızca eşikteki üründe görünür.
+  bool get isCriticalStock => minimumStock > 0 && stockQuantity <= minimumStock;
+
+  /// **BR-STOCK-007 — negatif stok bir HATA SİNYALİDİR**, gizlenmez.
+  bool get isNegativeStock => stockQuantity < 0;
 }
 
 /// Henüz kaydedilmemiş ürün (id yok).

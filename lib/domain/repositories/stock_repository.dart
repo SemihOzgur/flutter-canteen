@@ -38,6 +38,24 @@ abstract interface class StockRepository {
   /// (rules/01 §8).
   Future<int> sumQuantityDelta(int productId);
 
+  /// Filtrelenebilir hareket listesi — **docs/13 §8 · REQ-STOCK-010.**
+  ///
+  /// "Bu ürünün stoğu neden 12?" sorusu buradan yanıtlanır (BR-STOCK-010).
+  /// Sınırlar **UTC**'dir; yerel gün sınırına çevirme çağıranın işidir
+  /// (BR-GEN-004).
+  ///
+  /// Sayfalıdır (rules/01 §8): tüm defter belleğe alınmaz.
+  Future<List<StockMovement>> list({
+    int? productId,
+    StockMovementType? type,
+    int? supplierId,
+    int? userId,
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    int limit = 100,
+    int offset = 0,
+  });
+
   /// Bir satışa/iadeye bağlı hareketler — `ix_movements_reference`.
   Future<List<StockMovement>> findByReference({
     required StockReferenceType referenceType,

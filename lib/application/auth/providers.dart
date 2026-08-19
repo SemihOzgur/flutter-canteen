@@ -40,6 +40,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/logging/app_logger.dart';
 import '../../data/db/providers.dart';
+import '../audit/providers.dart';
 import '../../domain/models/auth_user.dart';
 import 'auth_service.dart';
 import 'financial_access_service.dart';
@@ -106,6 +107,7 @@ final authServiceProvider = Provider<AuthService>(
     // olmak zorundadır.
     financialAccess: ref.watch(financialAccessProvider),
     throttle: ref.watch(loginThrottleProvider),
+    audit: ref.watch(auditServiceProvider),
   ),
 );
 

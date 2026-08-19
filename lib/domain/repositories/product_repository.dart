@@ -17,6 +17,7 @@
 /// stok yalnızca `stock_movements` üzerinden oluşur (BR-STOCK-001).
 library;
 
+import '../../core/money/money.dart';
 import '../../core/result/result.dart';
 import '../models/product.dart';
 
@@ -65,6 +66,19 @@ abstract interface class ProductRepository {
     int offset,
   });
 
+  /// **docs/13 §7 — kritik stok.**
+  ///
+  /// ```text
+  /// minimum_stock > 0  AND  stock_quantity <= minimum_stock
+  /// ```
+  ///
+  /// REQ-STOCK-011: `minimum_stock = 0` olan ürünler **dahil edilmez** —
+  /// kullanıcı o ürün için takip istemiyor demektir.
+  Future<List<Product>> listCriticalStock({int limit});
+
+  /// **docs/13 §7 · BR-STOCK-007 — negatif stok GİZLENMEZ, vurgulanır.**
+  Future<List<Product>> listNegativeStock({int limit});
+
   /// [list] ile aynı filtrelerin toplam kayıt sayısı — sayfalama göstergesi
   /// için. Sayım **SQL tarafında** yapılır (rules/01 §8).
   Future<int> count({bool includeInactive, int? categoryId});
@@ -101,6 +115,14 @@ abstract interface class ProductRepository {
   /// `is_favorite` (ve `updated_at`) yazılır; başka hiçbir alan değişmez.
   /// Etkilenen satır sayısını döner.
   Future<int> setFavorite(int id, bool isFavorite);
+
+  /// Yalnızca alış fiyatını günceller — **BR-STOCK-009 · REQ-STOCK-008.**
+  ///
+  /// Stok girişinde kullanıcı farklı bir alış fiyatı girdiğinde ürünün fiyatı
+  /// da güncellenebilir; bu güncelleme girişle **aynı transaction** içinde
+  /// olmak zorundadır. Tüm ürünü yeniden yazan [update] bunun için fazla
+  /// geniştir: aradaki başka bir değişikliği sessizce geri alabilirdi.
+  Future<int> updatePurchasePrice(int id, Money purchasePrice);
 
   /// docs/09 §5 — "30'dan fazla favori eklenirse kullanıcı uyarılır."
   ///

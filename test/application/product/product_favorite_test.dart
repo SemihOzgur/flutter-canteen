@@ -44,6 +44,7 @@ void main() {
       stockService: StockService(
         db: db,
         stock: stock,
+        products: DriftProductRepository(db),
         clock: () => testEpochUtc,
       ),
       categories: CategoriesDao(db),

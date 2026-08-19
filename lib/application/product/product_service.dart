@@ -54,6 +54,7 @@
 /// tedarikçi ve minimum stok değişiklikleri kaydedilir.
 library;
 
+import '../audit/audit_actions.dart';
 import 'dart:convert';
 
 import '../../core/logging/app_logger.dart';
@@ -136,21 +137,24 @@ class _Abort implements Exception {
 
 class ProductService {
   /// docs/18 §2 — `entity_type`.
-  static const String auditEntityType = 'product';
+  static const String auditEntityType = AuditEntities.product;
 
   // docs/18 §3 — Ürün tablosundaki action adları.
-  static const String actionCreated = 'productCreated';
-  static const String actionPriceChanged = 'productPriceChanged';
-  static const String actionCostChanged = 'productCostChanged';
-  static const String actionCategoryChanged = 'productCategoryChanged';
-  static const String actionSupplierChanged = 'productSupplierChanged';
-  static const String actionMinStockChanged = 'productMinStockChanged';
-  static const String actionDeactivated = 'productDeactivated';
-  static const String actionActivated = 'productActivated';
-  static const String actionDeleted = 'productDeleted';
-  static const String actionBarcodeAdded = 'barcodeAdded';
-  static const String actionBarcodeRemoved = 'barcodeRemoved';
-  static const String actionImageChanged = 'productImageChanged';
+  static const String actionCreated = AuditActions.productCreated;
+  static const String actionPriceChanged = AuditActions.productPriceChanged;
+  static const String actionCostChanged = AuditActions.productCostChanged;
+  static const String actionCategoryChanged =
+      AuditActions.productCategoryChanged;
+  static const String actionSupplierChanged =
+      AuditActions.productSupplierChanged;
+  static const String actionMinStockChanged =
+      AuditActions.productMinStockChanged;
+  static const String actionDeactivated = AuditActions.productDeactivated;
+  static const String actionActivated = AuditActions.productActivated;
+  static const String actionDeleted = AuditActions.productDeleted;
+  static const String actionBarcodeAdded = AuditActions.barcodeAdded;
+  static const String actionBarcodeRemoved = AuditActions.barcodeRemoved;
+  static const String actionImageChanged = AuditActions.productImageChanged;
 
   // ⚠️ Favori değişikliğinin docs/18 §3'te **karşılığı yoktur** ve bu yüzden
   // audit'e yazılmaz (rules/00 §6 — dokümanda olmayan action uydurulmaz).
