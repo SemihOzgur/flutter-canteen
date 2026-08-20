@@ -9,6 +9,20 @@
 /// | Fire birim maliyeti saklar | OD-025 |
 /// | Hareket silinmez — **ters kayıt** açılır | REQ-STOCK-003 |
 /// | `stock_quantity == Σ quantity_delta` | BR-STOCK-002/003 |
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-STOCK-001** — her stok değişimi hareket kaydı oluşturur
+/// - **REQ-STOCK-002** — `stock_quantity` = hareket toplamı
+/// - **REQ-STOCK-004** — `resulting_stock` her harekette saklanır
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-STOCK-005** — stok girişi `0` miktarla
+/// - **EC-STOCK-006** — stok girişi negatif miktarla
+/// - **EC-STOCK-007** — fark `0` ise hareket yazılmaz
+/// - **EC-STOCK-008** — aynı ürün iki satırda — `resulting_stock` zincirlenir
+/// - **EC-STOCK-009** — fire stoktan büyük → izin verilir, stok negatife düşer
+///
 library;
 
 import 'dart:math';

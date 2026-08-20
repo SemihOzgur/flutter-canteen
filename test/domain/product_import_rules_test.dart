@@ -3,6 +3,12 @@
 /// docs/20 §4'teki tablo satır satır sınanır. Hata (🔴 satır alınmaz) ile
 /// uyarı (🟡 satır alınır) ayrımı **kesindir**: yanlış tarafa düşen bir kural
 /// ya kullanıcının verisini kaybettirir ya da fiyatsız ürün oluşturur.
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-IMEX-001** — dosyada aynı barkod iki satırda
+/// - **EC-IMEX-006** — fiyat "on lira" gibi metin
+/// - **EC-IMEX-014** — import'ta tanımsız KDV oranı
+///
 library;
 
 import 'package:canteen/domain/services/product_import_rules.dart';

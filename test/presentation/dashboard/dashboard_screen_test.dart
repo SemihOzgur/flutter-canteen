@@ -9,6 +9,13 @@
 /// | Saatlik yoğunluk yalnızca ≥ 2 günde | docs/15 §3.3 |
 /// | Kâr KDV **hariç** matrahtan | REQ-VAT-009 |
 /// | Brüt/iptal/iade ayrı bölümde | docs/15 §5 |
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-DASH-002** — aralık değişince yeniden hesaplanır
+/// - **REQ-DASH-004** — stok kartları anlık
+/// - **REQ-DASH-012** — parola doğrulanmadan veri sorgulanmaz/görünmez
+/// - **REQ-DASH-013** — kâr KDV hariç, ciro KDV dahil; ayrım ekranda
 library;
 
 import 'package:canteen/app/l10n/app_strings_tr.dart';

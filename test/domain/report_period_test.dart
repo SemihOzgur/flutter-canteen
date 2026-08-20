@@ -2,6 +2,14 @@
 ///
 /// Gün sınırları **yerel saattedir**; veriler UTC saklanır. Bu ayrımın
 /// sınırları burada, veritabanı olmadan sınanır.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-DASH-001** — 7 tarih aralığı seçeneği
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-SYS-007** — yaz saati geçişi — UTC saklanır, gün sınırı yereldir
+///
 library;
 
 import 'package:canteen/domain/services/report_period.dart';

@@ -4,6 +4,10 @@
 ///
 /// Kapsanan edge case'ler: EC-CAT-001 · EC-CAT-002 · EC-CAT-003 · EC-CAT-005 ·
 /// EC-CAT-006.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-CAT-002** — `Genel` kategorisi korumalıdır
 library;
 
 import 'package:canteen/application/reference/category_service.dart';

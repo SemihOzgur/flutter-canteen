@@ -5,6 +5,13 @@
 /// AppPaths → ensureDirectories → AppLogger → InstanceLock → DB → runApp
 /// ```
 /// InstanceLock başarısızsa **veritabanı HİÇ açılmaz.**
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-ARCH-001** — presentation katmanı DB'ye doğrudan erişmez
+/// - **REQ-ARCH-002** — domain katmanı framework'ten bağımsız
+/// - **REQ-ARCH-003** — transaction sınırları yalnızca servis katmanında
+/// - **REQ-SEC-006** — sorgular parametrelidir (Drift zorlar)
 library;
 
 import 'dart:convert';

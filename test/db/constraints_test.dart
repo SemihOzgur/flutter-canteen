@@ -3,6 +3,11 @@
 /// REQ-DB-004 (barkod UNIQUE) · REQ-DB-005 (tek aktif sepet) ·
 /// REQ-DB-009 (miktar > 0) · REQ-DB-011 (ağırlık çifti) ·
 /// BR-STOCK-004 (quantity_delta ≠ 0) · REQ-DB-001 (foreign_keys)
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-SALE-014** — ondalık miktar — `quantity` INTEGER, tip sistemi engeller
+/// - **EC-STOCK-010** — hareket silinmez — düzeltme ters kayıtla yapılır
+///
 library;
 
 import 'package:canteen/data/db/canteen_database.dart';

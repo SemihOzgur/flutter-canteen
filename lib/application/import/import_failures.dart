@@ -25,7 +25,9 @@ abstract final class ImportFailures {
   /// REQ-IMEX-007 — onaysız import yok.
   static const Failure notConfirmed = Failure(
     code: 'import_not_confirmed',
-    userMessage: 'İçe aktarma onaylanmadı.',
+    userMessage:
+        'İçe aktarma onaylanmadı. Önizlemeyi kontrol edip "İçe Aktar" '
+        'düğmesine basın.',
   );
 
   /// docs/20 §4.1 — kullanıcı "iptal et" politikasını seçti.

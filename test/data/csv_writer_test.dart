@@ -6,6 +6,10 @@
 /// | Ayırıcı `;` | Türkçe yerelde `,` ondalık ayırıcıdır |
 /// | `=`, `+`, `-`, `@` kaçışlanır | Formül enjeksiyonu (rules/04 §7) |
 /// | Ayırıcı ve tırnak içeren hücre alıntılanır | RFC 4180 |
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-IMEX-013** — export'ta ürün adı `=CMD()` ile başlıyor
+///
 library;
 
 import 'dart:convert';

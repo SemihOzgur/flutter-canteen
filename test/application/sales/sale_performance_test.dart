@@ -23,6 +23,11 @@
 /// (100 ms) bir tasarım amacıdır; CI makinesinin yüküne bağlı olarak
 /// dalgalanır. `> 250 ms` ise docs/24 §2'nin *ürün kusurlu* dediği yerdir ve
 /// orada dalgalanma mazeret değildir. Ölçülen süreler yine de yazdırılır.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-BARC-009** — barkod lookup < 100 ms
+/// - **REQ-DATA-001** — atomik işlem listesi
 library;
 
 import 'dart:io';

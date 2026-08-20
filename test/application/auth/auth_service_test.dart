@@ -2,6 +2,10 @@
 ///
 /// docs/27 §4: gerçek in-memory SQLite üzerinde çalışır.
 /// Test önceliği rules/06 §2 → **Authentication** 🔴.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-AUTH-013** — rol/yetki ayrımı yok; tüm kullanıcılar eşit
 library;
 
 import 'dart:convert';

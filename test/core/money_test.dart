@@ -3,6 +3,17 @@
 /// docs/27-testing-strategy.md §3.1
 /// BR-FIN-001 (integer kuruş) · BR-FIN-003 (half-up) · BR-FIN-004 (toplam = satırlar)
 /// BR-FIN-005 (tr_TR gösterim) · REQ-FIN-006 (`,` ve `.` kabulü)
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-FIN-001** — tam sayı kuruş; floating point yasak
+/// - **REQ-FIN-002** — oranlar basis point
+/// - **REQ-FIN-003** — half-up yuvarlama, satır seviyesinde
+/// - **REQ-FIN-005** — `₺#.###,##` tr_TR gösterim
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-IMEX-007** — fiyat `1.234,56` formatında
+///
 library;
 
 import 'package:canteen/core/money/money.dart';

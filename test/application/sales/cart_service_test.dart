@@ -2,6 +2,11 @@
 /// docs/12 §2–§4**
 ///
 /// docs/27 §4: gerçek in-memory SQLite üzerinde çalışır; mock veritabanı yoktur.
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-PROD-004** — sepette olan ürün pasifleştiriliyor
+/// - **EC-CART-001** — uygulama sepet doluyken çöküyor — sepet geri yüklenir
+///
 library;
 
 import 'package:canteen/application/sales/cart_failures.dart';

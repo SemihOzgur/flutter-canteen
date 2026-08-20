@@ -9,6 +9,10 @@
 /// | Hareket listesinde **Düzenle/Sil YOK**, ters kayıt var | REQ-STOCK-003 |
 /// | `minimum_stock = 0` kritik listeye girmez | REQ-STOCK-011 |
 /// | Negatif stok pasif üründe de görünür | BR-STOCK-007 |
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-STOCK-010** — stok geçmişi referans ve sebepleriyle görünür
 library;
 
 import 'package:canteen/app/l10n/app_strings_tr.dart';

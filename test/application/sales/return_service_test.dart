@@ -4,6 +4,22 @@
 /// fiyat)** 🔴.
 ///
 /// docs/27 §4: gerçek in-memory SQLite; mock veritabanı yoktur.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-RET-004** — iade satılanı aşamaz
+/// - **REQ-RET-005** — iade snapshot fiyatla
+/// - **REQ-RET-008** — iptal edilmiş satış tekrar iptal/iade edilemez
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-RET-001** — iptal edilmiş satış tekrar iptal edilemez
+/// - **EC-RET-002** — iade edilmiş satış iptal edilemez
+/// - **EC-RET-003** — satılandan fazla iade reddedilir
+/// - **EC-RET-004** — tüm satırlar tek tek iade edilince `returned`
+/// - **EC-RET-006** — iade ortasında hata → hiçbir kayıt oluşmaz
+/// - **EC-RET-007** — fiyat değişmişse iade SNAPSHOT fiyattan
+/// - **EC-RET-009** — `0` miktarla iade reddedilir
+///
 library;
 
 import 'package:canteen/application/audit/audit_actions.dart';

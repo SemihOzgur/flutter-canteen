@@ -12,6 +12,16 @@
 ///
 /// Gerçek **dosya tabanlı** veritabanı kullanılır: `VACUUM INTO` ve WAL
 /// davranışı in-memory'de üretimdeki gibi değildir.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-BKUP-003** — uygulamayı durdurmadan tutarlı snapshot
+/// - **REQ-SEC-003** — zip-slip koruması
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-BKUP-006** — yedekte görsel eksik — yedeklemeyi engellemez
+/// - **EC-BKUP-008** — yedek alırken uygulama kapanıyor — `.tmp` kalmaz
+///
 library;
 
 import 'dart:io';

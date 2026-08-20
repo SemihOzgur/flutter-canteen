@@ -5,6 +5,10 @@
 /// Veritabanı **dosya tabanlıdır**: in-memory SQLite üretimden hızlıdır ve
 /// eşiği geçmesi hiçbir şey kanıtlamazdı — WAL + `synchronous=FULL` maliyeti
 /// tam olarak burada görünür (rules/03 §1).
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-IMEX-009** — büyük satırlı dosya
+///
 library;
 
 import 'dart:io';

@@ -3,6 +3,11 @@
 /// Mutasyon testi bu dosyanın kapattığı boşlukları ortaya çıkardı: zip-slip ve
 /// zip bomb korumaları **yalnızca iyi niyetli arşivlerle** sınanıyordu, yani
 /// hiç sınanmıyordu. Doğrulamanın başarısız olduğu yol da hiç yürütülmemişti.
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-BKUP-013** — yedek dosyası zip-slip yolu içeriyor
+/// - **EC-BKUP-014** — yedek açıldığında aşırı genişliyor (zip bomb)
+///
 library;
 
 import 'dart:io';

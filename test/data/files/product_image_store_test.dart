@@ -10,6 +10,11 @@
 /// | DB'ye **göreli** yol yazılır | BR-IMG-001 · rules/03 §8 |
 /// | Silinen görsel `.trash/`'a taşınır | BR-IMG-003 · REQ-IMG-006 |
 /// | Sınırlar `app_settings`'ten okunur | OD-016 — business rule DEĞİL |
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-PROD-017** — görsel eklendi, ürün kaydedilmedi → dosya `temp/`'te kalır
+/// - **EC-BKUP-015** — yedek başka bilgisayarda restore — DB göreli yol tutar
+///
 library;
 
 import 'dart:io';
