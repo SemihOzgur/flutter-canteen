@@ -196,6 +196,12 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 | W14 | ⬜ Antivirüs `.canteenbackup` dosyasını engellemiyor | Platform |
 | W15 | ⬜ Türkçe karakterli / boşluklu kullanıcı adı | Kısmen otomatikleştirildi — bkz. §9 |
 | W16 | ⬜ **Uygulama 7 gün kesintisiz açık** (EC-SYS-009) | Bellek sızıntısı ve dosya tanıtıcı birikmesi yalnızca gerçek süreyle görülür |
+| W17 | ⬜ **Kurulum paketi temiz makinede çalışıyor** (REQ-COMP-001) | Inno Setup yalnızca Windows'ta derlenir; betiğin içeriği test edildi, kurulumun kendisi edilemedi |
+| W18 | ⬜ **Uygulama ikonu** görev çubuğunda ve kısayolda doğru görünüyor | `.ico` yalnızca Windows kabuğunda doğrulanabilir |
+| W19 | ⬜ **"Programlar ve Özellikler"** kaydı ad, yayıncı ve sürümü doğru gösteriyor | Kayıt defteri girdisi |
+| W20 | ⬜ **Pencere 1280×720 altına küçültülemiyor** (docs/23 §4) | `WM_GETMINMAXINFO` yalnızca gerçek pencere yöneticisinde çalışır |
+| W21 | ⬜ **Uygulama açıkken kurulum** uyarı verip duruyor (REQ-COMP-004) | Windows dosya kilitleme davranışı |
+| W22 | ⬜ **Kaldırma sonrası** `%APPDATA%\CanteenApp` **duruyor** (BR-DATA-001) | Kaldırma yalnızca gerçek kurulumdan sonra denenebilir |
 
 ### Faz 8 — ortam bağımlı
 
