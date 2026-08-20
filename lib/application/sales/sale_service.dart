@@ -47,6 +47,7 @@ import '../../domain/enums/cart_status.dart';
 import '../../domain/enums/sale_status.dart';
 import '../../domain/models/cart.dart';
 import '../../domain/models/sale.dart';
+import '../../domain/models/sale_return.dart';
 import '../../domain/repositories/product_repository.dart';
 import '../../domain/repositories/sale_repository.dart';
 import '../../domain/services/sale_number.dart';
@@ -133,6 +134,35 @@ class SaleService {
        _stockService = stockService,
        _logger = logger,
        _clock = clock ?? db.clock;
+
+  // --- Okuma — ekranların TEK kapısı (rules/01 §1) ------------------------
+
+  /// docs/12 §7 · REQ-SALE-010 — filtrelenebilir satış geçmişi.
+  Future<List<Sale>> history({
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    SaleStatus? status,
+    String? saleNumber,
+    int limit = 50,
+    int offset = 0,
+  }) => _sales.list(
+    fromUtc: fromUtc,
+    toUtc: toUtc,
+    status: status,
+    saleNumber: saleNumber,
+    limit: limit,
+    offset: offset,
+  );
+
+  /// Satış satırları — 5 snapshot alanıyla (BR-SALE-001).
+  Future<List<SaleItem>> itemsOf(int saleId) => _sales.itemsOf(saleId);
+
+  Future<Sale?> findById(int saleId) async =>
+      (await _sales.findById(saleId)).valueOrNull;
+
+  /// Aktif satış ekranındaki üründen kaç adet satıldığını değil, bir satışın
+  /// iadelerini döner (docs/14 §4 — satış detayı iadeleri listeler).
+  Future<List<SaleReturn>> returnsOf(int saleId) => _sales.returnsOf(saleId);
 
   /// Aktif sepeti satışa çevirir — **docs/12 §6.**
   ///

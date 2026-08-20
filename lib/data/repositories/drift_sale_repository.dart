@@ -167,6 +167,64 @@ class DriftSaleRepository implements SaleRepository {
         );
   }
 
+  @override
+  Future<List<domain.Sale>> list({
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    SaleStatus? status,
+    int? userId,
+    int? minTotalMinor,
+    int? maxTotalMinor,
+    String? saleNumber,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    const toMillis = UtcMillisConverter();
+
+    final query = _db.select(_db.sales)
+      ..where((s) {
+        // Filtre verilmediyse koşul EKLENMEZ — `ix_sales_status_date`
+        // planının bulanıklaşmaması için.
+        var condition = const Constant(true) as Expression<bool>;
+        if (fromUtc != null) {
+          condition =
+              condition &
+              s.completedAt.isBiggerOrEqualValue(toMillis.toSql(fromUtc));
+        }
+        if (toUtc != null) {
+          condition =
+              condition &
+              s.completedAt.isSmallerThanValue(toMillis.toSql(toUtc));
+        }
+        if (status != null) {
+          condition = condition & s.status.equalsValue(status);
+        }
+        if (userId != null) {
+          condition = condition & s.userId.equals(userId);
+        }
+        if (minTotalMinor != null) {
+          condition =
+              condition & s.grandTotalMinor.isBiggerOrEqualValue(minTotalMinor);
+        }
+        if (maxTotalMinor != null) {
+          condition =
+              condition &
+              s.grandTotalMinor.isSmallerOrEqualValue(maxTotalMinor);
+        }
+        if (saleNumber != null && saleNumber.trim().isNotEmpty) {
+          condition = condition & s.saleNumber.like('%${saleNumber.trim()}%');
+        }
+        return condition;
+      })
+      ..orderBy([
+        (s) => OrderingTerm(expression: s.completedAt, mode: OrderingMode.desc),
+        (s) => OrderingTerm(expression: s.id, mode: OrderingMode.desc),
+      ])
+      ..limit(limit, offset: offset);
+
+    return (await query.get()).map(_toDomain).toList();
+  }
+
   // --- Faz 7: iptal ve iade ------------------------------------------------
 
   @override

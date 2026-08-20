@@ -1021,6 +1021,29 @@ class _FailingSaleRepository implements SaleRepository {
       _inner.findByNumber(saleNumber);
 
   @override
+  Future<List<Sale>> list({
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    SaleStatus? status,
+    int? userId,
+    int? minTotalMinor,
+    int? maxTotalMinor,
+    String? saleNumber,
+    int limit = 50,
+    int offset = 0,
+  }) => _inner.list(
+    fromUtc: fromUtc,
+    toUtc: toUtc,
+    status: status,
+    userId: userId,
+    minTotalMinor: minTotalMinor,
+    maxTotalMinor: maxTotalMinor,
+    saleNumber: saleNumber,
+    limit: limit,
+    offset: offset,
+  );
+
+  @override
   Future<List<Sale>> listCompletedBetween({
     required DateTime fromUtc,
     required DateTime toUtc,

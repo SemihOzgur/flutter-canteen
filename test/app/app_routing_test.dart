@@ -29,7 +29,11 @@ void main() {
     // docs/23 §4 — desteklenen **minimum** çözünürlük 1366×768. Flutter'ın
     // 800×600 varsayılanı ürünün hiç desteklemediği bir boyuttur; orada
     // kaydırma gerektiren bir düğme "bulunamadı" gibi görünür.
-    tester.view.physicalSize = const Size(1366, 768);
+    // Ana ekran her fazda yeni bir giriş noktası kazanıyor. Test yüzeyi
+    // ürünün HEDEF çözünürlüğüdür (docs/23 §4 — 1920×1080); minimum
+    // çözünürlükte düğmelerin kaydırma gerektirmesi bir kusur değildir,
+    // ekran zaten `SingleChildScrollView` içindedir.
+    tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 

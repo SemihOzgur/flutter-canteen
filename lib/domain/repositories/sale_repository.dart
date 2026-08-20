@@ -35,6 +35,26 @@ abstract interface class SaleRepository {
     int offset = 0,
   });
 
+  /// Filtrelenebilir satış listesi — **docs/12 §7 · REQ-SALE-010.**
+  ///
+  /// Sayfalıdır (rules/01 §8): 50'şerli sonsuz kaydırma için.
+  /// Sınırlar **UTC**'dir; yerel gün sınırına çevirme çağıranın işidir
+  /// (BR-GEN-004).
+  ///
+  /// [saleNumber] verilirse kısmi eşleşme aranır — kullanıcı fişteki son üç
+  /// haneyi yazarak arayabilmelidir.
+  Future<List<Sale>> list({
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    SaleStatus? status,
+    int? userId,
+    int? minTotalMinor,
+    int? maxTotalMinor,
+    String? saleNumber,
+    int limit = 50,
+    int offset = 0,
+  });
+
   /// Satış satırları — 5 snapshot alanıyla birlikte (BR-SALE-001).
   Future<List<SaleItem>> itemsOf(int saleId);
 

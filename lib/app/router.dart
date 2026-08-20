@@ -20,6 +20,7 @@ import '../presentation/settings/user_management_screen.dart';
 import '../presentation/barcode/barcode_diagnostics_screen.dart';
 import '../presentation/products/product_list_screen.dart';
 import '../presentation/backup/backup_screen.dart';
+import '../presentation/history/sale_history_screen.dart';
 import '../presentation/maintenance/consistency_screen.dart';
 import '../presentation/sales/sale_screen.dart';
 import '../presentation/stock/stock_entry_screen.dart';
@@ -68,6 +69,10 @@ class AppRoutes {
   /// Barkod tanılama (REQ-BARC-010). Finansal veri içermez, kilit dışındadır.
   static const String barcodeDiagnostics = '/barcode-diagnostics';
 
+  /// Satış geçmişi (docs/12 §7 · docs/14). **Kilit dışındadır** —
+  /// iade ve iptal günlük kasa işidir, finansal rapor değildir (rules/04 §4).
+  static const String saleHistory = '/sales/history';
+
   /// Stok yönetimi (docs/13). Kilit dışındadır (rules/04 §4).
   static const String stock = '/stock';
 
@@ -102,6 +107,7 @@ class AppRoutes {
     products: (_) => const ProductListScreen(),
     barcodeDiagnostics: (_) => const BarcodeDiagnosticsScreen(),
     sales: (_) => const SaleScreen(),
+    saleHistory: (_) => const SaleHistoryScreen(),
     stock: (_) => const StockOverviewScreen(),
     stockEntry: (_) => const StockEntryScreen(),
     stockMovements: (_) => const StockMovementsScreen(),
