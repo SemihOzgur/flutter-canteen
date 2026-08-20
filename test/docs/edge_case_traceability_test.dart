@@ -45,14 +45,14 @@ Set<String> edgeCasesMentionedInTests() {
 /// `docs/26`'ya yeni bir `EC-*` eklenirse kimse onu sessizce atlayamaz.
 const Map<String, String> knownUncovered = {
   // ─ Donanım / işletim sistemi gerektiriyor — docs/32 §7 (W1–W15)
-  'EC-BARC-009': 'Türkçe Q/F klavyede alfanümerik barkod — docs/32 W8',
-  'EC-BKUP-010': 'Restore sırasında disk doluyor — docs/32 D9',
-  'EC-IMEX-012': 'Export sırasında disk doluyor — docs/32 H9',
+  'EC-BARC-009': 'Türkçe Q/F klavyede alfanümerik barkod — docs/32 W3',
+  'EC-BKUP-010': 'Restore sırasında disk doluyor — docs/32 W10',
+  'EC-IMEX-012': 'Export sırasında disk doluyor — docs/32 W10',
   'EC-SYS-002': 'Veri dizini yazılamıyor (izin) — docs/32 W6',
   'EC-SYS-003': 'Disk dolu, satış tamamlanıyor — docs/32 W10',
   'EC-SYS-008': 'Çözünürlük 1366×768 altında — docs/32 W7',
-  'EC-SYS-009': 'Uygulama 7 gün açık kalıyor — docs/32 W11',
-  'EC-SYS-010': 'Antivirüs yedeği karantinaya alıyor — docs/32 W12',
+  'EC-SYS-009': 'Uygulama 7 gün açık kalıyor — docs/32 W16',
+  'EC-SYS-010': 'Antivirüs yedeği karantinaya alıyor — docs/32 W14',
 
   // ─ Şema hâlâ v1: "daha eski yedek" ÜRETİLEMEZ
   //
@@ -123,6 +123,39 @@ void main() {
           'Bunlar artık test ediliyor; `knownUncovered` satırlarını silin: '
           '$stale',
     );
+  });
+
+  test('docs/32 atıfları GERÇEK madde numaralarına gidiyor', () {
+    // Gerekçelerdeki "docs/32 W10" gibi atıflar elle yazılır ve sessizce
+    // yanlış maddeyi gösterebilir — o zaman borç defteri doğru görünür ama
+    // kimseyi doğru yere götürmez. Atıfları dokümanla karşılaştırırız.
+    final backlog = File('docs/32-manual-test-backlog.md').readAsStringSync();
+    final documented = RegExp(
+      r'^\|\s*\**([A-Z]\d+)\**\s*\|',
+      multiLine: true,
+    ).allMatches(backlog).map((m) => m.group(1)!).toSet();
+    expect(
+      documented.length,
+      greaterThan(50),
+      reason: 'docs/32 ayrıştırılamadı.',
+    );
+
+    final referenced = <String, String>{};
+    for (final path in const [
+      'test/docs/edge_case_traceability_test.dart',
+      'test/docs/requirement_traceability_test.dart',
+    ]) {
+      final source = File(path).readAsStringSync();
+      for (final match in RegExp(r'docs/32\s+([A-Z]\d+)').allMatches(source)) {
+        referenced[match.group(1)!] = path;
+      }
+    }
+    expect(referenced, isNotEmpty);
+
+    final dangling =
+        referenced.keys.where((id) => !documented.contains(id)).toList()
+          ..sort();
+    expect(dangling, isEmpty, reason: 'docs/32\'de böyle madde yok: $dangling');
   });
 
   test('borç defterindeki her kimlik docs/26\'da GERÇEKTEN var', () {
