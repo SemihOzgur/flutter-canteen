@@ -147,6 +147,12 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 | W14 | ⬜ Antivirüs `.canteenbackup` dosyasını engellemiyor | Platform |
 | W15 | ⬜ Türkçe karakterli / boşluklu kullanıcı adı | Kısmen otomatikleştirildi — bkz. §9 |
 
+### Faz 8 — ortam bağımlı
+
+| # | Senaryo | Neden |
+|---|---|---|
+| F1 | ⬜ Sistem saatini **UTC olmayan** bir dilime alıp gece yarısına yakın (00:30 / 23:30) satış yap, dashboard'da "Bugün" doğru mu? | UTC makinede otomatik test kayma üretemez (BR-GEN-004) |
+
 ---
 
 ## 8. 🚫 Otomatik test EDİLEMEYENLER — sebepleriyle
@@ -162,6 +168,7 @@ Bunlar unutulmuş değil; test altyapısının **yapısal olarak** kapsayamadı�
 | Barkod → sepet süresinin **uçtan uca** ölçümü | Ölçülen 16 ms **veri yoludur**; ekran boyaması ve scanner gecikmesi dahil değildir | W1 |
 | `%APPDATA%` çözümlemesi ve 260 karakter sınırı | Platforma özgü | W6 · W13 |
 | Golden (piksel) testleri | docs/27 §4 **yazılmayacağını** söyler — bilinçli karar | — |
+| **Yerel gün sınırının UTC'den ayrıştığı** durum | Test makinesi **UTC saat diliminde** ise kayma diye bir şey oluşmaz ve testin ayırt edici gücü yoktur. Geliştirme makinesinde (`+03:00`) doğrulandı; CI UTC'de çalışırsa bu test sessizce güçsüzleşir | F1 |
 
 ---
 

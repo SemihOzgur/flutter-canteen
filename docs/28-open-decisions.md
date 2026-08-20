@@ -517,6 +517,54 @@ veritabanından bağımsız olması bir tercih değil, ön koşuldur.
 kullanılmıyor** ama kaldırılmadı: yayınlanmış bir anahtarın silinmesi eski kurulumlarda
 okunamayan bir kalıntı bırakırdı.
 
+### OD-028 — İptal, **iptal tarihine** raporlanır; "brüt ciro" iptalleri İÇERİR
+
+**Karar (iki parça):**
+
+1. `net = satış − iptal − iade` formülündeki **"satış" tüm satışlardır**, iptal edilmişler
+   dâhil. `docs/14 §5`'in "Brüt ciro"yu `completed + partiallyReturned + returned` olarak
+   tanımlaması **hatalıdır** — o tanımla iptal iki kez düşerdi.
+2. Bir iptal, orijinal satışın tarihine değil, **`sales.cancelled_at`** tarihine raporlanır.
+
+**Çözülen çelişki (1):** [02 BR-RET-007](02-product-and-business-requirements.md)
+`net = satış − iptal − iade` der. `docs/14 §5` ise "Brüt ciro"yu iptal edilmişleri **hariç
+tutarak** tanımlar. İkisi birlikte uygulanırsa:
+
+```text
+net = (tüm − iptal) − iptal − iade      ❌ iptal İKİ KEZ düşer
+```
+
+`docs/02` hiyerarşinin en üstündedir (rules/00 §1), dolayısıyla `docs/14 §5` düzeltilir.
+Ayrıca [16 R1](16-reporting.md)'in özet şeridi *"brüt ciro · iptal · iade · net ciro"*
+gösterir; bu dört sayının toplanabilir olması ancak brüt iptalleri içerdiğinde mümkündür.
+
+**Doldurulan boşluk (2):** `docs/14 §5` iade için tarih sorusunu açıkça çözer
+(BR-RET-008 — **iade tarihi**) ama iptal için **hiçbir şey söylemez.** İptal orijinal satışın
+gününden düşülürse, 1 Ağustos'ta yapılıp 5 Ağustos'ta iptal edilen bir satış **1 Ağustos'un
+kapanmış cirosunu geriye dönük değiştirir.** Bu, iadeler için açıkça reddedilmiş olan
+davranışın ta kendisidir:
+
+> *"Alternatif (orijinal satış gününü düzeltmek) geçmiş kapanmış günleri değiştirir ve
+> kabul edilemez."* — docs/14 §5
+
+Aynı gerekçe iptal için de geçerlidir ve **veri zaten mevcuttur**: `sales.cancelled_at`
+şemada tanımlıdır (docs/05 §2.8) ve Faz 7'de doldurulmaktadır. Farklı davranmak için bir
+sebep yoktur.
+
+**Sonuç — rapor aritmetiği:**
+
+```text
+brüt ciro (dönem)  = Σ grandTotal        · completed_at aralıkta        · TÜM durumlar
+iptal     (dönem)  = Σ grandTotal        · cancelled_at aralıkta        · status=cancelled
+iade      (dönem)  = Σ return_items.line_total · returns.created_at aralıkta
+────────────────────────────────────────────────────────────────────────
+net ciro           = brüt − iptal − iade
+```
+
+**Etki:** [14 §5](14-returns-and-cancellation.md) düzeltildi · BR-RET-008'in yanına iptal
+tarihi kuralı eklendi · Faz 8 rapor sorguları bu aritmetiği uygular ·
+`ix_sales_status_date` yanında `cancelled_at` üzerinden filtreleme gerekir.
+
 ---
 
 ## 3. Kararların faz üzerindeki etkisi
@@ -529,7 +577,8 @@ Faz 3  →  Recovery code, finansal erişim kilidi, görsel politikası
 Faz 5  →  Son alış fiyatı snapshot'ı, indirim yok, nakit yuvarlama yok,
           barkod snapshot'ı birincil barkoddur (OD-022)
 Faz 6  →  Fire birim maliyeti saklar (OD-025); sapma düzeltmesi defterden (OD-026)
-Faz 8  →  fl_chart; Raporlar kilit arkasında
+Faz 8  →  fl_chart; Raporlar kilit arkasında; iptal, iptal tarihine
+          raporlanır ve brüt ciro iptalleri içerir (OD-028)
 Faz 9  →  ZIP yedek; restore işareti veritabanı dışında (OD-027)
 Faz 10 →  CSV birincil + Excel abstraction
 Faz 12 →  Inno Setup
@@ -541,7 +590,7 @@ Faz 12 →  Inno Setup
 
 Geliştirme sırasında kararlaştırılmamış bir konu ortaya çıkarsa:
 
-1. Bu dokümana `OD-028`'den başlayarak yeni bir kayıt açılır.
+1. Bu dokümana `OD-029`'dan başlayarak yeni bir kayıt açılır.
 2. `Decision / Options / Recommendation / Impact` formatı kullanılır.
 3. Karar kapanmadan ilgili kod yazılmaz.
 4. Kapandığında bu dokümandaki karar kaydına ve ilgili business rule'a dönüştürülür.

@@ -133,12 +133,17 @@ COMMIT
 > **BR-RET-007 — Raporlar net değerleri gösterir.**
 
 ```text
-Brüt ciro   = Σ completed + partiallyReturned + returned satışların grandTotal
-İptal       = Σ cancelled satışların grandTotal
-İade        = Σ return_items.line_total
+Brüt ciro   = Σ TÜM satışların grandTotal      · completed_at aralıkta
+              (iptal edilmişler DÂHİL — OD-028)
+İptal       = Σ cancelled satışların grandTotal · cancelled_at aralıkta
+İade        = Σ return_items.line_total         · returns.created_at aralıkta
 ────────────────────────────────────────────
 NET CİRO    = Brüt ciro − İptal − İade
 ```
+
+> **Brüt ciro neden iptalleri içerir (OD-028):** İçermeseydi `− İptal` terimi iptali
+> **ikinci kez** düşerdi. Ayrıca [16 R1](16-reporting.md) özet şeridi bu dört sayıyı
+> yan yana gösterir; toplanabilir olmaları gerekir.
 
 Aynı mantık **satılan adet** ve **kâr** için de geçerlidir:
 
@@ -159,6 +164,10 @@ Net kâr  = Net ciro − (net adetlerin unit_cost toplamı)
 **Karar:** İade, **iade tarihine** yazılır (`returns.created_at`). Ciro raporunda:
 - 1 Ağustos: satış görünür (brüt),
 - 5 Ağustos: iade eksi olarak görünür.
+
+**Aynı kural iptal için de geçerlidir (OD-028):** iptal `sales.cancelled_at` tarihine
+yazılır. Orijinal satışın gününden düşmek, kapanmış bir günün cirosunu geriye dönük
+değiştirirdi — iadeler için açıkça reddedilen davranışın aynısı.
 
 Gerekçe: Kasa mutabakatı günlük yapılır; para 5 Ağustos'ta kasadan çıkmıştır.
 Alternatif (orijinal satış gününü düzeltmek) geçmiş kapanmış günleri değiştirir ve kabul edilemez.
