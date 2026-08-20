@@ -351,3 +351,11 @@ Bir faz "tamamlandı" sayılmaz eğer:
 3. `flutter analyze` uyarısız geçmiyorsa,
 4. Faz kapsamındaki Windows manuel testleri yapılmamışsa,
 5. Performans eşikleri aşılıyorsa.
+
+---
+
+## Elle test borcu
+
+Otomatik testin kapsayamadığı ve bilinçli olarak kapsamadığı her şey
+[32 — Elle Test Borcu](32-manual-test-backlog.md) içinde tek listede tutulur.
+Faz 12 çıkış kriteri o listenin tamamının kapanmasıdır.

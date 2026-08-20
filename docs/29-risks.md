@@ -251,3 +251,8 @@ yakalar. W1–W4 ve W7/W9 yine elde kalır.
 | Her faz sonunda | Azaltma önlemleri uygulandı mı doğrulanır |
 | Yeni risk tespit edilince | Bu dokümana eklenir, ilgili requirement güncellenir |
 | v1.0.0 öncesi | Tüm 🔴 risklerin azaltmaları test edilmiş olmalıdır |
+
+---
+
+> **RSK-018'in izlenmesi:** Windows doğrulama borcunun madde madde listesi
+> [32 — Elle Test Borcu §7](32-manual-test-backlog.md) içindedir.
