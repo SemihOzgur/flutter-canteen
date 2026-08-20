@@ -23,6 +23,7 @@ import '../presentation/reports/reports_screen.dart';
 import '../presentation/backup/backup_screen.dart';
 import '../presentation/dashboard/dashboard_screen.dart';
 import '../presentation/history/sale_history_screen.dart';
+import '../presentation/import/import_export_screen.dart';
 import '../presentation/maintenance/consistency_screen.dart';
 import '../presentation/sales/sale_screen.dart';
 import '../presentation/stock/stock_entry_screen.dart';
@@ -84,6 +85,11 @@ class AppRoutes {
   /// iade ve iptal günlük kasa işidir, finansal rapor değildir (rules/04 §4).
   static const String saleHistory = '/sales/history';
 
+  /// İçe / dışa aktarma (docs/20). **Kilit dışındadır** (rules/04 §4):
+  /// veri girişi işidir, finansal rapor değildir. Satış ve rapor export'ları
+  /// Raporlar ekranından ve kapının arkasından gider.
+  static const String importExport = '/import-export';
+
   /// Stok yönetimi (docs/13). Kilit dışındadır (rules/04 §4).
   static const String stock = '/stock';
 
@@ -121,6 +127,7 @@ class AppRoutes {
     saleHistory: (_) => const SaleHistoryScreen(),
     dashboard: (_) => const DashboardScreen(),
     reports: (_) => const ReportsScreen(),
+    importExport: (_) => const ImportExportScreen(),
     stock: (_) => const StockOverviewScreen(),
     stockEntry: (_) => const StockEntryScreen(),
     stockMovements: (_) => const StockMovementsScreen(),

@@ -77,6 +77,11 @@ dependencies:
   # Grafik — OD-014. rules/01 §7: karar kapsamındadır, yeniden onay
   # gerektirmez.
   fl_chart: ^1.2.0
+  # CSV OKUMA — OD-009 (CSV birincil format). rules/01 §7: karar
+  # kapsamındadır. Ayrıştırma (tırnak, gömülü ayırıcı, satır sonu) zor
+  # kısımdır; YAZMA tarafı `data/files/csv_writer.dart` içinde elle yapılır
+  # çünkü BOM/`;`/formül kaçışlama bu projeye özgü üç kuraldır.
+  csv: ^8.0.0
 
 dev_dependencies:
   flutter_test:

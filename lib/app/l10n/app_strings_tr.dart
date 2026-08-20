@@ -1046,6 +1046,61 @@ class AppStringsTr {
       'Dışa aktarma, ekranda görünen sayfayı değil, filtrelenmiş tüm sonucu '
       'kapsar.';
 
+  // ── İçe / dışa aktarma (docs/20) ─────────────────────────────────────────
+  static const String importExportTitle = 'İçe / Dışa Aktarma';
+  static const String homeImportExportAction = 'İçe / Dışa Aktar';
+
+  static const String importTemplateDownload = 'Şablon İndir';
+  static const String importTemplateSaved = 'Şablon kaydedildi.';
+  static const String importPickFile = 'Dosya Seç';
+  static const String importNoFile = 'Henüz dosya seçilmedi.';
+  static String importFileSelected(String name, int rows, String separator) =>
+      '$name · $rows satır · ayırıcı "$separator"';
+
+  static const String importPolicyTitle = 'Barkod sistemde zaten kayıtlıysa';
+  static const String importPolicySkip = 'Bu satırları atla';
+  static const String importPolicyUpdate = 'Mevcut ürünleri güncelle';
+  static const String importPolicyCancel = 'İçe aktarmayı iptal et';
+
+  static const String importPreviewTitle = 'İçe Aktarma Önizlemesi';
+  static String importPreviewCreate(int count) => '$count satır aktarılacak';
+  static String importPreviewUpdate(int count) => '$count satır güncellenecek';
+  static String importPreviewWarning(int count) =>
+      '$count satır uyarı ile aktarılacak';
+  static String importPreviewRejected(int count) =>
+      '$count satır aktarılamayacak';
+  static String importPreviewNew(int categories, int suppliers) =>
+      '$categories yeni kategori, $suppliers yeni tedarikçi oluşturulacak';
+
+  static const String importFilterAll = 'Tümü';
+  static const String importFilterProblems = 'Sorunlular';
+  static const String importErrorsDownload = 'Hata Listesini CSV İndir';
+  static const String importErrorsSaved = 'Hata listesi kaydedildi.';
+  static const String importColumnLine = 'Satır';
+
+  /// REQ-IMEX-007 — onaysız import yok.
+  static String importConfirmAction(int count) => 'İçe Aktar ($count)';
+  static String importDone(int created, int updated, int skipped) =>
+      'İçe aktarma tamamlandı — $created yeni, $updated güncellenen, '
+      '$skipped atlanan';
+
+  static const String exportTitle = 'Dışa Aktarma';
+  static const String exportProducts = 'Ürünler';
+  static const String exportCategories = 'Kategoriler';
+  static const String exportSuppliers = 'Tedarikçiler';
+  static const String exportSaved = 'Dosya kaydedildi.';
+  static const String exportCancelled = 'Kaydetme iptal edildi.';
+
+  /// docs/20 §8 — dışa aktar → düzenle → içe aktar döngüsü.
+  static const String exportRoundTripNotice =
+      'Ürün dosyası içe aktarma şablonuyla aynı sütunları taşır: dışa '
+      'aktarıp düzenleyip tekrar içe aktarabilirsiniz.';
+
+  /// docs/20 §1 — asla import edilemeyenler.
+  static const String importForbiddenNotice =
+      'Satışlar, satış satırları ve stok hareketleri içe aktarılamaz. Bunlar '
+      'denetim izinin temelidir; veri taşıma için yedekleme kullanın.';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =
