@@ -45,6 +45,7 @@ import 'package:canteen/data/db/canteen_database.dart'
     hide Cart, Category, Product, Sale, SaleItem, StockMovement, Supplier;
 import 'package:canteen/data/files/backup_archive.dart';
 import 'package:canteen/domain/enums/sale_status.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -218,6 +219,65 @@ void main() {
       final result = await restore.validate(tampered);
 
       expect(result.failureOrNull, BackupFailures.metadataInvalid);
+    });
+
+    test('EC-BKUP-007 — BOZUK GÖRSEL restore\'u ENGELLEMEZ, uyarır', () async {
+      // REQ-BKUP-018: *"Bozuk veya eksik görsel içeren yedek, geri
+      // yüklemeyi engellemez; kullanıcı uyarılır."* Bir ürün fotoğrafının
+      // bozulması yüzünden tüm satış geçmişinin geri yüklenememesi,
+      // korumadan büyük bir kayıptır.
+      final id = await product(name: 'Kola');
+      await (db.update(db.products)..where((t) => t.id.equals(id))).write(
+        const ProductsCompanion(imagePath: Value('images/kola.jpg')),
+      );
+      final imageFile = File(p.join(temp.paths.imagesDir, 'kola.jpg'))
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(List<int>.generate(512, (i) => i % 256));
+
+      final backup = await backupService.create(createdBy: 'ahmet');
+      expect(backup.isErr, isFalse, reason: '${backup.failureOrNull}');
+      final corrupted = await _corruptEntry(
+        temp,
+        backup.valueOrNull!.file,
+        'images/kola.jpg',
+      );
+
+      final preview = okPreview(await restore.validate(corrupted));
+
+      expect(
+        preview.corruptImageCount,
+        1,
+        reason: 'Bozuk görsel SAYILIR ve kullanıcıya bildirilir.',
+      );
+      expect(preview.missingImageCount, 0);
+
+      // Ve restore gerçekten tamamlanır — bozuk dosya YERİNE KONMAZ.
+      imageFile.deleteSync();
+      final result = await restore.apply(
+        preview: preview,
+        confirmation: RestoreService.confirmationPhrase,
+        createdBy: 'ahmet',
+        closeDatabase: db.close,
+      );
+      expect(result.isErr, isFalse, reason: '${result.failureOrNull}');
+      expect(
+        File(p.join(temp.paths.imagesDir, 'kola.jpg')).existsSync(),
+        isFalse,
+        reason:
+            'docs/26 EC-BKUP-007 — "o görsel ATLANIR". Bozuk baytları '
+            'yerine koymak, ürünü bozuk bir dosyayla eşleştirirdi.',
+      );
+    });
+
+    test('BOZUK VERİTABANI ise restore YİNE reddedilir', () async {
+      // Kontrol grubu: muafiyet yalnızca görsellere aittir. Veritabanının
+      // yarısı okunabilen bir yedekten restore, sessiz veri kaybıdır.
+      final file = await backupThenDiverge();
+      final corrupted = await _corruptEntry(temp, file, 'database.sqlite');
+
+      final result = await restore.validate(corrupted);
+
+      expect(result.failureOrNull, BackupFailures.checksumMismatch);
     });
 
     test('rules/03 §7 — zip-slip reddedilir', () async {
@@ -504,6 +564,28 @@ void main() {
 /// ⚠️ `checksums.json` metadata'yı kapsamaz (docs/19 §2), bu yüzden bu
 /// değişiklik checksum doğrulamasını **tetiklemez** — tam olarak format/şema
 /// kontrollerini sınamak istediğimiz durum budur.
+/// Arşivdeki bir dosyayı bozar; `checksums.json`'a DOKUNMAZ, böylece
+/// checksum uyuşmazlığı doğal yoldan oluşur.
+Future<File> _corruptEntry(
+  TempAppPaths temp,
+  File source,
+  String entryPath,
+) async {
+  final work = Directory(
+    p.join(temp.dir.path, 'corrupt_${DateTime.now().microsecondsSinceEpoch}'),
+  );
+  await BackupArchive.extract(archiveFile: source, targetDirectory: work);
+  await File(
+    p.join(work.path, entryPath),
+  ).writeAsBytes(const [0x00, 0x01, 0x02, 0x03]);
+
+  final target = File(
+    p.join(temp.dir.path, 'corrupted_${work.hashCode}.canteenbackup'),
+  );
+  await BackupArchive.pack(sourceDirectory: work, target: target);
+  return target;
+}
+
 Future<File> _rewriteMetadata(
   TempAppPaths temp,
   File source,

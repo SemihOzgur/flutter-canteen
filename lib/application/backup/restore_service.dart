@@ -64,12 +64,22 @@ class RestorePreview {
   /// REQ-BKUP-018 — yedekte eksik görsel var; **engelleyici değildir.**
   final int missingImageCount;
 
+  /// EC-BKUP-007 — checksum'ı tutmayan görsel sayısı.
+  ///
+  /// REQ-BKUP-018 bozuk görseli de eksik görselle aynı kefeye koyar:
+  /// *"Bozuk veya eksik görsel içeren yedek, geri yüklemeyi ENGELLEMEZ."*
+  /// Bir ürün fotoğrafının bozulması yüzünden satış geçmişinin tamamının
+  /// geri yüklenememesi, korumanın kendisinden daha büyük bir kayıptır.
+  /// Bozuk dosya yerine KONULMAZ; ürün varsayılan ikonla gösterilir.
+  final int corruptImageCount;
+
   const RestorePreview({
     required this.file,
     required this.metadata,
     required this.current,
     required this.migrationRequired,
     required this.missingImageCount,
+    required this.corruptImageCount,
   });
 
   /// docs/19 §4 — "şu anki veri daha fazla kayıt içeriyor" durumu **açıkça
@@ -169,17 +179,26 @@ class RestoreService {
       if (checksums == null) return const Err(BackupFailures.metadataInvalid);
 
       var missingImages = 0;
+      var corruptImages = 0;
       for (final entry in checksums.entries) {
+        final isImage = entry.key.startsWith(BackupArchive.imagesPrefix);
         final target = File(p.join(inspectDir.path, entry.key));
         if (!target.existsSync()) {
           // REQ-BKUP-018 — eksik GÖRSEL engellemez; eksik veritabanı engeller.
-          if (entry.key.startsWith(BackupArchive.imagesPrefix)) {
+          if (isImage) {
             missingImages++;
             continue;
           }
           return const Err(BackupFailures.checksumMismatch);
         }
         if (await BackupArchive.sha256OfFile(target) != entry.value) {
+          // EC-BKUP-007 — bozuk görsel de engellemez, ATLANIR (REQ-BKUP-018).
+          // Veritabanının bozulması ise mutlak engeldir: yarısı okunabilen
+          // bir yedekten restore, sessiz veri kaybının ta kendisidir.
+          if (isImage) {
+            corruptImages++;
+            continue;
+          }
           return const Err(BackupFailures.checksumMismatch);
         }
       }
@@ -196,6 +215,7 @@ class RestoreService {
           current: await _currentCounts(),
           migrationRequired: metadata.schemaVersion < _supportedSchemaVersion,
           missingImageCount: missingImages,
+          corruptImageCount: corruptImages,
         ),
       );
     } on BackupArchiveException catch (error) {
@@ -300,7 +320,16 @@ class RestoreService {
       await imagesDir.create(recursive: true);
       final extractedImages = Directory(p.join(extractDir.path, 'images'));
       if (extractedImages.existsSync()) {
+        // EC-BKUP-007 — doğrulama bu arşivi bir kez açtı ama restore kendi
+        // kopyasını çıkarıyor; checksum burada TEKRAR kontrol edilir. Aksi
+        // hâlde "atlanacak" denen bozuk dosya yine de yerine konurdu.
+        final expected = await _expectedChecksums(extractDir);
         for (final image in extractedImages.listSync().whereType<File>()) {
+          final key = '${BackupArchive.imagesPrefix}${p.basename(image.path)}';
+          final want = expected[key];
+          if (want != null && await BackupArchive.sha256OfFile(image) != want) {
+            continue;
+          }
           await image.copy(p.join(imagesDir.path, p.basename(image.path)));
         }
       }
@@ -540,6 +569,16 @@ class RestoreService {
         }
       }
     }
+  }
+
+  /// Arşivden çıkarılmış dizindeki `checksums.json`.
+  ///
+  /// Okunamıyorsa boş harita döner: doğrulama adımı zaten geçilmiş olduğu
+  /// için burada dosyayı ikinci kez reddetmek restore'u yarıda bırakırdı.
+  Future<Map<String, String>> _expectedChecksums(Directory extractDir) async {
+    final file = File(p.join(extractDir.path, BackupArchive.checksumsEntry));
+    if (!file.existsSync()) return const {};
+    return BackupChecksums.tryDecode(await file.readAsString()) ?? const {};
   }
 
   Future<void> _clearMarker() async {

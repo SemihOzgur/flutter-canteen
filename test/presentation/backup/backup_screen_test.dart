@@ -53,6 +53,7 @@ RestorePreview preview({
   BackupCounts? current,
   bool migrationRequired = false,
   int missingImageCount = 0,
+  int corruptImageCount = 0,
 }) => RestorePreview(
   file: File('yedek.canteenbackup'),
   metadata: BackupMetadata(
@@ -69,6 +70,7 @@ RestorePreview preview({
   current: current ?? _counts(products: 489, sales: 8401, images: 85),
   migrationRequired: migrationRequired,
   missingImageCount: missingImageCount,
+  corruptImageCount: corruptImageCount,
 );
 
 BackupCounts _counts({int products = 0, int sales = 0, int images = 0}) =>

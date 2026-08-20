@@ -72,16 +72,6 @@ const Map<String, String> knownUncovered = {
       'Restore veritabanını BÜTÜN olarak değiştirir; `carts` için '
       'ayrı bir kod yolu yoktur — restore_service_test veri değişimini '
       'bütün olarak doğrular',
-
-  // ─ 🐛 AÇIK KUSUR — docs ile çelişen mevcut davranış
-  //
-  // docs/19 REQ-BKUP-018: *"Bozuk veya eksik görsel içeren yedek, geri
-  // yüklemeyi ENGELLEMEZ."* Mevcut `RestoreService` bozuk görselde
-  // `checksumMismatch` döndürüp restore'u tamamen reddediyor. Eksik görsel
-  // doğru davranıyor, bozuk görsel davranmıyor.
-  'EC-BKUP-007':
-      'Bozuk görsel restore\'u ENGELLİYOR — REQ-BKUP-018 ihlali, '
-      'bugfix/backup-corrupt-image kapsamında düzeltilecek',
 };
 
 void main() {
