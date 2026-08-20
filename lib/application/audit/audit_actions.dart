@@ -168,7 +168,6 @@ abstract final class AuditActions {
   /// bu haritayı kullanarak "dokümanda var, kodda yok" farkını beklenen
   /// boşluklarla sınırlar — beklenmeyen bir boşluk testi kırar.
   static const Map<String, String> futurePhaseActions = {
-    dataImported: 'Faz 10 — import',
     // Şema v1'den başka sürüm yok; migration adımı hiç çalışmıyor. Yazım
     // noktası ilk v2 adımıyla birlikte eklenir — bugün eklenirse asla
     // tetiklenmeyen ölü kod olur (rules/06 §7).
