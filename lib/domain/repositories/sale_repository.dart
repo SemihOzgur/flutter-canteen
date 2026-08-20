@@ -15,7 +15,9 @@
 library;
 
 import '../../core/result/result.dart';
+import '../enums/sale_status.dart';
 import '../models/sale.dart';
+import '../models/sale_return.dart';
 
 abstract interface class SaleRepository {
   Future<Result<Sale>> findById(int id);
@@ -49,4 +51,38 @@ abstract interface class SaleRepository {
   /// ⚠️ **Yalnızca `SaleService` çağırır**, [insertSale] ile aynı transaction
   /// içinde.
   Future<int> insertItem(int saleId, NewSaleItem item);
+
+  // --- Faz 7: iptal ve iade ------------------------------------------------
+
+  /// Satış **durumunu** değiştirir — docs/14 §2.
+  ///
+  /// Satış kaydı hiçbir koşulda **silinmez** (BR-GEN-002 · REQ-RET-001);
+  /// bu yüzden arayüzde `delete` yoktur ve olmayacaktır.
+  ///
+  /// ⚠️ Yalnızca `ReturnService` çağırır ve durumu **elle atamaz**:
+  /// `SaleStatusRules` üzerinden hesaplar (REQ-RET-007).
+  Future<int> updateStatus(
+    int saleId, {
+    required SaleStatus status,
+    DateTime? cancelledAtUtc,
+    String? note,
+  });
+
+  /// İade başlığını yazar ve `id`'sini döner.
+  Future<int> insertReturn(NewReturn value);
+
+  /// İade satırını yazar — fiyat **orijinal snapshot'tır** (BR-RET-005).
+  Future<int> insertReturnItem(int returnId, NewReturnItem item);
+
+  /// `sale_items.returned_quantity`'yi [by] kadar artırır (denormalize alan,
+  /// rules/03 §2 — kaynağıyla **aynı transaction** içinde güncellenir).
+  ///
+  /// Şemadaki `CHECK(returned_quantity <= quantity)` son güvencedir.
+  Future<int> incrementReturnedQuantity(int saleItemId, int by);
+
+  /// Bir satışın iadeleri — satış detayında gösterilir.
+  Future<List<SaleReturn>> returnsOf(int saleId);
+
+  /// Bir iadenin satırları.
+  Future<List<SaleReturnItem>> returnItemsOf(int returnId);
 }

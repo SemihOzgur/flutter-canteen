@@ -8,7 +8,9 @@ import 'package:drift/drift.dart';
 
 import '../../core/money/money.dart';
 import '../../core/result/result.dart';
+import '../../domain/enums/sale_status.dart';
 import '../../domain/models/sale.dart' as domain;
+import '../../domain/models/sale_return.dart' as domain;
 import '../../domain/repositories/sale_repository.dart';
 import '../db/canteen_database.dart' as db;
 import '../db/converters.dart';
@@ -163,6 +165,112 @@ class DriftSaleRepository implements SaleRepository {
             lineTotalMinor: item.lineTotal.minor,
           ),
         );
+  }
+
+  // --- Faz 7: iptal ve iade ------------------------------------------------
+
+  @override
+  Future<int> updateStatus(
+    int saleId, {
+    required SaleStatus status,
+    DateTime? cancelledAtUtc,
+    String? note,
+  }) {
+    return (_db.update(_db.sales)..where((s) => s.id.equals(saleId))).write(
+      db.SalesCompanion(
+        status: Value(status),
+        // `cancelledAt` yalnızca iptalde yazılır; iadede dokunulmaz.
+        cancelledAt: cancelledAtUtc == null
+            ? const Value.absent()
+            : Value(cancelledAtUtc),
+        note: note == null ? const Value.absent() : Value(note),
+        updatedAt: Value(_db.clock().toUtc()),
+      ),
+    );
+  }
+
+  @override
+  Future<int> insertReturn(domain.NewReturn value) {
+    return _db
+        .into(_db.returns)
+        .insert(
+          db.ReturnsCompanion.insert(
+            saleId: value.saleId,
+            type: value.type,
+            totalMinor: value.total.minor,
+            reason: Value(value.reason),
+            userId: value.userId,
+            createdAt: value.createdAtUtc,
+          ),
+        );
+  }
+
+  @override
+  Future<int> insertReturnItem(int returnId, domain.NewReturnItem item) {
+    return _db
+        .into(_db.returnItems)
+        .insert(
+          db.ReturnItemsCompanion.insert(
+            returnId: returnId,
+            saleItemId: item.saleItemId,
+            quantity: item.quantity,
+            // BR-RET-005 — orijinal snapshot fiyat.
+            unitPriceMinor: item.unitPrice.minor,
+            lineTotalMinor: item.lineTotal.minor,
+          ),
+        );
+  }
+
+  @override
+  Future<int> incrementReturnedQuantity(int saleItemId, int by) {
+    // Okuyup yazmak yerine SQL tarafında artırılır: aynı transaction içinde
+    // aynı satır iki kez artırılabilir (aynı ürün iki satırda) ve okunan
+    // değer bayatlardı.
+    return _db.customUpdate(
+      'UPDATE sale_items SET returned_quantity = returned_quantity + ? '
+      'WHERE id = ?',
+      variables: [Variable.withInt(by), Variable.withInt(saleItemId)],
+      updates: {_db.saleItems},
+    );
+  }
+
+  @override
+  Future<List<domain.SaleReturn>> returnsOf(int saleId) async {
+    final rows =
+        await (_db.select(_db.returns)
+              ..where((r) => r.saleId.equals(saleId))
+              ..orderBy([(r) => OrderingTerm(expression: r.createdAt)]))
+            .get();
+    return [
+      for (final row in rows)
+        domain.SaleReturn(
+          id: row.id,
+          saleId: row.saleId,
+          type: row.type,
+          total: Money(row.totalMinor),
+          reason: row.reason,
+          userId: row.userId,
+          createdAtUtc: row.createdAt,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<domain.SaleReturnItem>> returnItemsOf(int returnId) async {
+    final rows = await (_db.select(
+      _db.returnItems,
+    )..where((i) => i.returnId.equals(returnId))).get();
+    return [
+      for (final row in rows)
+        domain.SaleReturnItem(
+          id: row.id,
+          returnId: row.returnId,
+          saleItemId: row.saleItemId,
+          quantity: row.quantity,
+          unitPrice: Money(row.unitPriceMinor),
+          lineTotal: Money(row.lineTotalMinor),
+        ),
+    ];
   }
 
   @override

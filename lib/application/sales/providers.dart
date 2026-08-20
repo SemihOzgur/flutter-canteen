@@ -9,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/providers.dart';
 import '../auth/providers.dart' show appLoggerProvider;
+import '../audit/providers.dart';
 import '../stock/providers.dart';
 import 'cart_service.dart';
+import 'return_service.dart';
 import 'sale_service.dart';
 
 /// Aktif sepet — BR-CART-001.
@@ -37,5 +39,16 @@ final saleServiceProvider = Provider<SaleService>(
     sales: ref.watch(saleRepositoryProvider),
     stockService: ref.watch(stockServiceProvider),
     logger: ref.watch(appLoggerProvider),
+  ),
+);
+
+/// docs/14 — satış iptali ve iade. İkisi de **atomiktir** (REQ-RET-010).
+final returnServiceProvider = Provider<ReturnService>(
+  (ref) => ReturnService(
+    db: ref.watch(canteenDatabaseProvider),
+    sales: ref.watch(saleRepositoryProvider),
+    stockService: ref.watch(stockServiceProvider),
+    audit: ref.watch(auditServiceProvider),
+    clock: ref.watch(canteenDatabaseProvider).clock,
   ),
 );

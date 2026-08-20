@@ -168,8 +168,6 @@ abstract final class AuditActions {
   /// bu haritayı kullanarak "dokümanda var, kodda yok" farkını beklenen
   /// boşluklarla sınırlar — beklenmeyen bir boşluk testi kırar.
   static const Map<String, String> futurePhaseActions = {
-    saleCancelled: 'Faz 7 — satış iptali',
-    saleReturned: 'Faz 7 — iade',
     dataImported: 'Faz 10 — import',
     dataExported: 'Faz 10 — export',
     // Şema v1'den başka sürüm yok; migration adımı hiç çalışmıyor. Yazım
