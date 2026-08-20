@@ -50,7 +50,6 @@ const Map<String, String> knownUncovered = {
   'EC-IMEX-012': 'Export sırasında disk doluyor — docs/32 W10',
   'EC-SYS-002': 'Veri dizini yazılamıyor (izin) — docs/32 W6',
   'EC-SYS-003': 'Disk dolu, satış tamamlanıyor — docs/32 W10',
-  'EC-SYS-008': 'Çözünürlük 1366×768 altında — docs/32 W7',
   'EC-SYS-009': 'Uygulama 7 gün açık kalıyor — docs/32 W16',
   'EC-SYS-010': 'Antivirüs yedeği karantinaya alıyor — docs/32 W14',
 

@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../presentation/common/low_resolution_notice.dart';
 import '../presentation/startup/already_running_screen.dart';
 import 'l10n/app_strings_tr.dart';
 import 'router.dart';
@@ -27,6 +28,10 @@ class CanteenApp extends StatelessWidget {
       theme: AppTheme.light(),
       initialRoute: initialRoute,
       routes: AppRoutes.routes(),
+      // EC-SYS-008 — uyarı TÜM ekranların üstünde durur; tek tek ekranlara
+      // dağıtılsaydı yeni bir ekran eklendiğinde sessizce unutulurdu.
+      builder: (context, child) =>
+          LowResolutionNotice(child: child ?? const SizedBox.shrink()),
     );
   }
 }

@@ -30,6 +30,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/l10n/app_strings_tr.dart';
 import '../../app/router.dart';
+import '../../core/version/app_version.dart';
 import '../auth/financial_access_dialog.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -101,13 +102,13 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  AppStringsTr.foundationReady,
+                  AppStringsTr.homeWelcome,
                   style: theme.textTheme.titleMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  AppStringsTr.foundationDescription,
+                  AppStringsTr.homeDescription,
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -230,6 +231,17 @@ class HomeScreen extends ConsumerWidget {
                       label: const Text(AppStringsTr.reportsTitle),
                     ),
                   ],
+                ),
+                const SizedBox(height: 32),
+                // docs/24 §7 — tanılama paketi ve destek yazışması için
+                // kullanıcının sürümü OKUYABİLMESİ gerekir. Tek kaynak
+                // `core/version/app_version.dart`.
+                Text(
+                  appVersionLabel,
+                  key: const Key('home_app_version'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
               ],
             ),

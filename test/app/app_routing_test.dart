@@ -71,7 +71,7 @@ void main() {
   testWidgets('home rotası ana ekranı açar', (tester) async {
     await pumpApp(tester, AppRoutes.home);
 
-    expect(find.text(AppStringsTr.foundationReady), findsOneWidget);
+    expect(find.text(AppStringsTr.homeWelcome), findsOneWidget);
   });
 
   // --- Faz 3a rotaları (docs/17 §8, §9, §11) --------------------------------

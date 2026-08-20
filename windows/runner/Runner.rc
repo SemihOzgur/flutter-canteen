@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "canteen" "\0"
+            VALUE "CompanyName", "Eygul Turizm" "\0"
+            VALUE "FileDescription", "Kantin Otomasyonu" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "canteen" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "InternalName", "Kantin Otomasyonu" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Eygul Turizm. Tum haklari saklidir." "\0"
             VALUE "OriginalFilename", "canteen.exe" "\0"
-            VALUE "ProductName", "canteen" "\0"
+            VALUE "ProductName", "Kantin Otomasyonu" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -14,6 +14,11 @@
 /// Bunlar burada otomatik olarak sınanır. **Yakalayamadığı tek şey**
 /// `%APPDATA%`'nın Windows'a özgü çözümlenmesi ve 260 karakter yol sınırıdır;
 /// onlar W6/W15 olarak elde kalır (bkz. RSK-018).
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-COMP-003** — macOS geliştirme desteği: bu testler macOS'ta
+///   gerçek dosya sistemiyle çalışır
+///
 library;
 
 import 'dart:io';

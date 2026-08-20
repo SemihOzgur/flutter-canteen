@@ -207,6 +207,20 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
     }
 
+    // docs/23 §4 — "Minimum pencere boyutu: 1280x720 (altina kucultulemez)."
+    // Sepet paneli hicbir cozunurlukte gizlenmez veya sekmeye donusmez
+    // (rules/05 §2); daha kucuk bir pencere bu garantiyi bozar.
+    case WM_GETMINMAXINFO: {
+      auto* info = reinterpret_cast<MINMAXINFO*>(lparam);
+      // GetDpiForWindow: Windows 10 1607+. Hedefimiz 1809+ (docs/24 §5),
+      // yani her zaman mevcuttur; yine de 0 donerse %100'e duseriz.
+      const UINT dpi = ::GetDpiForWindow(hwnd);
+      const double scale = (dpi == 0 ? 96.0 : static_cast<double>(dpi)) / 96.0;
+      info->ptMinTrackSize.x = static_cast<LONG>(1280 * scale);
+      info->ptMinTrackSize.y = static_cast<LONG>(720 * scale);
+      return 0;
+    }
+
     case WM_ACTIVATE:
       if (child_content_ != nullptr) {
         SetFocus(child_content_);
