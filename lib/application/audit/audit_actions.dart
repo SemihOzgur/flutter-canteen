@@ -169,7 +169,6 @@ abstract final class AuditActions {
   /// boşluklarla sınırlar — beklenmeyen bir boşluk testi kırar.
   static const Map<String, String> futurePhaseActions = {
     dataImported: 'Faz 10 — import',
-    dataExported: 'Faz 10 — export',
     // Şema v1'den başka sürüm yok; migration adımı hiç çalışmıyor. Yazım
     // noktası ilk v2 adımıyla birlikte eklenir — bugün eklenirse asla
     // tetiklenmeyen ölü kod olur (rules/06 §7).

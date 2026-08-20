@@ -126,7 +126,7 @@
 | BR-RET-005 | İade tutarı, orijinal `SaleItem.unitPrice` snapshot'ı üzerinden hesaplanır; güncel ürün fiyatı kullanılmaz. |
 | BR-RET-006 | İptal edilmiş satış tekrar iptal edilemez ve iade edilemez; iade edilmiş miktar tekrar iade edilemez. |
 | BR-RET-007 | Ciro, kâr ve satış adedi raporları iptal ve iadeleri **net** olarak yansıtır (`net = satış − iptal − iade`). |
-| BR-RET-008 | **İade, iade tarihine (`returns.createdAt`) göre raporlanır.** Orijinal satışın tarihi ve tutarı değiştirilmez. |
+| BR-RET-008 | **İade, iade tarihine (`returns.createdAt`) göre raporlanır.** Orijinal satışın tarihi ve tutarı değiştirilmez. **İptal aynı şekilde `sales.cancelledAt` tarihine raporlanır** (OD-028). |
 
 ---
 

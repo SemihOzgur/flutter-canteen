@@ -12,6 +12,7 @@ import 'package:canteen/data/db/canteen_database.dart'
     hide Product, Sale, SaleItem, StockMovement;
 import 'package:canteen/data/db/providers.dart';
 import 'package:canteen/presentation/auth/financial_access_dialog.dart';
+import 'package:canteen/presentation/dashboard/dashboard_screen.dart';
 import 'package:canteen/presentation/home/home_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,7 +116,7 @@ void main() {
   });
 
   /// docs/22 F9 · BR-AUTH-013: Dashboard kilidin arkasındadır — ekran Faz 8'de
-  /// gelecek olsa da kapı bugün çalışır.
+  /// Faz 8'de ekran geldi; kapı hâlâ ekranın ÖNÜNDEDİR.
   testWidgets('ana ekranda Dashboard finansal erişim parolası sorar', (
     tester,
   ) async {
@@ -125,6 +126,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(FinancialAccessDialog), findsOneWidget);
-    expect(find.text(AppStringsTr.dashboardPlaceholderTitle), findsNothing);
+    expect(
+      find.byType(DashboardScreen),
+      findsNothing,
+      reason:
+          'docs/22 F9 — kilit ekranın ÖNÜNDEDİR; parola girilmeden Dashboard '
+          'hiç kurulmaz.',
+    );
+  });
+
+  testWidgets('vazgeçilirse Dashboard AÇILMAZ', (tester) async {
+    // EC-DASH-003 — kullanıcı vazgeçerse hiçbir şey açılmaz ve kilit kapalı
+    // kalır.
+    await pumpApp(tester, AppRoutes.home);
+    await tester.tap(find.byKey(HomeScreen.dashboardButtonKey));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(AppStringsTr.cancelAction));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DashboardScreen), findsNothing);
+    expect(find.byType(FinancialAccessDialog), findsNothing);
   });
 }
