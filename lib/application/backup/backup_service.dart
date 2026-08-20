@@ -40,6 +40,7 @@ import 'package:path/path.dart' as p;
 import '../../core/logging/app_logger.dart';
 import '../../core/paths/app_paths.dart';
 import '../../core/result/result.dart';
+import '../../core/version/app_version.dart' as app;
 import '../../data/dao/backup_dao.dart';
 import '../../data/dao/daos.dart';
 import '../../data/db/app_setting_keys.dart';
@@ -86,7 +87,7 @@ class BackupService {
     required DateTime Function() clock,
     AuditService? audit,
     AppLogger? logger,
-    String appVersion = '1.0.0',
+    String appVersion = app.appVersion,
   }) : _dao = dao,
        _schemaVersion = schemaVersion,
        _paths = paths,

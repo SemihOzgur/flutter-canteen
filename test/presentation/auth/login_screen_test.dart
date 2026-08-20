@@ -28,6 +28,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/test_window.dart';
+
 import '../../support/test_database.dart';
 
 const String kUsername = 'kasa';
@@ -42,6 +44,7 @@ void main() {
 
   /// Ekranı açar. [withUser] verilirse test kullanıcısı önceden oluşturulur.
   Future<void> pumpLogin(WidgetTester tester, {bool withUser = true}) async {
+    useSupportedSurface(tester);
     if (withUser) {
       final container = ProviderContainer(
         overrides: [canteenDatabaseProvider.overrideWithValue(db)],
@@ -100,7 +103,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(AppStringsTr.foundationReady),
+      find.text(AppStringsTr.homeWelcome),
       findsOneWidget,
       reason: 'Başarılı giriş ana ekrana geçirir (REQ-AUTH-001).',
     );
@@ -119,7 +122,7 @@ void main() {
     await tester.tap(find.byKey(LoginScreen.submitButtonKey));
     await tester.pumpAndSettle();
 
-    expect(find.text(AppStringsTr.foundationReady), findsOneWidget);
+    expect(find.text(AppStringsTr.homeWelcome), findsOneWidget);
   });
 
   group('EC-AUTH-001 — hangi alanın yanlış olduğu söylenmez', () {
@@ -141,7 +144,7 @@ void main() {
         find.text(AuthFailures.invalidCredentials.userMessage),
         findsOneWidget,
       );
-      expect(find.text(AppStringsTr.foundationReady), findsNothing);
+      expect(find.text(AppStringsTr.homeWelcome), findsNothing);
     });
 
     testWidgets('bilinmeyen kullanıcı adı AYNI mesajı gösterir', (
@@ -215,6 +218,6 @@ void main() {
 
     expect(find.text(AppStringsTr.usernameRequired), findsOneWidget);
     expect(find.text(AppStringsTr.passwordRequired), findsOneWidget);
-    expect(find.text(AppStringsTr.foundationReady), findsNothing);
+    expect(find.text(AppStringsTr.homeWelcome), findsNothing);
   });
 }

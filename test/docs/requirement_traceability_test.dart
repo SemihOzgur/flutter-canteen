@@ -113,10 +113,16 @@ const Map<String, String> deliberatelyUntested = {
   // saatle tamamen test edilir (`barcode_input_handler_test.dart`). Yalnızca
   // GERÇEK SCANNER ile uçtan uca davranış donanım ister ve o docs/32 W1'dir.
   // Kısmen test edilen bir REQ'i tamamen muaf tutmak gerçek kapsamı gizler.
-  'REQ-COMP-001': 'Windows kurulum — docs/32 W5',
-  'REQ-COMP-002': 'Windows veri dizini — docs/32 W6',
-  'REQ-COMP-003': 'Windows DPI/çözünürlük — docs/32 W7',
-  'REQ-COMP-004': 'Windows installer — docs/32 W5',
+  // REQ-COMP-003 (macOS geliştirme desteği) buraya YAZILMAZ: bu test
+  // paketinin macOS'ta çalışıyor olması gereksinimin KANITIDIR; etiketi
+  // `platform_path_safety_test.dart` taşır.
+  //
+  // REQ-COMP-001 ve REQ-COMP-004 buraya YAZILMAZ: installer betiğinin
+  // platform kısıtı ve üzerine-yazma davranışı `inno_setup_test.dart` ile
+  // denetlenir. Uçtan uca kanıt (gerçek makinede kurulum ve güncelleme)
+  // hâlâ docs/32 W5–W6'dır; kısmen test edilen bir REQ'i tamamen muaf
+  // tutmak gerçek kapsamı gizler.
+  'REQ-COMP-002': 'DPI ölçekleme %100/%125/%150 — docs/32 W7',
 
   // ─ Faz 11–12 kapsamında, henüz ölçülmedi
   'REQ-PERF-003':

@@ -32,6 +32,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/test_window.dart';
+
 import '../../support/test_database.dart';
 
 const String kUsername = 'kasa';
@@ -80,6 +82,7 @@ void main() {
   );
 
   Future<void> pumpWizard(WidgetTester tester) async {
+    useSupportedSurface(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [canteenDatabaseProvider.overrideWithValue(db)],
@@ -311,7 +314,7 @@ void main() {
       reason: 'Üç zorunlu adım da kalıcılaşmış olmalıdır.',
     );
     expect(
-      find.text(AppStringsTr.foundationReady),
+      find.text(AppStringsTr.homeWelcome),
       findsOneWidget,
       reason:
           'docs/22 F1: kurulum otomatik giriş ile biter; kullanıcı tekrar '

@@ -18,11 +18,18 @@ class AppStringsTr {
   // ── Uygulama ─────────────────────────────────────────────────────────────
   static const String appTitle = 'Kantin Otomasyonu';
 
-  // ── Faz 1 — temel ekran ──────────────────────────────────────────────────
-  static const String foundationReady = 'Temel altyapı hazır';
-  static const String foundationDescription =
-      'Uygulama iskeleti kuruldu. Satış, ürün ve stok ekranları '
-      'sonraki fazlarda eklenecek.';
+  /// EC-SYS-008 — 1366×768 altında uyarılır, engellenmez.
+  static String lowResolutionWarning(int width, int height) =>
+      'Pencere $width×$height. Uygulama 1366×768 ve üzeri için tasarlandı; '
+      'daha küçük pencerede bazı ekranlar sıkışabilir.';
+
+  static const String lowResolutionDismiss = 'Kapat';
+
+  // ── Ana ekran ────────────────────────────────────────────────────────────
+  static const String homeWelcome = 'Hoş geldiniz';
+  static const String homeDescription =
+      'Satışa başlamak için Satış Ekranı\'nı açın. Kısayolların tamamı '
+      'satış ekranında F1 ile listelenir.';
 
   // ── Single instance (BR-GEN-005) ─────────────────────────────────────────
   static const String alreadyRunningTitle = 'Uygulama zaten çalışıyor';
