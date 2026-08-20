@@ -25,6 +25,7 @@ import 'package:canteen/domain/enums/stock_movement_type.dart';
 import 'package:canteen/domain/enums/stock_reference_type.dart';
 import 'package:canteen/domain/models/cart.dart';
 import 'package:canteen/domain/models/sale.dart';
+import 'package:canteen/domain/models/sale_return.dart';
 import 'package:canteen/domain/repositories/sale_repository.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
@@ -1020,6 +1021,29 @@ class _FailingSaleRepository implements SaleRepository {
       _inner.findByNumber(saleNumber);
 
   @override
+  Future<List<Sale>> list({
+    DateTime? fromUtc,
+    DateTime? toUtc,
+    SaleStatus? status,
+    int? userId,
+    int? minTotalMinor,
+    int? maxTotalMinor,
+    String? saleNumber,
+    int limit = 50,
+    int offset = 0,
+  }) => _inner.list(
+    fromUtc: fromUtc,
+    toUtc: toUtc,
+    status: status,
+    userId: userId,
+    minTotalMinor: minTotalMinor,
+    maxTotalMinor: maxTotalMinor,
+    saleNumber: saleNumber,
+    limit: limit,
+    offset: offset,
+  );
+
+  @override
   Future<List<Sale>> listCompletedBetween({
     required DateTime fromUtc,
     required DateTime toUtc,
@@ -1034,4 +1058,37 @@ class _FailingSaleRepository implements SaleRepository {
 
   @override
   Future<List<SaleItem>> itemsOf(int saleId) => _inner.itemsOf(saleId);
+
+  // --- Faz 7 yüzeyi: bu test kullanmaz, gerçek repository'ye devredilir ----
+
+  @override
+  Future<int> updateStatus(
+    int saleId, {
+    required SaleStatus status,
+    DateTime? cancelledAtUtc,
+    String? note,
+  }) => _inner.updateStatus(
+    saleId,
+    status: status,
+    cancelledAtUtc: cancelledAtUtc,
+    note: note,
+  );
+
+  @override
+  Future<int> insertReturn(NewReturn value) => _inner.insertReturn(value);
+
+  @override
+  Future<int> insertReturnItem(int returnId, NewReturnItem item) =>
+      _inner.insertReturnItem(returnId, item);
+
+  @override
+  Future<int> incrementReturnedQuantity(int saleItemId, int by) =>
+      _inner.incrementReturnedQuantity(saleItemId, by);
+
+  @override
+  Future<List<SaleReturn>> returnsOf(int saleId) => _inner.returnsOf(saleId);
+
+  @override
+  Future<List<SaleReturnItem>> returnItemsOf(int returnId) =>
+      _inner.returnItemsOf(returnId);
 }

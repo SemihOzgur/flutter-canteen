@@ -926,6 +926,62 @@ class AppStringsTr {
       'Geri yükleme kurtarılamadı. Güvenlik yedeği veri klasörünüzdeki '
       'backups/auto altındadır.';
 
+  // ── Satış geçmişi (docs/12 §7 · REQ-SALE-010) ────────────────────────────
+  static const String saleHistoryTitle = 'Satış Geçmişi';
+  static const String homeSaleHistoryAction = 'Satış Geçmişi';
+  static const String saleHistorySearchHint = 'Fiş numarası ara...';
+  static const String saleHistoryEmpty = 'Bu filtrelerle satış bulunamadı.';
+  static const String saleHistoryAllStatuses = 'Tüm durumlar';
+  static const String saleHistoryDetailTitle = 'Satış Detayı';
+  static const String saleHistoryItems = 'Satırlar';
+  static const String saleHistoryReturns = 'İadeler';
+  static const String saleHistoryNoReturns = 'Bu satışta iade yok.';
+  static const String saleHistoryCost = 'Maliyet';
+  static const String saleHistoryProfit = 'Kâr';
+  static const String saleHistoryCash = 'Alınan';
+  static const String saleHistoryChange = 'Para üstü';
+  static const String saleHistoryReturnedBadge = 'iade edildi';
+
+  /// docs/14 §2 — satış durumu adları.
+  static const Map<String, String> saleStatusNames = {
+    'completed': 'Tamamlandı',
+    'cancelled': 'İptal edildi',
+    'partiallyReturned': 'Kısmen iade edildi',
+    'returned': 'İade edildi',
+  };
+
+  // ── Satış iptali (docs/14 §3) ────────────────────────────────────────────
+  static const String saleCancelAction = 'Satışı İptal Et';
+  static String saleCancelTitle(String saleNumber) =>
+      'Satışı İptal Et — $saleNumber';
+  static String saleCancelSummary(String total, int itemCount) =>
+      'Tutar: $total · $itemCount ürün';
+  static const String saleCancelWarning =
+      'Bu işlem geri alınamaz. Tüm ürünlerin stoğu geri eklenecek. Satış '
+      'kaydı silinmez, iptal olarak işaretlenir ve raporlarda görünmeye '
+      'devam eder.';
+  static const String saleCancelReason = 'İptal sebebi';
+  static const String saleCancelConfirm = 'İptal Et';
+  static const String saleCancelled = 'Satış iptal edildi.';
+
+  /// BR-RET-001 — iade yapılmış satış iptal edilemez.
+  static const String saleCancelUnavailable = 'Bu satış iptal edilemez.';
+
+  // ── İade (docs/14 §4) ────────────────────────────────────────────────────
+  static const String saleReturnAction = 'İade Oluştur';
+  static String saleReturnTitle(String saleNumber) =>
+      'İADE — Satış $saleNumber';
+  static const String saleReturnColumnSold = 'Satılan';
+  static const String saleReturnColumnReturned = 'Önceki iade';
+  static const String saleReturnColumnQuantity = 'İade edilecek';
+  static const String saleReturnTotal = 'İade tutarı';
+  static const String saleReturnPriceNote =
+      '(satış anındaki fiyatlar üzerinden)';
+  static const String saleReturnReason = 'Sebep';
+  static const String saleReturnSave = 'İadeyi Kaydet';
+  static const String saleReturnSaved = 'İade kaydedildi.';
+  static String saleReturnMax(int max) => 'maks $max';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

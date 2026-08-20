@@ -16,9 +16,10 @@
 ///
 /// | Var | Yok |
 /// |---|---|
-/// | `initial` (Faz 3c) | İptal / iade hareketleri (**Faz 7**) |
-/// | `sale` (Faz 5) | Import düzeltmesi (**Faz 10**) |
+/// | `initial` (Faz 3c) | Import düzeltmesi (**Faz 10**) |
+/// | `sale` (Faz 5) | Restore tabanı (**Faz 9**) |
 /// | `stockEntry` · `waste` · `adjustment` (Faz 6) | Restore tabanı (**Faz 9**) |
+/// | `saleCancellation` · `return` (Faz 7) | Import düzeltmesi (**Faz 10**) |
 ///
 /// `stock_quantity`'ye yazan **başka bir yol açılmaz**; kalan üç hareket tipi
 /// de buraya eklenecektir.
@@ -244,6 +245,95 @@ class StockService {
       createdAtUtc: nowUtc,
       referenceType: StockReferenceType.sale,
       referenceId: saleId,
+    );
+    await _stock.writeStockQuantity(productId, resulting);
+
+    return Ok<int>(resulting);
+  }
+
+  /// Satış iptalinin stok geri yazımı — **docs/14 §3 · REQ-RET-002/006.**
+  ///
+  /// ```text
+  ///   stock_movements  type=saleCancellation, delta=+N, reference=(sale, id)
+  /// ```
+  ///
+  /// Orijinal `sale` hareketi **silinmez** (BR-STOCK-005): defter yalnızca
+  /// ileri yazılır ve "bu ürünün stoğu neden 12?" sorusu iptalden sonra da
+  /// yanıtlanabilir kalır.
+  ///
+  /// ⚠️ Transaction AÇMAZ — çağıran (`ReturnService`) satışın tamamını tek
+  /// transaction'da tutar (REQ-RET-010).
+  Future<Result<int>> recordSaleCancellation({
+    required int productId,
+    required int quantity,
+    required int saleId,
+    required int userId,
+    required DateTime nowUtc,
+  }) => _recordPositiveReference(
+    productId: productId,
+    quantity: quantity,
+    type: StockMovementType.saleCancellation,
+    referenceType: StockReferenceType.sale,
+    referenceId: saleId,
+    userId: userId,
+    nowUtc: nowUtc,
+  );
+
+  /// İadenin stok geri yazımı — **docs/14 §4 · REQ-RET-006.**
+  ///
+  /// ```text
+  ///   stock_movements  type=return, delta=+N, reference=(return, returnId)
+  /// ```
+  ///
+  /// Referans **iadeye** verilir, satışa değil: aynı satıştan birden fazla
+  /// kısmi iade yapılabilir (docs/14 §1) ve hangi hareketin hangi iadeye ait
+  /// olduğu ayırt edilebilmelidir.
+  Future<Result<int>> recordReturn({
+    required int productId,
+    required int quantity,
+    required int returnId,
+    required int userId,
+    required DateTime nowUtc,
+  }) => _recordPositiveReference(
+    productId: productId,
+    quantity: quantity,
+    type: StockMovementType.returnedToStock,
+    referenceType: StockReferenceType.returnOperation,
+    referenceId: returnId,
+    userId: userId,
+    nowUtc: nowUtc,
+  );
+
+  /// İptal ve iadenin ortak gövdesi: pozitif yönlü, referanslı hareket.
+  ///
+  /// docs/13 §2 — ikisi de `unit_cost` taşımaz: maliyet zaten
+  /// `sale_items.purchase_price_snapshot_minor`'dadır ve oradan türetilir.
+  Future<Result<int>> _recordPositiveReference({
+    required int productId,
+    required int quantity,
+    required StockMovementType type,
+    required StockReferenceType referenceType,
+    required int referenceId,
+    required int userId,
+    required DateTime nowUtc,
+  }) async {
+    // BR-STOCK-004 — delta `0` olamaz.
+    if (quantity <= 0) return const Err(StockFailures.nonPositiveSaleQuantity);
+
+    // Önbellek her çağrıda yeniden okunur: aynı ürün satışta iki satırda
+    // olabilir ve ikinci hareketin `resulting_stock`'u birincisini görmelidir.
+    final before = await _stock.readStockQuantity(productId);
+    final resulting = before + quantity;
+
+    await _stock.appendMovement(
+      productId: productId,
+      type: type,
+      quantityDelta: quantity,
+      resultingStock: resulting,
+      userId: userId,
+      createdAtUtc: nowUtc,
+      referenceType: referenceType,
+      referenceId: referenceId,
     );
     await _stock.writeStockQuantity(productId, resulting);
 
