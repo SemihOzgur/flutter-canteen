@@ -116,9 +116,13 @@ const Map<String, String> deliberatelyUntested = {
   // REQ-COMP-003 (macOS geliştirme desteği) buraya YAZILMAZ: bu test
   // paketinin macOS'ta çalışıyor olması gereksinimin KANITIDIR; etiketi
   // `platform_path_safety_test.dart` taşır.
-  'REQ-COMP-001': 'Windows 10/11 x64 üzerinde çalışma — docs/32 W5',
+  //
+  // REQ-COMP-001 ve REQ-COMP-004 buraya YAZILMAZ: installer betiğinin
+  // platform kısıtı ve üzerine-yazma davranışı `inno_setup_test.dart` ile
+  // denetlenir. Uçtan uca kanıt (gerçek makinede kurulum ve güncelleme)
+  // hâlâ docs/32 W5–W6'dır; kısmen test edilen bir REQ'i tamamen muaf
+  // tutmak gerçek kapsamı gizler.
   'REQ-COMP-002': 'DPI ölçekleme %100/%125/%150 — docs/32 W7',
-  'REQ-COMP-004': 'Güncelleme veriyi korur — docs/32 W5',
 
   // ─ Faz 11–12 kapsamında, henüz ölçülmedi
   'REQ-PERF-003':
