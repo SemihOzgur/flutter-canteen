@@ -132,6 +132,15 @@ class _RestoreConfirmDialogState extends State<_RestoreConfirmDialog> {
                   style: theme.textTheme.bodySmall,
                 ),
               ],
+              // EC-BKUP-007 — bozuk görsel de engellemez, bilgilendirir.
+              if (preview.corruptImageCount > 0) ...[
+                const SizedBox(height: 8),
+                Text(
+                  AppStringsTr.restoreCorruptImages(preview.corruptImageCount),
+                  key: const Key('restore_corrupt_images'),
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 16),
               Text(
                 AppStringsTr.restoreWarning,

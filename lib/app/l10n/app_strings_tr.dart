@@ -903,6 +903,11 @@ class AppStringsTr {
       '$count görsel yedekte bulunamadı. Geri yükleme yapılabilir; bu ürünler '
       'varsayılan ikonla gösterilir.';
 
+  /// EC-BKUP-007 — bozuk görsel de engelleyici değildir (REQ-BKUP-018).
+  static String restoreCorruptImages(int count) =>
+      '$count görsel dosyası bozuk ve geri yüklenmeyecek. Geri yükleme '
+      'yapılabilir; bu ürünler varsayılan ikonla gösterilir.';
+
   static String restoreConfirmPrompt(String phrase) =>
       'Onaylamak için "$phrase" yazın:';
   static const String restoreConfirmAction = 'Geri Yükle';
