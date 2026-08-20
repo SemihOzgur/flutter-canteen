@@ -19,6 +19,7 @@ import '../presentation/settings/supplier_management_screen.dart';
 import '../presentation/settings/user_management_screen.dart';
 import '../presentation/barcode/barcode_diagnostics_screen.dart';
 import '../presentation/products/product_list_screen.dart';
+import '../presentation/reports/reports_screen.dart';
 import '../presentation/backup/backup_screen.dart';
 import '../presentation/dashboard/dashboard_screen.dart';
 import '../presentation/history/sale_history_screen.dart';
@@ -75,6 +76,10 @@ class AppRoutes {
   /// asıl güvence `DashboardService`'in kapısıdır (BR-AUTH-012).
   static const String dashboard = '/dashboard';
 
+  /// Raporlar (docs/16). Dashboard ile **aynı kilidin arkasındadır**
+  /// (BR-AUTH-013); kilit oturum kapsamlı olduğu için parola tekrar sorulmaz.
+  static const String reports = '/reports';
+
   /// Satış geçmişi (docs/12 §7 · docs/14). **Kilit dışındadır** —
   /// iade ve iptal günlük kasa işidir, finansal rapor değildir (rules/04 §4).
   static const String saleHistory = '/sales/history';
@@ -115,6 +120,7 @@ class AppRoutes {
     sales: (_) => const SaleScreen(),
     saleHistory: (_) => const SaleHistoryScreen(),
     dashboard: (_) => const DashboardScreen(),
+    reports: (_) => const ReportsScreen(),
     stock: (_) => const StockOverviewScreen(),
     stockEntry: (_) => const StockEntryScreen(),
     stockMovements: (_) => const StockMovementsScreen(),

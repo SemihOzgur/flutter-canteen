@@ -1025,6 +1025,27 @@ class AppStringsTr {
 
   static const String dashboardNoComparison = 'önceki dönemde veri yok';
 
+  // ── Raporlar (docs/16) ───────────────────────────────────────────────────
+  static const String reportsTitle = 'Raporlar';
+  static const String reportProductSales = 'Ürün Satış Raporu';
+  static const String reportCategorySales = 'Kategori Raporu';
+  static const String reportExportCsv = 'CSV Olarak Kaydet';
+  static const String reportExported = 'Rapor kaydedildi.';
+  static const String reportExportCancelled = 'Kaydetme iptal edildi.';
+  static const String reportEmpty =
+      'Seçilen kriterlere uygun kayıt bulunamadı.';
+  static const String reportColumnProduct = 'Ürün';
+  static const String reportColumnCategory = 'Kategori';
+  static const String reportColumnUnits = 'Adet';
+  static const String reportColumnRevenue = 'Ciro';
+  static const String reportColumnProfit = 'Kâr';
+  static String reportRowCount(int count) => '$count kayıt';
+
+  /// docs/16 §2 — dışa aktarma FİLTRELENMİŞ TÜM sonucu kapsar.
+  static const String reportExportNotice =
+      'Dışa aktarma, ekranda görünen sayfayı değil, filtrelenmiş tüm sonucu '
+      'kapsar.';
+
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =

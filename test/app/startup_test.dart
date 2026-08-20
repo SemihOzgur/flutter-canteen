@@ -300,12 +300,13 @@ void main() {
         AppRoutes.saleHistory,
         // Faz 8 — docs/15 · BR-AUTH-013.
         AppRoutes.dashboard,
+        AppRoutes.reports,
         // Faz 9 — docs/19.
         AppRoutes.backup,
       });
       expect(
         routes.length,
-        18,
+        19,
         reason: 'Aynı yol iki kez tanımlanırsa biri sessizce kaybolur.',
       );
     });

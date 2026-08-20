@@ -39,6 +39,7 @@ class HomeScreen extends ConsumerWidget {
     'home_financial_access_button',
   );
   static const Key dashboardButtonKey = Key('home_dashboard_button');
+  static const Key reportsButtonKey = Key('home_reports_button');
   static const Key salesButtonKey = Key('home_sales_button');
   static const Key stockButtonKey = Key('home_stock_button');
   static const Key saleHistoryButtonKey = Key('home_sale_history_button');
@@ -66,6 +67,16 @@ class HomeScreen extends ConsumerWidget {
     // duruyor: rota koruması bir gezinme ayrıntısıdır ve unutulabilir,
     // `DashboardService`'in kapısı unutulamaz (BR-AUTH-012).
     await Navigator.of(context).pushNamed(AppRoutes.dashboard);
+  }
+
+  /// docs/22 F9 — Raporlar **aynı** kilidin arkasındadır (BR-AUTH-013).
+  ///
+  /// Kilit oturum kapsamlı olduğu için Dashboard açılmışsa parola tekrar
+  /// sorulmaz (BR-AUTH-016).
+  Future<void> _openReports(BuildContext context, WidgetRef ref) async {
+    if (!await ensureFinancialAccess(context, ref)) return;
+    if (!context.mounted) return;
+    await Navigator.of(context).pushNamed(AppRoutes.reports);
   }
 
   @override
@@ -202,6 +213,12 @@ class HomeScreen extends ConsumerWidget {
                       onPressed: () => _openDashboard(context, ref),
                       icon: const Icon(Icons.lock_outline),
                       label: const Text(AppStringsTr.homeDashboardAction),
+                    ),
+                    OutlinedButton.icon(
+                      key: HomeScreen.reportsButtonKey,
+                      onPressed: () => _openReports(context, ref),
+                      icon: const Icon(Icons.lock_outline),
+                      label: const Text(AppStringsTr.reportsTitle),
                     ),
                   ],
                 ),

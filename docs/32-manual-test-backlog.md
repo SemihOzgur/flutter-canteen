@@ -139,6 +139,8 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 | G7 | ⬜ Bir satışı iptal et | Net ciro düşer; **brüt aynı kalır** | OD-028 |
 | G8 | ⬜ KDV oranı tanımlı bir ürün sat | Kâr **KDV hariç** matrahtan; brüt cirodan değil | REQ-VAT-009 |
 | G9 | ⬜ 100.000 satış satırıyla aç | **< 1 saniye** | docs/15 §5 |
+| G10 | ⬜ Raporlar → CSV Olarak Kaydet → dosyayı **Türkçe Excel'de aç** | Sütunlar ayrı, Türkçe karakterler bozulmamış | rules/03 §7 |
+| G11 | ⬜ Adı `=1+1` olan bir ürün oluştur, sat, raporu dışa aktar, Excel'de aç | Hücre **metin** olarak görünür, hesaplanmaz | REQ-SEC-005 |
 
 > **G9 elle ölçülmelidir.** Otomatik testlerde 10.000 ürünle veri yolu ölçüldü
 > (16 ms) ama dashboard'un 100k satırlık gerçek yükü ve ekran boyaması
