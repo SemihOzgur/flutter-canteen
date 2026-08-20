@@ -218,6 +218,10 @@ class _VatRateManagementScreenState
     );
   }
 
+  /// Boş durum yoktur: kurulum `%0 — KDV Yok` oranını daima oluşturur
+  /// (OD-017) ve oran kaydı **silinemez** (docs/08 §4 — `VatRateService`
+  /// silme metodu sunmaz), yani liste hiçbir zaman boşalmaz. Pasif oranlar
+  /// da listelenir. Var olmayan bir durum için metin uydurulmaz.
   Widget _buildList(List<VatRate> rates) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

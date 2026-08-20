@@ -24,7 +24,9 @@ abstract final class CartFailures {
   /// negatif miktar için üretilir.
   static const Failure negativeQuantity = Failure(
     code: 'cart_quantity_negative',
-    userMessage: 'Miktar negatif olamaz.',
+    // rules/05 §5 — "ne oldu + ne yapmalıyım". Yalnızca "negatif olamaz"
+    // demek, kullanıcıya satırı nasıl kaldıracağını söylemez.
+    userMessage: 'Miktar negatif olamaz. Satırı kaldırmak için 0 girin.',
   );
 
   /// EC-SALE-007 — negatif fiyat reddedilir (BR-PROD-006).

@@ -10,6 +10,19 @@
 /// | Barkod politikası uygulanır | BR-IMEX-001 |
 /// | Stok **hareket** oluşturur | REQ-IMEX-011 |
 /// | Kategori/tedarikçi otomatik oluşur | docs/20 §4 |
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-IMEX-009** — barkod çakışma politikası seçilir
+/// - **REQ-IMEX-010** — dosya içi duplicate reddedilir
+/// - **REQ-IMEX-012** — satış/hareket import edilemez
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-IMEX-002** — sistemde var olan barkod dosyada
+/// - **EC-IMEX-005** — zorunlu sütun eşleştirilmemiş
+/// - **EC-IMEX-010** — import ortasında hata → tam rollback
+/// - **EC-IMEX-011** — import onaylanmadı/iptal edildi → hiçbir kayıt oluşmaz
+///
 library;
 
 import 'package:canteen/application/audit/audit_actions.dart';

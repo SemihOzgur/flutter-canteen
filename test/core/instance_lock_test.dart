@@ -5,6 +5,10 @@
 /// **Kapsam notu:** Gerçek çapraz-süreç dışlama, işletim sistemi kilidine
 /// dayanır ve manuel test **W11** ile doğrulanır (docs/27 §8). Buradaki testler
 /// kilit dosyasının yaşam döngüsünü deterministik olarak doğrular.
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-SYS-001** — ikinci uygulama örneği açılıyor
+///
 library;
 
 import 'dart:convert';

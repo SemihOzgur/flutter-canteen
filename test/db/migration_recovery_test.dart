@@ -8,6 +8,11 @@
 /// **Kapsam notu:** Kullanıcıya "geri yükleyelim mi?" diye soran diyalog Faz 3+
 /// kapsamındadır (onaylanmış karar). Buradaki testler **mekanizmayı** doğrular:
 /// tespit, snapshot, doğrulama, geri yükleme ve yarım şemayla açılmama.
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-SYS-004** — DB dosyası bozuk (`integrity_check` fail)
+/// - **EC-SYS-005** — migration yarım kalmış
+///
 library;
 
 import 'dart:io';

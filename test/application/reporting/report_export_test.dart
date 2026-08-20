@@ -4,6 +4,14 @@
 /// En kritik iddia: **dışa aktarma kilidin etrafından dolaşamaz.** "Dışa
 /// aktar" düğmesi, ekranda gizlenmiş bir raporu dosyaya yazmanın yolu
 /// olmamalıdır.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-REP-002** — tarih filtresi
+/// - **REQ-REP-003** — CSV dışa aktarma
+/// - **REQ-REP-004** — export filtrelenmiş tümünü kapsar
+/// - **REQ-REP-005** — Türkçe karakter uyumlu CSV
+/// - **REQ-REP-008** — snapshot alanları kullanılır
 library;
 
 import 'package:canteen/application/audit/audit_actions.dart';

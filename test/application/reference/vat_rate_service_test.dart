@@ -4,6 +4,10 @@
 ///
 /// Kritik invariant: `is_default` **yalnızca bir kayıtta** `true` olabilir
 /// (docs/04 §3.4).
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-VAT-010** — pasif oran varsayılan yapılamaz
 library;
 
 import 'dart:io';

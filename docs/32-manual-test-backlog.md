@@ -195,6 +195,7 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 | W13 | ⬜ 260 karakter yol sınırı | Platform |
 | W14 | ⬜ Antivirüs `.canteenbackup` dosyasını engellemiyor | Platform |
 | W15 | ⬜ Türkçe karakterli / boşluklu kullanıcı adı | Kısmen otomatikleştirildi — bkz. §9 |
+| W16 | ⬜ **Uygulama 7 gün kesintisiz açık** (EC-SYS-009) | Bellek sızıntısı ve dosya tanıtıcı birikmesi yalnızca gerçek süreyle görülür |
 
 ### Faz 8 — ortam bağımlı
 

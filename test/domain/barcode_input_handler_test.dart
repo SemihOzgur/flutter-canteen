@@ -2,6 +2,19 @@
 ///
 /// Saat enjekte edilir: 35 ms ile 36 ms arasındaki fark **hiçbir gerçek
 /// bekleme olmadan** doğrulanır (rules/06 §7 — determinizm).
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-BARC-002** — süre eşiği + `Enter` ile insan yazımından ayırt etme
+///   (uçtan uca gerçek scanner davranışı donanım ister — docs/32 W1)
+/// - **REQ-BARC-008** — barkod metindir; baştaki sıfır korunur
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-BARC-001** — kullanıcı elle hızlı yazıyor, Enter'a basıyor
+/// - **EC-BARC-003** — yarım barkod okundu (kısa hareket)
+/// - **EC-BARC-004** — 64 karakterden uzun giriş
+/// - **EC-BARC-008** — uzun kod yavaş okunuyor, toplam süre eşiği aşıyor
+///
 library;
 
 import 'package:canteen/domain/services/barcode_input_handler.dart';

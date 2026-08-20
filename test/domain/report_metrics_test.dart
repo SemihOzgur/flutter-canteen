@@ -4,6 +4,11 @@
 /// matrah)** 🔴.
 ///
 /// Saf Dart: net ciro ve kâr formülleri burada, veritabanı olmadan sınanır.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-DASH-007** — net (iade/iptal düşülmüş) metrikler
+/// - **REQ-REP-013** — kâr KDV hariç matrahtan
 library;
 
 import 'package:canteen/core/money/money.dart';

@@ -4,6 +4,10 @@
 /// stok ekranı). Kopyalandığında biri `<` diğeri `<=` olur ve fark **yalnızca
 /// eşikteki üründe** görünür — yani en kolay gözden kaçan yerde. Kural bu
 /// yüzden domain'de tek yerde yaşar ve sınırları burada sınanır.
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-PROD-011** — `minimum_stock = 0` kritik uyarısına girmez
+///
 library;
 
 import 'package:canteen/core/money/money.dart';

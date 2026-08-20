@@ -10,6 +10,10 @@
 /// | Satış toplamı / sayaç sapmaları bulunur | docs/24 §3.3 |
 /// | Eksik görsel dosyası bulunur | docs/24 §3.3 |
 /// | Çalıştırma audit'e yazılır | docs/18 §3 |
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-STOCK-004** — `stock_quantity` defterle uyuşmuyor
+///
 library;
 
 import 'dart:io';

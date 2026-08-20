@@ -5,6 +5,18 @@
 /// alanı)** 🔴 · **VAT** 🔴 · **Stock** 🔴 · **Profit** 🔴.
 ///
 /// docs/27 §4: gerçek in-memory SQLite; mock veritabanı yoktur.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-CART-008** — boş sepetle satış yok
+/// - **REQ-SALE-011** — miktarlar pozitif tam sayı
+/// - **REQ-FIN-009** — satış miktarı pozitif tam sayı
+/// - **REQ-VAT-004** — oran değişikliği geçmişi bozmaz
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-SALE-003** — satış ortasında hata/kesinti → tam rollback, sayaç geri alınır
+/// - **EC-PROD-023** — KDV oranı yokken `line_vat = 0`, `line_net = line_total`
+///
 library;
 
 import 'package:canteen/application/sales/cart_service.dart';

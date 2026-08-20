@@ -6,6 +6,10 @@
 /// doğrulanır.
 ///
 /// Test önceliği rules/06 §2 → **Authentication** 🔴.
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-BKUP-012** — restore edilen DB'de kullanıcı yok → sihirbaz
+///
 library;
 
 import 'dart:io';

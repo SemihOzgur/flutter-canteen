@@ -15,6 +15,10 @@
 /// | Teknik detay / hata kodu görünmez | REQ-UX-008 · REQ-SEC-007 |
 ///
 /// Golden (piksel) testi **yazılmaz** (docs/27 §4).
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-IMG-011** — ürün başına 1 görsel
 library;
 
 import 'package:canteen/app/l10n/app_strings_tr.dart';

@@ -1,6 +1,10 @@
 /// Tedarikçi yönetimi testleri — **BR-SUP-001/002 · REQ-SUP-001/002/004**
 ///
 /// docs/27 §4: gerçek in-memory SQLite. Kapsanan edge case: EC-SUP-001.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-SUP-004** — tedarikçi opsiyoneldir
 library;
 
 import 'dart:io';

@@ -12,6 +12,21 @@
 /// | Yarım kalan restore kurtarılır | REQ-BKUP-012 |
 /// | Satış sayacı düzeltilir, oturum düşer | REQ-BKUP-015 · REQ-BKUP-020 |
 /// | Zip-slip reddedilir | rules/03 §7 |
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-DATA-004** — yarım kalan işlem kurtarılır
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-BKUP-001** — yedek dosyası bozuk (checksum uyuşmuyor)
+/// - **EC-BKUP-002** — yedek geçerli ZIP değil
+/// - **EC-BKUP-003** — `metadata.json` eksik/bozuk
+/// - **EC-BKUP-004** — yedek daha yeni şema versiyonlu
+/// - **EC-BKUP-009** — restore yarım kaldı — bayrakla kurtarılır
+/// - **EC-BKUP-011** — yedekteki veri mevcut veriden az — karşılaştırmalı özet
+/// - **EC-AUTH-007** — restore sonrası oturum sonlandırılır
+/// - **EC-DASH-010** — restore sonrası finansal kilit kapatılır
+///
 library;
 
 import 'dart:io';

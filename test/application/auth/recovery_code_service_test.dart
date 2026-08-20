@@ -8,6 +8,15 @@
 ///   * EC-REC-004 — dört adım **tek transaction**
 ///   * EC-REC-005 — hata enjekte → **tam rollback**: eski parola VE eski kod
 ///     hâlâ geçerli
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-AUTH-025** — recovery code ile dashboard parolası sıfırlanabilir
+/// - **REQ-AUTH-026** — recovery code tek kullanımlıktır
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-DASH-007** — dashboard parolası unutuldu → recovery code
+///
 library;
 
 import 'dart:convert';

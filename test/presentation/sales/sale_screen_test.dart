@@ -20,6 +20,18 @@
 /// | Sepeti temizleme onaysız çalışmaz — `[Vazgeç]` **ve** `Esc` | REQ-UX-009 |
 ///
 /// Golden (piksel) testi **yazılmaz** (docs/27 §4).
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-UX-004** — 1366×768 tam işlevsel
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-STOCK-001** — stok 0, satış yapılıyor — uyarı, engel değil
+/// - **EC-STOCK-002** — stok zaten negatif, satış devam ediyor
+/// - **EC-BARC-006** — aynı barkod arka arkaya — miktar artar
+/// - **EC-BARC-007** — barkod pasif ürüne ait
+/// - **EC-BARC-010** — barkod okutuldu, ürün ekleme dialogu iptal edildi
+///
 library;
 
 import 'package:canteen/app/l10n/app_strings_tr.dart';

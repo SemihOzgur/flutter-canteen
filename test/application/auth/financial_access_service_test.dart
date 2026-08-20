@@ -6,6 +6,18 @@
 /// En kritik test docs/27 §6.1b'den gelir: *"Parola girilmeden hiçbir
 /// dashboard/rapor sorgusunun çalışmadığı doğrulanır (sorgu sayacı ile)"*
 /// → `BR-AUTH-012` grubu.
+///
+/// ## Kapsanan requirement'lar (Faz 11 izlenebilirliği)
+///
+/// - **REQ-AUDIT-012** — kilit olayları audit'e yazılır
+/// - **REQ-AUTH-017** — dashboard parolası salt'lı hash olarak saklanır
+/// - **REQ-DASH-011** — kilit açılmadan erişilemez
+/// - **REQ-REP-014** — raporlar da aynı kilitle korunur
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-DASH-012** — kilit kapalıyken Raporlar açılmak isteniyor
+/// - **EC-DASH-013** — kilit bir kez açılınca Dashboard ↔ Raporlar tekrar sormaz
+///
 library;
 
 import 'dart:convert';

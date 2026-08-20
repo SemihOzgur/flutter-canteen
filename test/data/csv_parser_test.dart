@@ -7,6 +7,11 @@
 /// | `\r\n` ve `\n` desteklenir | docs/20 §2 |
 /// | RFC 4180 tırnak kuralları | docs/20 §2 |
 /// | Boş satırlar atlanır | Excel dosya sonuna boş satır ekler |
+/// ## Kapsanan uç durumlar (docs/26 · Faz 11 izlenebilirliği)
+///
+/// - **EC-IMEX-003** — CSV bozuk / ayırıcı tutarsız
+/// - **EC-IMEX-008** — boş dosya / yalnızca başlık
+///
 library;
 
 import 'package:canteen/data/files/csv_parser.dart';
