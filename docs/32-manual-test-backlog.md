@@ -35,7 +35,8 @@ madde bu listeye girmez; "unuttum" ile "edilemez" aynı yere yazılmaz.
 | 7 | İade, iptal, satış geçmişi | ✅ | ⬜ |
 | 9 | Yedekleme ve geri yükleme | ✅ | ⬜ |
 | 8 | Dashboard | ✅ | ⬜ |
-| 10–12 | Import, optimizasyon, Windows | — | — |
+| 10 | Import / export | ✅ | ⬜ |
+| 11–12 | Optimizasyon, Windows | — | — |
 
 ---
 
@@ -148,6 +149,29 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 
 ---
 
+## 6c. Faz 10 — İçe / dışa aktarma
+
+> Ana ekran → **İçe / Dışa Aktar**
+
+| # | Senaryo | Beklenen | Kural |
+|---|---|---|---|
+| H1 | ⬜ **Şablon İndir** → dosyayı **Türkçe Excel'de aç** | Sütunlar ayrı, Türkçe karakterler bozulmamış | REQ-IMEX-002 |
+| H2 | ⬜ Şablonu Excel'de doldur, **CSV olarak kaydet**, içe aktar | Excel'in yazdığı dosya okunur | docs/20 §2 |
+| H3 | ⬜ Hatalı satır içeren dosya seç | Önizlemede satır no + sebep | REQ-IMEX-004/005 |
+| H4 | ⬜ **Hata Listesini CSV İndir** → Excel'de aç, düzelt, tekrar dene | Döngü çalışır | REQ-IMEX-006 |
+| H5 | ⬜ Aynı barkodu iki satıra yaz | **İki satır da** reddedilir | BR-IMEX-002 |
+| H6 | ⬜ Sistemde kayıtlı barkodlu dosya, politika **"atla"** | Satır atlanır | BR-IMEX-001 |
+| H7 | ⬜ Aynı dosya, politika **"güncelle"** | Ürün güncellenir, **stok değişmez** | docs/20 §4.1 |
+| H8 | ⬜ Onaylamadan ekrandan çık | Hiçbir ürün oluşmamış | REQ-IMEX-007 |
+| H9 | ⬜ **Ürünler**'i dışa aktar → düzenle → içe aktar | Round-trip veri kaybetmiyor | REQ-IMEX-013 |
+| H10 | ⬜ 1.000 satırlık gerçek dosya | **< 10 sn**, UI donmuyor | REQ-IMEX-015 |
+
+> **H10'un yarısı ölçüldü:** servis katmanında 1.000 satır **795 ms** sürüyor
+> (dosya tabanlı veritabanıyla). Ölçülmeyen kısım **UI'nın donup donmadığı** —
+> import şu an ana isolate'te çalışıyor (docs/20 §6 isolate önerir).
+
+---
+
 ## 7. Windows'a özgü — W1…W15 · RSK-018
 
 > **Faz 4'ten beri birikiyor.** macOS'ta çalışan bir şeyin Windows'ta
@@ -222,6 +246,10 @@ proje sahibinindir.
 
 | Konu | Nerede geçiyor | Neden yapılmadı |
 |---|---|---|
+| **Excel (.xlsx) import/export** | docs/20 §2 (🟡 ikincil) · REQ-IMEX-001 | CSV **birincil** formattır (OD-009) ve Faz 10 çıkış kriterlerinin hiçbiri Excel gerektirmiyor. `ImportSource` soyutlaması (BR-DATA-006) CSV yolunun Excel'den bağımsız çalışmasını zaten sağlıyor; Excel implementasyonu eklendiğinde CSV yolu değişmeyecek |
+| **Import'un isolate'te çalışması** | docs/20 §6 · REQ-IMEX-015 | 1.000 satır **795 ms** sürüyor; isolate'in getireceği karmaşıklık bu sürede kendini ödemiyor. Ölçüm 10.000 satıra çıkarsa yeniden değerlendirilmeli |
+| **Sütun eşleştirme EKRANI** | docs/20 §3 · REQ-IMEX-003 | Otomatik eşleştirme (`ProductImportRules.autoMap`) uygulandı ve Türkçe katlama ile şablon dışı başlıkları da yakalıyor. Elle eşleştirme arayüzü, otomatik eşleşmenin yetmediği görülürse eklenir |
+| **Sayım (stok) import'u** | docs/20 §7 | Ayrı bir akıştır; ürün import'undan bağımsız. Stok düzeltme ekranı Faz 6'da elle çalışıyor |
 | `Ctrl+Z` — son sepet işlemini geri al | docs/23 §2 · docs/12 §3 kısayol tabloları | REQ'i yok; 10 adımlık geri alma yığını ister |
 | `*` + sayı + `Enter` — miktarı doğrudan gir | docs/23 §2 · docs/12 §3 | REQ'i yok |
 | `cartTakenOver` — aktif sepet varken farklı kullanıcı girişi | REQ-AUTH-010 (🟢 Could) | 🟢 Could; `AuditActions.futurePhaseActions` içinde kayıtlı |
