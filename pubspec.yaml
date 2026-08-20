@@ -74,6 +74,9 @@ dependencies:
   # veritabanı belleğe alınmadan özetlenir. `crypto`'nun zaten geçişli
   # bağımlılığıdır; doğrudan import edildiği için açıkça yazılır.
   convert: ^3.1.2
+  # Grafik — OD-014. rules/01 §7: karar kapsamındadır, yeniden onay
+  # gerektirmez.
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:

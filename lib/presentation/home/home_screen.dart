@@ -10,14 +10,15 @@
 /// | Kategoriler | 🔓 kilit dışında | rules/04 §4 · docs/10 §1 |
 /// | Tedarikçiler | 🔓 kilit dışında | rules/04 §4 · docs/10 §2 |
 /// | KDV Oranları | 🔓 kilit dışında | rules/04 §4 · docs/08 §4 |
+/// | Satış geçmişi | 🔓 kilit dışında | rules/04 §4 |
+/// | Stok | 🔓 kilit dışında | rules/04 §4 |
+/// | Yedekleme | 🔓 kilit dışında | rules/04 §4 |
 /// | Dashboard | 🔒 **kilit arkasında** | BR-AUTH-013 · docs/22 F9 |
 ///
-/// ## Dashboard bağlantısı neden burada
+/// ## Dashboard kapısı
 ///
-/// Dashboard ekranı Faz 8'e aittir; buradaki bağlantı yalnızca **kapıyı**
-/// (`ensureFinancialAccess`) çalıştırır ve kilit açılınca Faz 8'i bekleyen bir
-/// yer tutucu gösterir. Böylece F9 akışı bugün uçtan uca kullanılabilir ve
-/// kapının bağlantısı kullanılmadan (dead code olarak) durmaz.
+/// docs/22 F9: kilit **ekran açılmadan önce** sorulur. Kullanıcı vazgeçerse
+/// Dashboard hiç kurulmaz ve tek sorgu çalışmaz.
 ///
 /// **BR-AUTH-012:** kilit açılmadan hiçbir finansal sorgu çalıştırılmaz —
 /// bu ekranda zaten hiçbir sorgu, hesaplama veya veri kaynağı yoktur
@@ -61,19 +62,10 @@ class HomeScreen extends ConsumerWidget {
     if (!await ensureFinancialAccess(context, ref)) return;
     if (!context.mounted) return;
 
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text(AppStringsTr.dashboardPlaceholderTitle),
-        content: const Text(AppStringsTr.dashboardPlaceholderMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text(AppStringsTr.okAction),
-          ),
-        ],
-      ),
-    );
+    // Faz 8 — kapı açıldı, ekran geldi. Kilit yine de ekranın İÇİNDE de
+    // duruyor: rota koruması bir gezinme ayrıntısıdır ve unutulabilir,
+    // `DashboardService`'in kapısı unutulamaz (BR-AUTH-012).
+    await Navigator.of(context).pushNamed(AppRoutes.dashboard);
   }
 
   @override

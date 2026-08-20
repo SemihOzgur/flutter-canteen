@@ -34,7 +34,8 @@ madde bu listeye girmez; "unuttum" ile "edilemez" aynı yere yazılmaz.
 | 6 | Stok + audit | ✅ | ⬜ |
 | 7 | İade, iptal, satış geçmişi | ✅ | ⬜ |
 | 9 | Yedekleme ve geri yükleme | ✅ | ⬜ |
-| 8, 10–12 | Dashboard, import, optimizasyon, Windows | — | — |
+| 8 | Dashboard | ✅ | ⬜ |
+| 10–12 | Import, optimizasyon, Windows | — | — |
 
 ---
 
@@ -120,6 +121,28 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 | D8 | ⬜ Geri yüklemeyi **tamamla**, uygulamayı yeniden başlat | Login ekranı gelir; satış sayacı yedektekine çekilmiş | REQ-BKUP-015/020 |
 | D9 | ⬜ Yedeği **başka bir makinede** aç | Geri yükleme çalışır | docs/31 Faz 9 çıkış kriteri |
 | D10 | ⬜ Yedeği bir arşiv programıyla aç | `metadata.json` · `database.sqlite` · `checksums.json` · `images/` | docs/19 §2 |
+
+---
+
+## 6b. Faz 8 — Dashboard
+
+> Ana ekran → **Dashboard** (finansal erişim parolası sorulur)
+
+| # | Senaryo | Beklenen | Kural |
+|---|---|---|---|
+| G1 | ⬜ Dashboard'a bas, **Vazgeç** de | Ekran **hiç açılmaz** | EC-DASH-003 |
+| G2 | ⬜ Parolayı gir | Dashboard açılır, KPI'lar dolar | BR-AUTH-013 |
+| G3 | ⬜ Raporlar'a geç (Faz 8c) | Parola **tekrar sorulmaz** | BR-AUTH-016 |
+| G4 | ⬜ Çıkış yap, tekrar gir, Dashboard'a bas | Parola **yeniden sorulur** | REQ-AUTH-021 |
+| G5 | ⬜ Dönem düğmelerini değiştir | Rakamlar yeniden hesaplanır | docs/15 §2 |
+| G6 | ⬜ Bir satışı iade et, Dashboard'a dön | Net ciro düşer, ayrıntıda iade görünür | BR-RET-007 |
+| G7 | ⬜ Bir satışı iptal et | Net ciro düşer; **brüt aynı kalır** | OD-028 |
+| G8 | ⬜ KDV oranı tanımlı bir ürün sat | Kâr **KDV hariç** matrahtan; brüt cirodan değil | REQ-VAT-009 |
+| G9 | ⬜ 100.000 satış satırıyla aç | **< 1 saniye** | docs/15 §5 |
+
+> **G9 elle ölçülmelidir.** Otomatik testlerde 10.000 ürünle veri yolu ölçüldü
+> (16 ms) ama dashboard'un 100k satırlık gerçek yükü ve ekran boyaması
+> ölçülmedi.
 
 ---
 

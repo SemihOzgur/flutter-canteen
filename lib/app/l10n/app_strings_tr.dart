@@ -136,12 +136,6 @@ class AppStringsTr {
   static const String financialAccessUnlockAction = 'Aç';
   static const String financialAccessForgotAction = 'Şifremi unuttum';
 
-  /// Faz 8 gelene kadar kilidin arkasında gösterilecek yer tutucu.
-  static const String dashboardPlaceholderTitle = 'Finansal erişim açıldı';
-  static const String dashboardPlaceholderMessage =
-      'Dashboard ve Raporlar ekranları sonraki fazda eklenecek. '
-      'Kilit bu oturum boyunca açık kalır.';
-
   // ── Faz 3a — kurtarma akışı (docs/17 §8 · docs/22 F10) ───────────────────
   static const String recoveryTitle = 'Kurtarma Kodu';
   static const String recoveryStepCounterCode = 'Adım 1 / 3';
@@ -981,6 +975,55 @@ class AppStringsTr {
   static const String saleReturnSave = 'İadeyi Kaydet';
   static const String saleReturnSaved = 'İade kaydedildi.';
   static String saleReturnMax(int max) => 'maks $max';
+
+  // ── Dashboard (docs/15) ──────────────────────────────────────────────────
+  static const String dashboardTitle = 'Dashboard';
+  static const String dashboardNetRevenue = 'Net Ciro';
+  static const String dashboardNetProfit = 'Net Kâr';
+  static const String dashboardSaleCount = 'Satış Adedi';
+  static const String dashboardUnitCount = 'Satılan Ürün';
+  static const String dashboardCriticalStock = 'Kritik Stok';
+  static const String dashboardNegativeStock = 'Negatif Stok';
+  static const String dashboardAverageSale = 'Ortalama fiş';
+  static const String dashboardMargin = 'Kâr marjı';
+
+  /// docs/15 §3.1 — kritik/negatif kartlar tarih aralığından bağımsızdır.
+  static const String dashboardNowSuffix = 'şu an';
+
+  static const String dashboardRevenueTrend = 'Ciro Trendi';
+  static const String dashboardHourlyDensity = 'Saatlik Yoğunluk';
+  static const String dashboardTopProducts = 'En Çok Satan Ürünler';
+  static const String dashboardCategories = 'Kategori Dağılımı';
+  static const String dashboardRecentSales = 'Son Satışlar';
+  static const String dashboardNoData = 'Bu dönemde veri yok.';
+  static const String dashboardOtherCategories = 'Diğer';
+
+  /// docs/15 §5 — brüt/iptal/iade ayrıntısı ayrı bölümde.
+  static const String dashboardBreakdownTitle = 'İptal ve İadeler';
+  static const String dashboardGrossRevenue = 'Brüt ciro';
+  static const String dashboardCancelled = 'İptal';
+  static const String dashboardReturned = 'İade';
+  static const String dashboardWasteCost = 'Fire maliyeti';
+
+  /// docs/15 §2 — dönem seçici.
+  static const Map<String, String> dashboardPeriodNames = {
+    'today': 'Bugün',
+    'yesterday': 'Dün',
+    'thisWeek': 'Bu Hafta',
+    'thisMonth': 'Bu Ay',
+    'last7Days': 'Son 7 Gün',
+    'last30Days': 'Son 30 Gün',
+    'custom': 'Özel',
+  };
+
+  /// docs/15 §2 — karşılaştırma; önceki dönem boşsa gösterilmez.
+  static String dashboardChange(int bp) {
+    final sign = bp >= 0 ? '▲' : '▼';
+    final value = (bp.abs() / 100).toStringAsFixed(1).replaceAll('.', ',');
+    return '$sign%$value önceki döneme göre';
+  }
+
+  static const String dashboardNoComparison = 'önceki dönemde veri yok';
 
   // ── Genel hata (REQ-UX-007, REQ-SEC-007) ─────────────────────────────────
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
