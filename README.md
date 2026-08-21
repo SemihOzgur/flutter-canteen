@@ -12,7 +12,7 @@
 | Dil | Türkçe (V1 tek dil) |
 | **Backend** | **Yok** — hiçbir temel işlev internete bağımlı değildir |
 
-Kullanıcı kılavuzu: [`docs/33-user-guide.md`](docs/33-user-guide.md)
+Kullanıcı kılavuzu: [`docs/bilgilendirme.md`](docs/bilgilendirme.md)
 
 ---
 
@@ -101,4 +101,4 @@ macOS'ta çalışan bir şeyin Windows'ta çalıştığı **varsayılamaz**. Her
 | [`docs/26`](docs/26-edge-cases.md) | Uç durumlar (EC-*) |
 | [`docs/28`](docs/28-open-decisions.md) | Karar kaydı (OD-*) |
 | [`docs/31`](docs/31-roadmap.md) | Faz planı |
-| [`docs/33`](docs/33-user-guide.md) | Kullanıcı kılavuzu |
+| [`docs/bilgilendirme.md`](docs/bilgilendirme.md) | Kullanıcı kılavuzu |

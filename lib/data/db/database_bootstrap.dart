@@ -65,7 +65,14 @@ class DatabaseBootstrap {
     MigrationPlan? migrationPlan,
     this.supportedSchemaVersion = kSupportedSchemaVersion,
   }) : clock = clock ?? DateTime.now,
-       migrationPlan = migrationPlan ?? MigrationPlan.empty;
+       // Varsayılan **yayınlanan** plandır. `MigrationPlan.empty` idi ve
+       // bu, üretim yolunun şema yükseltmesini hiç görmemesine yol açıyordu:
+       // `CanteenDatabase`'in varsayılanı düzeltilmişti ama uygulama
+       // buradan geçtiği için plan hep boş kalıyordu. Testler
+       // `CanteenDatabase`'i doğrudan kurduğu için kusuru göremedi;
+       // `database_bootstrap_migration_test.dart` artık üretim yolunu
+       // izliyor.
+       migrationPlan = migrationPlan ?? MigrationPlan.released;
 
   MigrationCoordinator get coordinator => MigrationCoordinator(
     databaseFilePath: paths.databaseFile,
@@ -158,6 +165,28 @@ class DatabaseBootstrap {
   /// docs/06 §3 adım 2–9.
   Future<DatabaseOpenResult> _migrate({required int from}) async {
     final coord = coordinator;
+
+    // Adım 0: PLAN EKSİKSİZ Mİ — snapshot ve bayraktan ÖNCE.
+    //
+    // Eksik adım zaten `MigrationPlan.apply` içinde yakalanır, ama orası
+    // bayrak yazıldıktan SONRA çalışır. Sonuç, gerçekte hiç başlamamış bir
+    // migration için "yarım kaldı" bayrağı kalması ve uygulamanın bir daha
+    // açılmaması olurdu: kullanıcı, hiçbir şeyin değişmediği bir
+    // veritabanı için kurtarma ekranıyla karşılaşırdı.
+    //
+    // Kontrol burada yapılınca veritabanına **hiç dokunulmaz**.
+    for (var version = from; version < supportedSchemaVersion; version++) {
+      if (!migrationPlan.steps.any((step) => step.from == version)) {
+        throw MigrationException(
+          userMessage:
+              'Bu sürüm veritabanınızı güncelleyemiyor. Verileriniz '
+              'değiştirilmedi; lütfen uygulamanın son sürümünü kurun.',
+          technicalDetail:
+              'Migration adımı yok: v$version → v${version + 1} '
+              '(v$from → v$supportedSchemaVersion isteniyordu).',
+        );
+      }
+    }
 
     // Adım 2–3: snapshot al ve doğrula. Şema versiyonu mevcut hâlinde açılır ki
     // Drift snapshot alınmadan migration'a başlamasın.
