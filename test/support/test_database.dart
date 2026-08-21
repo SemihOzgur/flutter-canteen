@@ -92,9 +92,10 @@ void deleteDirectoryWithRetry(
   int maxAttempts = 5,
   Duration retryDelay = const Duration(milliseconds: 100),
   void Function()? deleteAction,
-  bool windowsFileLockRetryEnabled = Platform.isWindows,
+  bool? windowsFileLockRetryEnabled,
 }) {
   if (!directory.existsSync()) return;
+  final isWindowsRetryEnabled = windowsFileLockRetryEnabled ?? Platform.isWindows;
 
   var attempt = 0;
   while (true) {
@@ -104,7 +105,7 @@ void deleteDirectoryWithRetry(
     } on PathAccessException catch (e) {
       attempt += 1;
       final isWindowsFileInUse =
-          windowsFileLockRetryEnabled && e.osError?.errorCode == 32;
+          isWindowsRetryEnabled && e.osError?.errorCode == 32;
       if (!isWindowsFileInUse || attempt >= maxAttempts) rethrow;
       sleep(retryDelay);
     }
