@@ -95,7 +95,8 @@ void deleteDirectoryWithRetry(
   bool? windowsFileLockRetryEnabled,
 }) {
   if (!directory.existsSync()) return;
-  final isWindowsRetryEnabled = windowsFileLockRetryEnabled ?? Platform.isWindows;
+  final isWindowsRetryEnabled =
+      windowsFileLockRetryEnabled ?? Platform.isWindows;
 
   var attempt = 0;
   while (true) {
