@@ -4,6 +4,7 @@
 /// |---|---|
 /// | Ürün listesi satırı | 40×40 |
 /// | Ürün formu | 200×200 |
+/// | Satış ekranı ürün kartı | kart genişliği × 72 |
 ///
 /// ## Kırık görsel HATA DEĞİLDİR
 ///
@@ -32,13 +33,30 @@ class ProductImageView extends ConsumerWidget {
   /// Veri dizinine **göreli** yol (`images/<uuid>.jpg`) — docs/21 §1.
   final String? relativePath;
 
+  /// Kare gösterim kenarı. [width]/[height] verilirse yok sayılır.
   final double size;
+
+  /// Kare olmayan gösterim için genişlik — satış ekranı kartı gibi.
+  final double? width;
+
+  /// Kare olmayan gösterim için yükseklik.
+  final double? height;
+
+  /// Köşe yuvarlaması — kartın üstüne oturan görselde alt köşeler düz kalır.
+  final BorderRadius? borderRadius;
 
   const ProductImageView({
     required this.relativePath,
     required this.size,
+    this.width,
+    this.height,
+    this.borderRadius,
     super.key,
   });
+
+  double get _width => width ?? size;
+  double get _height => height ?? size;
+  BorderRadius get _radius => borderRadius ?? BorderRadius.circular(6);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,12 +64,12 @@ class ProductImageView extends ConsumerWidget {
     if (provider == null) return _fallback(context);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: _radius,
       child: Image(
         key: imageKey,
         image: provider,
-        width: size,
-        height: size,
+        width: _width,
+        height: _height,
         fit: BoxFit.cover,
         // docs/21 §3 — liste kaydırılırken görseller tembel yüklenir; çözünen
         // kare belirene kadar varsayılan ikon durur, boş kutu görünmez.
@@ -67,12 +85,22 @@ class ProductImageView extends ConsumerWidget {
 
   Widget _fallback(BuildContext context) => Container(
     key: fallbackKey,
-    width: size,
-    height: size,
+    width: _width,
+    height: _height,
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: _radius,
     ),
-    child: Icon(Icons.inventory_2_outlined, size: size * 0.55),
+    child: Icon(Icons.inventory_2_outlined, size: _iconSize),
   );
+
+  /// Varsayılan ikonun kenarı.
+  ///
+  /// Kısa kenara göre ölçeklenir; ancak kutu bir `Expanded` içindeyse kenar
+  /// `double.infinity` olur ve sonsuz font boyutu Flutter'ı assert'e
+  /// düşürürdü. O durumda [size] bir taban değer olarak kullanılır.
+  double get _iconSize {
+    final shorter = _width < _height ? _width : _height;
+    return (shorter.isFinite ? shorter : size) * 0.55;
+  }
 }

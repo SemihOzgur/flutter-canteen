@@ -51,6 +51,7 @@ import 'package:canteen/presentation/sales/cart_panel.dart';
 import 'package:canteen/presentation/sales/product_picker.dart';
 import 'package:canteen/presentation/sales/sale_screen.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:canteen/presentation/products/product_image_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -194,6 +195,31 @@ void main() {
             'rules/05 §2: sepet paneli hiçbir çözünürlükte gizlenmez veya '
             'sekmeye dönüşmez.',
       );
+    });
+
+    testWidgets('ürün kartı GÖRSEL taşır', (tester) async {
+      // Görsel yoksa varsayılan ikon gelir; hata GÖSTERİLMEZ (REQ-IMG-009).
+      // Kart yüksekliği görselli ve görselsiz üründe aynıdır — aksi hâlde
+      // ızgara satır satır kayardı.
+      await createProduct(name: 'Ayran');
+      await pumpSale(tester);
+
+      final card = find.byKey(const Key('sale_product_1'));
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.byType(ProductImageView)),
+        findsOneWidget,
+        reason: 'Satış ekranı ürün kartı görsel alanı taşımalıdır.',
+      );
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.byKey(ProductImageView.fallbackKey),
+        ),
+        findsOneWidget,
+        reason: 'Görselsiz üründe varsayılan ikon gelir, hata değil.',
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('sepet satırı ve fiyatı UZAKTAN okunacak boyuttadır', (
