@@ -103,6 +103,18 @@ Optimizasyon yapılmazsa yedek dosyası kullanılamaz hale gelir — bu **kesin*
 
 - Flutter'ın `ImageCache`'i kullanılır; boyut sınırı 200 görsel / 50 MB.
 - Görsel yoksa veya okunamıyorsa **kategori ikonu** gösterilir — hata gösterilmez.
+
+```text
+Ürün görseli var ve okunabiliyor  →  görsel
+Yok / okunamıyor
+   ├── kategorinin icon_key'i dolu   →  seçilen ikon      (OD-029)
+   ├── icon_key NULL, ad eşleşiyor   →  addan türetilen ikon
+   └── ad da eşleşmiyor              →  nötr ürün ikonu
+```
+
+> Addan türetme bir **tahmindir** ve tahmin olduğu için sessizce yanlış olmaz: eşleşme
+> bulunamazsa nötr ikon kalır. Yanlış ikon göstermek, hiç ikon göstermemekten kötüdür —
+> kasadaki kişi *"Kalemler"* kategorisinde bardak görürse ekrana bir daha güvenmez.
 - Ürün listesi kaydırılırken görseller tembel (lazy) yüklenir.
 
 ---

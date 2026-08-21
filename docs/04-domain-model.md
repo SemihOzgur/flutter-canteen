@@ -105,6 +105,7 @@ düşük maliyetli bir genişleme yolu tanımlanmıştır.
 |---|---|---|
 | id | int | PK |
 | name | string | benzersiz |
+| iconKey | string? | sabit katalog anahtarı; `null` ise ikon addan türetilir (OD-029) |
 | sortOrder | int | satış ekranı sıralaması |
 | isSystem | bool | `Genel` için `true` |
 | isActive | bool | soft delete |

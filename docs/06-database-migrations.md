@@ -6,7 +6,8 @@
 
 ```text
 schemaVersion = 1  →  v1.0.0 ile yayınlanan ilk şema
-schemaVersion = 2  →  sonraki şema değişikliği
+schemaVersion = 2  →  categories.icon_key eklendi (OD-029)
+schemaVersion = 3  →  sonraki şema değişikliği
 ...
 ```
 

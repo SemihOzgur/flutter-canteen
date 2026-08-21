@@ -233,6 +233,8 @@ Gerçek veritabanı + servis katmanı. En yüksek değerli testler.
 | Adım ortasında hata → rollback |
 | Migration sonrası `foreign_key_check` boş |
 | Yarım migration → açılışta kurtarma |
+| **v1 → v2** (OD-029): `icon_key` eklenir, mevcut kategoriler ve ürünler **aynen kalır** |
+| **v1 → v2**: eklenen kolon `NULL` başlar; hiçbir kategori ikon kazanmış gibi görünmez |
 
 ### 6.5 Import / export
 

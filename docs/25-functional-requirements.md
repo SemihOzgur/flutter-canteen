@@ -167,6 +167,7 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-CAT-005 | Kategori adı benzersiz | 🟡 S | 3 |
 | **REQ-CAT-006** | **Hiç kullanılmamış kategori kalıcı silinebilir** | 🟡 S | 3 |
 | **REQ-CAT-007** | **Pasif kategori yeniden aktifleştirilebilir** (OD-020) | 🟡 S | 3 |
+| **REQ-CAT-008** | **Kategoriye sabit katalogdan ikon seçilebilir** (OD-029) | 🟡 S | v1.1 |
 | REQ-SUP-001 | Yalnızca ad ile tedarikçi | 🔴 M | 3 |
 | REQ-SUP-002 | Tedarikçi silinemez | 🔴 M | 3 |
 | REQ-SUP-003 | Tedarikçi detayında ürün ve girişler | 🟡 S | 6 |
@@ -401,6 +402,7 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-IMG-010 | Yedek yalnızca kullanılan görseller | 🟡 S | 9 |
 | REQ-IMG-011 | Ürün başına 1 görsel | 🔴 M | 3 |
 | REQ-IMG-012 | Elle bakım işlevi | 🟢 C | 9 |
+| **REQ-IMG-013** | **Görselsiz ürün: kategori ikonu → addan türetme → nötr ikon** (OD-029) | 🟡 S | v1.1 |
 
 ## UX · [23](23-ux-requirements.md)
 

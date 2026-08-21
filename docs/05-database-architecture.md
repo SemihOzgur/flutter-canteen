@@ -81,6 +81,7 @@ users
 categories
   id          INTEGER PK
   name        TEXT    NOT NULL
+  icon_key    TEXT    NULL                            -- v2 (OD-029); sabit katalog anahtarı
   sort_order  INTEGER NOT NULL DEFAULT 0
   is_system   INTEGER NOT NULL DEFAULT 0
   is_active   INTEGER NOT NULL DEFAULT 1
@@ -88,6 +89,12 @@ categories
   updated_at  INTEGER NOT NULL
   UNIQUE(name)                                        -- pasifler dahil; isim geri kullanılmaz
 ```
+
+> **`icon_key` neden metin ve neden NULL olabiliyor** (OD-029): saklanan şey bir ikon
+> **kod noktası değil**, sabit bir katalogdaki anahtardır (`drink`, `coffee`, `bakery` …).
+> Kod noktası bir uygulama ayrıntısıdır ve ikon seti değişince eski kayıtlar sessizce başka
+> bir şeye işaret ederdi. `NULL`, "kullanıcı seçmedi" demektir; o durumda ikon kategori
+> **adından** türetilir ([21 §3](21-image-storage.md)).
 
 ### 2.3 suppliers
 
