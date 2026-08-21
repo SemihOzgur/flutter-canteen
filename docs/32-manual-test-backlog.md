@@ -202,6 +202,8 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 | W20 | ⬜ **Pencere 1280×720 altına küçültülemiyor** (docs/23 §4) | `WM_GETMINMAXINFO` yalnızca gerçek pencere yöneticisinde çalışır |
 | W21 | ⬜ **Uygulama açıkken kurulum** uyarı verip duruyor (REQ-COMP-004) | Windows dosya kilitleme davranışı |
 | W22 | ⬜ **Kaldırma sonrası** `%APPDATA%\CanteenApp` **duruyor** (BR-DATA-001) | Kaldırma yalnızca gerçek kurulumdan sonra denenebilir |
+| W23 | ⬜ **v1 verisi olan kurulumun üzerine yeni sürüm** → kategoriler, ürünler ve satışlar duruyor (OD-029) | Gerçek migration yalnızca gerçek kurulumda çalışır |
+| W24 | ⬜ **Migration ortasında uygulamayı kapat** → açılışta kurtarma ekranı gelir, "Geri yükle" veri kaybetmeden çalışır (REQ-MIG-006) | Kesinti fiziksel olarak üretilmeli |
 
 ### Faz 8 — ortam bağımlı
 

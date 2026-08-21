@@ -28,6 +28,8 @@
 /// unutulurdu.
 library;
 
+import 'dart:async';
+import 'dart:io';
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
@@ -46,8 +48,10 @@ import 'core/paths/app_paths.dart';
 import 'core/single_instance/instance_lock.dart';
 import 'data/db/canteen_database.dart';
 import 'data/db/database_bootstrap.dart';
+import 'data/db/migrations/migration_coordinator.dart';
 import 'data/db/providers.dart';
 import 'data/files/providers.dart';
+import 'presentation/startup/migration_recovery_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,14 +113,10 @@ Future<void> main() async {
   // 5. Veritabanı — kilit ALINDIKTAN SONRA açılır (RSK-003).
   final CanteenDatabase database;
   try {
-    final result = await DatabaseBootstrap(paths: paths, logger: logger).open();
-    database = result.database;
-    logger.info('Veritabanı hazır (${result.kind.name}).');
-  } on AppException catch (e) {
-    // REQ-SEC-007: teknik detay log'a, kullanıcıya sade Türkçe mesaj.
-    logger.error('Veritabanı açılamadı', error: e.technicalDetail ?? e);
-    lock.release();
-    runApp(_StartupFailureApp(message: e.userMessage));
+    database = await _openDatabase(paths: paths, logger: logger, lock: lock);
+  } on _StartupHandled {
+    // Kullanıcıya bir ekran gösterildi (kurtarma veya hata); akış burada
+    // biter ve `runApp` ikinci kez çağrılmaz.
     return;
   }
 
@@ -186,6 +186,119 @@ Future<void> main() async {
 }
 
 /// Bootstrap başarısız olduğunda gösterilen minimal ekran.
+/// Açılış, kullanıcıya bir ekran göstererek sonlandı.
+///
+/// `main` içindeki akışı erken bitirmek için kullanılır; `runApp` çağrısı
+/// zaten yapılmıştır.
+class _StartupHandled implements Exception {
+  const _StartupHandled();
+}
+
+/// Veritabanını açar; yarım kalmış migration bulursa **kurtarma ekranını**
+/// gösterir (docs/06 §3 · REQ-MIG-006).
+///
+/// docs/06 §3 kurtarmayı dört adımda tanımlar ve üçüncüsü *"kullanıcı
+/// onaylarsa snapshot geri yüklenir ve migration yeniden denenir"* der —
+/// bu yüzden geri yükleme sonrası açılış **yeniden** denenir, uygulama
+/// kapanıp açılmayı beklemez.
+///
+/// Yeniden deneme **bir kez** yapılır: ikinci kez yarım kalan bir migration,
+/// düzelmeyen bir sorunun işaretidir ve döngüye girmek kullanıcıyı hiçbir
+/// yere götürmez.
+Future<CanteenDatabase> _openDatabase({
+  required AppPaths paths,
+  required AppLogger logger,
+  required InstanceLock lock,
+  bool retrying = false,
+}) async {
+  try {
+    final result = await DatabaseBootstrap(paths: paths, logger: logger).open();
+    logger.info('Veritabanı hazır (${result.kind.name}).');
+    return result.database;
+  } on MigrationRecoveryRequiredException catch (e) {
+    logger.error(
+      'Yarım kalmış migration',
+      error: e.technicalDetail ?? e.userMessage,
+    );
+    if (retrying) {
+      lock.release();
+      runApp(_StartupFailureApp(message: e.userMessage));
+      throw const _StartupHandled();
+    }
+
+    final completer = Completer<CanteenDatabase>();
+    runApp(
+      _MigrationRecoveryApp(
+        snapshotPath: e.snapshotPath,
+        onRestore: () async {
+          try {
+            // Snapshot adım 2'de, bayrak adım 4'te yazılır: geri yüklenen
+            // kopya bayrağı TAŞIMAZ ve migration temiz bir zeminde
+            // yeniden denenir.
+            await MigrationCoordinator(
+              databaseFilePath: paths.databaseFile,
+              autoBackupsDirPath: paths.autoBackupsDir,
+            ).restoreFromSnapshot(File(e.snapshotPath!));
+            logger.info('Snapshot geri yüklendi; migration yeniden denenecek.');
+
+            completer.complete(
+              await _openDatabase(
+                paths: paths,
+                logger: logger,
+                lock: lock,
+                retrying: true,
+              ),
+            );
+            return true;
+          } on Object catch (error) {
+            logger.error('Snapshot geri yüklenemedi', error: error);
+            return false;
+          }
+        },
+        // docs/06 §3 adım 4 — onaylamazsa uygulama kapanır; yarım şemayla
+        // çalışmaya izin verilmez.
+        onQuit: () {
+          lock.release();
+          exit(0);
+        },
+      ),
+    );
+
+    return completer.future;
+  } on AppException catch (e) {
+    // REQ-SEC-007: teknik detay log'a, kullanıcıya sade Türkçe mesaj.
+    logger.error('Veritabanı açılamadı', error: e.technicalDetail ?? e);
+    lock.release();
+    runApp(_StartupFailureApp(message: e.userMessage));
+    throw const _StartupHandled();
+  }
+}
+
+/// Kurtarma ekranını taşıyan minimal uygulama.
+class _MigrationRecoveryApp extends StatelessWidget {
+  final String? snapshotPath;
+  final Future<bool> Function() onRestore;
+  final VoidCallback onQuit;
+
+  const _MigrationRecoveryApp({
+    required this.snapshotPath,
+    required this.onRestore,
+    required this.onQuit,
+  });
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: AppStringsTr.appTitle,
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.light(),
+    home: MigrationRecoveryScreen(
+      snapshotPath: snapshotPath,
+      onRestore: onRestore,
+      onQuit: onQuit,
+    ),
+  );
+}
+
 class _StartupFailureApp extends StatelessWidget {
   final String message;
 

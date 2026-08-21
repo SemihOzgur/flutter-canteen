@@ -3,7 +3,7 @@
 /// REQ-MIG-002 (snapshot) · REQ-MIG-003 (geri alma) · REQ-MIG-006 (kurtarma)
 ///
 /// ```text
-/// 1. (Kullanıcı bilgi ekranı — Faz 3+ UI)
+/// 1. (Kullanıcı bilgi ekranı — kurtarma yolunda `MigrationRecoveryScreen`)
 /// 2. PRE-MIGRATION SNAPSHOT   → backups/auto/premigration_v<eski>_<ts>.sqlite
 /// 3. Snapshot doğrula          → integrity_check + boyut > 0
 /// 4. app_settings['migration_in_progress'] = {from, to, startedAt}
@@ -15,10 +15,10 @@
 /// 10. Audit log                 → Faz 6 (AuditService)
 /// ```
 ///
-/// **Faz 2 kapsam notu:** Adım 1'deki kullanıcı bilgi ekranı ve §3'teki
-/// "kullanıcı onayıyla geri yükleme" diyaloğu Faz 3+ kapsamındadır (onaylanmış
-/// karar). Bu dosya **mekanizmayı** kurar ve testlerle doğrular; kullanıcıya
-/// soru soran hiçbir UI içermez.
+/// **Kapsam notu:** Bu dosya **mekanizmayı** kurar ve kullanıcıya soru soran
+/// hiçbir UI içermez. §3'ün "kullanıcı onayıyla geri yükleme" adımı
+/// `presentation/startup/migration_recovery_screen.dart` içindedir ve
+/// `main.dart` ikisini birbirine bağlar (REQ-MIG-006).
 library;
 
 import 'dart:convert';

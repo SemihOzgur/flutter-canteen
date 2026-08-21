@@ -26,6 +26,7 @@ import 'dart:io';
 
 import 'package:canteen/core/errors/app_exception.dart';
 import 'package:canteen/data/db/database_bootstrap.dart';
+import 'package:canteen/data/db/migrations/migration_coordinator.dart';
 import 'package:canteen/data/db/migrations/migration_plan.dart';
 import 'package:canteen/data/db/raw_sqlite_file.dart';
 import 'package:canteen/data/db/schema_version.dart';
@@ -131,6 +132,60 @@ void main() {
       reason: 'Adım yeniden çalışsaydı "duplicate column" ile düşerdi.',
     );
   });
+
+  test(
+    'REQ-MIG-006 — snapshot geri yüklenince migration YENİDEN denenir',
+    () async {
+      // docs/06 §3 adım 3: "Kullanıcı onaylarsa snapshot geri yüklenir ve
+      // migration yeniden denenir." Ekranın gösterdiği düğmenin ARKASINDAKİ
+      // mekanizma budur.
+      final before = await seedRealV1();
+
+      // Yarım kalmış migration üret: snapshot al, bayrağı yaz.
+      final probe = fileDatabase(
+        temp.paths.databaseFile,
+        supportedSchemaVersion: 1,
+      );
+      final coordinator = MigrationCoordinator(
+        databaseFilePath: temp.paths.databaseFile,
+        autoBackupsDirPath: temp.paths.autoBackupsDir,
+      );
+      final snapshot = await coordinator.createSnapshot(probe, fromVersion: 1);
+      await coordinator.writeFlag(
+        probe,
+        MigrationFlag(from: 1, to: 2, startedAt: DateTime.utc(2026)),
+      );
+      await probe.close();
+
+      // Açılış kurtarma ister ve snapshot'ı GÖSTERİR.
+      try {
+        await DatabaseBootstrap(paths: temp.paths).open();
+        fail('MigrationRecoveryRequiredException bekleniyordu');
+      } on MigrationRecoveryRequiredException catch (e) {
+        expect(e.snapshotPath, isNotNull);
+        expect(e.fromVersion, 1);
+        expect(e.toVersion, 2);
+      }
+
+      // Kullanıcı onaylar → geri yükle → yeniden aç.
+      await coordinator.restoreFromSnapshot(snapshot);
+
+      final result = await DatabaseBootstrap(paths: temp.paths).open();
+      addTearDown(result.database.close);
+
+      expect(
+        result.kind,
+        DatabaseOpenKind.migrated,
+        reason:
+            'Geri yüklenen kopya bayrağı TAŞIMAZ; migration temiz zeminde '
+            'yeniden çalışır (snapshot adım 2, bayrak adım 4).',
+      );
+
+      final db = result.database;
+      expect((await db.select(db.categories).get()).length, before.categories);
+      expect((await db.select(db.products).get()).length, before.products);
+    },
+  );
 
   test(
     'plan eksikse veritabanına DOKUNULMAZ — bayrak ve snapshot oluşmaz',

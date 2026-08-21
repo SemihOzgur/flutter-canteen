@@ -102,7 +102,7 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-MIG-003 | Başarısız migration veriyi geri alır | 🔴 M | 2 |
 | REQ-MIG-004 | Migration tek transaction | 🔴 M | 2 |
 | REQ-MIG-005 | Daha yeni şema reddedilir | 🔴 M | 2 |
-| REQ-MIG-006 | Yarım migration açılışta kurtarılır | 🔴 M | 2 |
+| REQ-MIG-006 | Yarım migration açılışta kurtarılır | 🔴 M | 2 · *kurtarma ekranı v1.0.0* |
 | REQ-MIG-007 | Veri kaybettiren migration yasak | 🔴 M | 2 |
 | REQ-MIG-008 | Şema versiyonları repoda saklanır | 🟡 S | 2 |
 

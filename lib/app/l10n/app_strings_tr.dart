@@ -1171,5 +1171,24 @@ class AppStringsTr {
   static const String unexpectedErrorTitle = 'Beklenmeyen bir hata oluştu';
   static const String unexpectedErrorMessage =
       'İşlem tamamlanamadı. Sorun devam ederse uygulamayı yeniden başlatın.';
+  // ── Yarım kalmış migration kurtarması (docs/06 §3 · REQ-MIG-006) ────────
+  static const String migrationRecoveryTitle =
+      'Veritabanı güncellemesi yarım kalmış';
+  static const String migrationRecoveryBody =
+      'Uygulama, veritabanınızı güncellerken beklenmedik şekilde kapanmış. '
+      'Güncelleme öncesi verileriniz yedeklenmişti ve geri yüklenebilir.';
+  static const String migrationRecoveryAction =
+      'Verileri geri yükle ve tekrar dene';
+  static const String migrationRecoveryQuit = 'Kapat';
+
+  /// Snapshot yoksa geri yükleme sunulamaz.
+  static const String migrationRecoveryNoSnapshot =
+      'Güncelleme öncesi yedek bulunamadı. Uygulama yarım güncellenmiş bir '
+      'veritabanıyla açılmaz. Son yedeğinizden geri yükleyin veya destek '
+      'için log dosyasını iletin.';
+  static const String migrationRecoveryWorking = 'Geri yükleniyor...';
+  static const String migrationRecoveryFailed =
+      'Geri yükleme başarısız oldu. Verileriniz değiştirilmedi.';
+
   static const String startupFailedTitle = 'Uygulama başlatılamadı';
 }

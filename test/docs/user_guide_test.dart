@@ -16,11 +16,15 @@ import 'package:canteen/core/version/app_version.dart';
 import 'package:canteen/presentation/common/low_resolution_notice.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-String get guide => File('docs/33-user-guide.md').readAsStringSync();
+/// Kılavuzun yolu tek yerde durur: dosya yeniden adlandırılırsa burası
+/// düzeltilir ve testler yolun gerçekten var olduğunu doğrular.
+const String guidePath = 'docs/bilgilendirme.md';
+
+String get guide => File(guidePath).readAsStringSync();
 
 void main() {
   test('kılavuz repoda vardır', () {
-    expect(File('docs/33-user-guide.md').existsSync(), isTrue);
+    expect(File(guidePath).existsSync(), isTrue);
     expect(guide.length, greaterThan(2000));
   });
 
