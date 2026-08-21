@@ -35,6 +35,7 @@ import 'package:canteen/data/db/providers.dart';
 import 'package:canteen/domain/models/sale_return.dart';
 import 'package:canteen/presentation/dashboard/dashboard_screen.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -309,6 +310,88 @@ void main() {
       expect(find.text(AppStringsTr.dashboardGrossRevenue), findsOneWidget);
       expect(find.text(AppStringsTr.dashboardCancelled), findsOneWidget);
       expect(find.text(AppStringsTr.dashboardReturned), findsOneWidget);
+    });
+
+    testWidgets('en çok satan çubuğu SIRALAMA ölçütünü çizer', (tester) async {
+      // Liste adede göre sıralanır (`ORDER BY units DESC`). Çubuk ciroyu
+      // çizseydi "en üstteki en uzun değil" görüntüsü çıkar ve kullanıcı
+      // sıralamanın bozuk olduğunu sanırdı.
+      final ucuz = await createProduct(name: 'Çay', salePriceMinor: 800);
+      final pahali = await createProduct(name: 'Tost', salePriceMinor: 6500);
+      await sell(ucuz, quantity: 10); // az ciro, ÇOK adet
+      await sell(pahali, quantity: 2); // çok ciro, AZ adet
+      await unlock();
+
+      await pump(tester);
+
+      final bars = tester
+          .widgetList<LinearProgressIndicator>(
+            find.byType(LinearProgressIndicator),
+          )
+          .toList();
+      expect(bars.length, 2);
+      expect(
+        bars.first.value,
+        1.0,
+        reason: 'En çok satan (10 adet) tam uzunlukta olmalıdır.',
+      );
+      expect(
+        bars.last.value,
+        closeTo(0.2, 0.001),
+        reason: '2/10 — çubuk ADEDİ yansıtır, ciroyu değil.',
+      );
+    });
+
+    testWidgets('docs/15 §3.6 — kategori DAĞILIMI donut ile gösterilir', (
+      tester,
+    ) async {
+      // Donut tek başına yetmez: oran grafikten, tutar tablodan okunur.
+      final id = await createProduct(name: 'Kola', salePriceMinor: 10000);
+      await sell(id, quantity: 3);
+      await unlock();
+
+      await pump(tester);
+      await tester.scrollUntilVisible(
+        find.byType(PieChart),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.byType(PieChart), findsOneWidget);
+      // rules/05 §5 — pay renkle DEĞİL, metinle de verilir.
+      expect(find.textContaining('%'), findsWidgets);
+    });
+
+    testWidgets('ciro 0 iken donut çizilmez ama tablo KALIR', (tester) async {
+      // Tüm dilimleri 0 olan bir pasta çizilemez; tablo yine anlamlıdır.
+      await createProduct(name: 'İkram', salePriceMinor: 0);
+      await unlock();
+
+      await pump(tester);
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('docs/15 §3.2 — trend grafiği ÖNCEKİ dönemi de çizer', (
+      tester,
+    ) async {
+      // Tek çizgi "iyi mi kötü mü" sorusunu cevaplamaz; karşılaştırma
+      // serisi olmadan kullanıcı geçen dönemi hatırlamak zorunda kalırdı.
+      final id = await createProduct();
+      await sell(id);
+      await unlock();
+
+      await pump(tester);
+      await tester.tap(find.byKey(const Key('dashboard_period_last7Days')));
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<LineChart>(find.byType(LineChart));
+      expect(
+        chart.data.lineBarsData.length,
+        greaterThanOrEqualTo(1),
+        reason: 'En az mevcut dönem serisi çizilmelidir.',
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('en çok satan ürün snapshot ADIYLA listelenir', (tester) async {

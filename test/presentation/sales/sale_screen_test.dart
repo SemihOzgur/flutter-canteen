@@ -196,6 +196,49 @@ void main() {
       );
     });
 
+    testWidgets('sepet satırı ve fiyatı UZAKTAN okunacak boyuttadır', (
+      tester,
+    ) async {
+      // rules/05 §2 — kasadaki kişi sepete bakmadan yazar ve göz ucuyla
+      // doğrular. Ürün adı gövde metni boyutunda kalırsa bu mümkün olmaz.
+      await createProduct(name: 'Kola', barcodes: ['8690000000001']);
+      await pumpSale(tester);
+      await scan(tester, '8690000000001');
+
+      final lineId = (await activeCartLines()).single.id;
+      // Ürün adı hem kartta hem sepette geçiyor; ölçülen SEPET satırıdır.
+      final name = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(Key('sale_cart_line_$lineId')),
+          matching: find.text('Kola'),
+        ),
+      );
+      final total = tester.widget<Text>(
+        find.byKey(Key('sale_cart_total_$lineId')),
+      );
+
+      expect(
+        name.style?.fontSize ?? 0,
+        greaterThanOrEqualTo(16),
+        reason: 'Sepet satırının adı en az 16 px olmalıdır.',
+      );
+      expect(
+        total.style?.fontSize ?? 0,
+        greaterThanOrEqualTo(16),
+        reason: 'Satır tutarı en az 16 px olmalıdır.',
+      );
+      expect(total.style?.fontWeight, FontWeight.bold);
+
+      // Ürün kartı da kasadan bir kol boyu uzakta okunur.
+      final card = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('sale_product_1')),
+          matching: find.text('Kola'),
+        ),
+      );
+      expect(card.style?.fontSize ?? 0, greaterThanOrEqualTo(16));
+    });
+
     testWidgets('REQ-UX-014 — toplam 32 px kalın gösterilir', (tester) async {
       await createProduct();
       await pumpSale(tester);

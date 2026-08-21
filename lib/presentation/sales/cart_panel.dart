@@ -254,8 +254,13 @@ class _CartLineTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
+                    // rules/05 §2 — kasadaki kişi sepete BAKMADAN yazar;
+                    // göz ucuyla doğrulayabilmesi için satır adı küçük
+                    // gövde metni olamaz.
                     line.productName,
-                    style: theme.textTheme.bodyLarge,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -275,18 +280,20 @@ class _CartLineTile extends StatelessWidget {
                 IconButton(
                   key: Key('sale_cart_decrease_${line.id}'),
                   tooltip: AppStringsTr.saleDecrease,
-                  icon: const Icon(Icons.remove, size: 16),
+                  icon: const Icon(Icons.remove, size: 20),
                   onPressed: onDecrease,
                 ),
                 Text(
                   '${line.quantity}',
                   key: Key('sale_cart_qty_${line.id}'),
-                  style: theme.textTheme.titleSmall,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 IconButton(
                   key: Key('sale_cart_increase_${line.id}'),
                   tooltip: AppStringsTr.saleIncrease,
-                  icon: const Icon(Icons.add, size: 16),
+                  icon: const Icon(Icons.add, size: 20),
                   onPressed: onIncrease,
                 ),
                 const SizedBox(width: 4),
@@ -296,15 +303,15 @@ class _CartLineTile extends StatelessWidget {
                     onTap: onEditPrice,
                     child: Text(
                       '× ${MoneyFormatter.format(line.unitPrice)}',
-                      style: theme.textTheme.bodySmall,
+                      style: theme.textTheme.bodyMedium,
                     ),
                   ),
                 ),
                 Text(
                   MoneyFormatter.format(line.lineTotal),
                   key: Key('sale_cart_total_${line.id}'),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -327,7 +334,10 @@ class _CartLineTile extends StatelessWidget {
     Widget badge(String text, Color color, Key key) => Text(
       text,
       key: key,
-      style: theme.textTheme.labelSmall?.copyWith(color: color),
+      style: theme.textTheme.labelMedium?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
     );
 
     return [

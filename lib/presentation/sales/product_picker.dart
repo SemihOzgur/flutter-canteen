@@ -152,8 +152,12 @@ class ProductPicker extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
+                        // Kart kasadan bir kol boyu uzakta okunuyor;
+                        // gövde metni bu mesafede seçilemiyordu.
                         product.name,
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -172,7 +176,9 @@ class ProductPicker extends StatelessWidget {
                           Flexible(
                             child: Text(
                               MoneyFormatter.format(product.salePrice),
-                              style: theme.textTheme.titleSmall,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

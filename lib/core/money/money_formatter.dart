@@ -42,6 +42,35 @@ class MoneyFormatter {
     return buffer.toString();
   }
 
+  /// Grafik ekseni için **kısaltılmış** biçim: `₺1.500` → `₺1,5B`.
+  ///
+  /// Yalnızca eksen etiketleri ve grafik içi kısa gösterimler içindir.
+  /// Fiş, sepet ve rapor tutarları **asla** kısaltılmaz — kullanıcı ödediği
+  /// rakamı tam görmelidir (BR-FIN-005).
+  ///
+  /// `B` = bin, `M` = milyon (tr_TR).
+  static String compact(Money money) {
+    final negative = money.isNegative;
+    final lira = (negative ? -money.minor : money.minor) ~/ 100;
+
+    String body;
+    if (lira >= 1000000) {
+      body = '${_oneDecimal(lira / 1000000)}M';
+    } else if (lira >= 1000) {
+      body = '${_oneDecimal(lira / 1000)}B';
+    } else {
+      body = '$lira';
+    }
+    return '${negative ? minusSign : ''}$currencySymbol$body';
+  }
+
+  /// `1.5` → `1,5` · `2.0` → `2` (gereksiz `,0` eksende yer kaplar).
+  static String _oneDecimal(double value) {
+    final rounded = (value * 10).round() / 10;
+    if (rounded == rounded.roundToDouble()) return '${rounded.round()}';
+    return rounded.toStringAsFixed(1).replaceAll('.', decimalSeparator);
+  }
+
   static String _groupThousands(int value) {
     final digits = value.toString();
     if (digits.length <= 3) return digits;

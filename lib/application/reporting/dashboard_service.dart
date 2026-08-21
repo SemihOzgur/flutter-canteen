@@ -37,6 +37,13 @@ class DashboardData {
   final ReportSummary previous;
 
   final List<TrendPoint> trend;
+
+  /// docs/15 §3.2 — aynı uzunluktaki **önceki** dönemin trendi.
+  ///
+  /// Ana grafikte soluk ikinci seri olarak çizilir. Tek başına bir çizgi
+  /// "iyi mi kötü mü" sorusuna cevap vermez; karşılaştırma serisi olmadan
+  /// kullanıcı geçen haftayı hatırlamak zorunda kalırdı.
+  final List<TrendPoint> previousTrend;
   final List<TrendPoint> hourly;
   final List<ProductBreakdown> topProducts;
   final List<CategoryBreakdown> categories;
@@ -51,6 +58,7 @@ class DashboardData {
     required this.summary,
     required this.previous,
     required this.trend,
+    this.previousTrend = const [],
     required this.hourly,
     required this.topProducts,
     required this.categories,
@@ -101,6 +109,13 @@ class DashboardService {
         trend: await dao.revenueTrend(
           fromMillis: from,
           toMillis: to,
+          format: period.trendFormat,
+        ),
+        // Önceki dönem AYNI granülerlikle çekilir; farklı format iki seriyi
+        // karşılaştırılamaz hâle getirirdi.
+        previousTrend: await dao.revenueTrend(
+          fromMillis: previous.fromUtc.millisecondsSinceEpoch,
+          toMillis: previous.toUtc.millisecondsSinceEpoch,
           format: period.trendFormat,
         ),
         // docs/15 §3.3 — yalnızca aralık ≥ 2 gün olduğunda.

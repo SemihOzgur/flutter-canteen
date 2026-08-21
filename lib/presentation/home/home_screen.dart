@@ -30,6 +30,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/l10n/app_strings_tr.dart';
 import '../../app/router.dart';
+import '../../app/theme/app_palette.dart';
 import '../../core/version/app_version.dart';
 import '../auth/financial_access_dialog.dart';
 
@@ -86,164 +87,323 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStringsTr.appTitle)),
+      appBar: AppBar(
+        title: const Text(AppStringsTr.appTitle),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text(
+                appVersionLabel,
+                key: const Key('home_app_version'),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.storefront_outlined,
-                  size: 64,
-                  color: theme.colorScheme.primary,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+            children: [
+              Text(
+                AppStringsTr.homeWelcome,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  AppStringsTr.homeWelcome,
-                  style: theme.textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                AppStringsTr.homeDescription,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  AppStringsTr.homeDescription,
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    OutlinedButton.icon(
-                      key: HomeScreen.usersButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.users),
-                      icon: const Icon(Icons.group_outlined),
-                      label: const Text(AppStringsTr.homeUsersAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.financialAccessSettingsButtonKey,
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.financialAccessSettings),
-                      icon: const Icon(Icons.tune_outlined),
-                      label: const Text(AppStringsTr.homeFinancialAccessAction),
-                    ),
-                    // Satış ekranı uygulamanın asıl işidir; ana ekranda
-                    // birincil eylem olarak durur (docs/22 · docs/12).
-                    FilledButton.icon(
-                      key: HomeScreen.salesButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.sales),
-                      icon: const Icon(Icons.point_of_sale),
-                      label: const Text(AppStringsTr.homeSaleAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.saleHistoryButtonKey,
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.saleHistory),
-                      icon: const Icon(Icons.receipt_long_outlined),
-                      label: const Text(AppStringsTr.homeSaleHistoryAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.stockButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.stock),
-                      icon: const Icon(Icons.inventory_outlined),
-                      label: const Text(AppStringsTr.homeStockAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.productsButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.products),
-                      icon: const Icon(Icons.inventory_2_outlined),
-                      label: const Text(AppStringsTr.homeProductsAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.categoriesButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.categories),
-                      icon: const Icon(Icons.folder_outlined),
-                      label: const Text(AppStringsTr.homeCategoriesAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.suppliersButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.suppliers),
-                      icon: const Icon(Icons.local_shipping_outlined),
-                      label: const Text(AppStringsTr.homeSuppliersAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.vatRatesButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.vatRates),
-                      icon: const Icon(Icons.percent_outlined),
-                      label: const Text(AppStringsTr.homeVatRatesAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.backupButtonKey,
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.backup),
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text(AppStringsTr.homeBackupAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.importExportButtonKey,
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.importExport),
-                      icon: const Icon(Icons.swap_vert),
-                      label: const Text(AppStringsTr.homeImportExportAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.consistencyButtonKey,
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.consistency),
-                      icon: const Icon(Icons.fact_check_outlined),
-                      label: const Text(AppStringsTr.consistencyTitle),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.barcodeDiagnosticsButtonKey,
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.barcodeDiagnostics),
-                      icon: const Icon(Icons.qr_code_scanner_outlined),
-                      label: const Text(
-                        AppStringsTr.homeBarcodeDiagnosticsAction,
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.dashboardButtonKey,
-                      onPressed: () => _openDashboard(context, ref),
-                      icon: const Icon(Icons.lock_outline),
-                      label: const Text(AppStringsTr.homeDashboardAction),
-                    ),
-                    OutlinedButton.icon(
-                      key: HomeScreen.reportsButtonKey,
-                      onPressed: () => _openReports(context, ref),
-                      icon: const Icon(Icons.lock_outline),
-                      label: const Text(AppStringsTr.reportsTitle),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                // docs/24 §7 — tanılama paketi ve destek yazışması için
-                // kullanıcının sürümü OKUYABİLMESİ gerekir. Tek kaynak
-                // `core/version/app_version.dart`.
-                Text(
-                  appVersionLabel,
-                  key: const Key('home_app_version'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
+              ),
+              const SizedBox(height: 24),
+
+              // Satış uygulamanın asıl işidir; kendi başına ve büyük durur
+              // (docs/12 · docs/22). Diğer 14 eylemle aynı boyutta olsaydı
+              // kasadaki kişi her açılışta onu arardı.
+              _PrimaryTile(
+                tileKey: HomeScreen.salesButtonKey,
+                icon: Icons.point_of_sale,
+                label: AppStringsTr.homeSaleAction,
+                hint: AppStringsTr.homeHintSale,
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.sales),
+              ),
+              const SizedBox(height: 28),
+
+              _Section(
+                title: AppStringsTr.homeSectionDaily,
+                tiles: [
+                  _Tile(
+                    tileKey: HomeScreen.saleHistoryButtonKey,
+                    icon: Icons.receipt_long_outlined,
+                    label: AppStringsTr.homeSaleHistoryAction,
+                    hint: AppStringsTr.homeHintSaleHistory,
+                    accent: AppPalette.tiles[0],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.saleHistory),
                   ),
-                ),
-              ],
+                  _Tile(
+                    tileKey: HomeScreen.stockButtonKey,
+                    icon: Icons.inventory_outlined,
+                    label: AppStringsTr.homeStockAction,
+                    hint: AppStringsTr.homeHintStock,
+                    accent: AppPalette.tiles[1],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.stock),
+                  ),
+                ],
+              ),
+
+              _Section(
+                title: AppStringsTr.homeSectionCatalog,
+                tiles: [
+                  _Tile(
+                    tileKey: HomeScreen.productsButtonKey,
+                    icon: Icons.inventory_2_outlined,
+                    label: AppStringsTr.homeProductsAction,
+                    hint: AppStringsTr.homeHintProducts,
+                    accent: AppPalette.tiles[2],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.products),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.categoriesButtonKey,
+                    icon: Icons.folder_outlined,
+                    label: AppStringsTr.homeCategoriesAction,
+                    hint: AppStringsTr.homeHintCategories,
+                    accent: AppPalette.tiles[3],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.categories),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.suppliersButtonKey,
+                    icon: Icons.local_shipping_outlined,
+                    label: AppStringsTr.homeSuppliersAction,
+                    hint: AppStringsTr.homeHintSuppliers,
+                    accent: AppPalette.tiles[4],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.suppliers),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.vatRatesButtonKey,
+                    icon: Icons.percent_outlined,
+                    label: AppStringsTr.homeVatRatesAction,
+                    hint: AppStringsTr.homeHintVatRates,
+                    accent: AppPalette.tiles[6],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.vatRates),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.usersButtonKey,
+                    icon: Icons.group_outlined,
+                    label: AppStringsTr.homeUsersAction,
+                    hint: AppStringsTr.homeHintUsers,
+                    accent: AppPalette.tiles[7],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.users),
+                  ),
+                ],
+              ),
+
+              _Section(
+                title: AppStringsTr.homeSectionData,
+                tiles: [
+                  _Tile(
+                    tileKey: HomeScreen.backupButtonKey,
+                    icon: Icons.save_outlined,
+                    label: AppStringsTr.homeBackupAction,
+                    hint: AppStringsTr.homeHintBackup,
+                    accent: AppPalette.tiles[1],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.backup),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.importExportButtonKey,
+                    icon: Icons.swap_vert,
+                    label: AppStringsTr.homeImportExportAction,
+                    hint: AppStringsTr.homeHintImportExport,
+                    accent: AppPalette.tiles[4],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.importExport),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.consistencyButtonKey,
+                    icon: Icons.fact_check_outlined,
+                    label: AppStringsTr.consistencyTitle,
+                    hint: AppStringsTr.homeHintConsistency,
+                    accent: AppPalette.tiles[2],
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.consistency),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.barcodeDiagnosticsButtonKey,
+                    icon: Icons.qr_code_scanner_outlined,
+                    label: AppStringsTr.homeBarcodeDiagnosticsAction,
+                    hint: AppStringsTr.homeHintBarcodeDiagnostics,
+                    accent: AppPalette.tiles[0],
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(AppRoutes.barcodeDiagnostics),
+                  ),
+                ],
+              ),
+
+              // BR-AUTH-013 — bu üçlü ayrı bir bölümdedir ve kilit simgesi
+              // taşır. Kullanıcı parolanın neden sorulduğunu tıklamadan
+              // ÖNCE anlamalıdır.
+              _Section(
+                title: AppStringsTr.homeSectionFinancial,
+                tiles: [
+                  _Tile(
+                    tileKey: HomeScreen.dashboardButtonKey,
+                    icon: Icons.dashboard_outlined,
+                    label: AppStringsTr.homeDashboardAction,
+                    hint: AppStringsTr.homeHintDashboard,
+                    accent: AppPalette.tiles[3],
+                    locked: true,
+                    onTap: () => _openDashboard(context, ref),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.reportsButtonKey,
+                    icon: Icons.assessment_outlined,
+                    label: AppStringsTr.reportsTitle,
+                    hint: AppStringsTr.homeHintReports,
+                    accent: AppPalette.tiles[5],
+                    locked: true,
+                    onTap: () => _openReports(context, ref),
+                  ),
+                  _Tile(
+                    tileKey: HomeScreen.financialAccessSettingsButtonKey,
+                    icon: Icons.tune_outlined,
+                    label: AppStringsTr.homeFinancialAccessAction,
+                    hint: AppStringsTr.homeHintFinancialAccess,
+                    accent: AppPalette.tiles[7],
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(AppRoutes.financialAccessSettings),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Başlıklı kutu grubu.
+class _Section extends StatelessWidget {
+  final String title;
+  final List<Widget> tiles;
+
+  const _Section({required this.title, required this.tiles});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(spacing: 12, runSpacing: 12, children: tiles),
+        ],
+      ),
+    );
+  }
+}
+
+/// Satış kutusu — ana ekranın birincil eylemi.
+class _PrimaryTile extends StatelessWidget {
+  final Key tileKey;
+  final IconData icon;
+  final String label;
+  final String hint;
+  final VoidCallback onTap;
+
+  const _PrimaryTile({
+    required this.tileKey,
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: hint,
+      waitDuration: _tileTooltipDelay,
+      child: DecoratedBox(
+        // Düz renk yerine degrade: bu kutu ana ekranın birincil eylemi ve
+        // yanındaki 14 doygun kutunun arasında kaybolmamalı.
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            key: tileKey,
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 26),
+              child: Row(
+                children: [
+                  Icon(icon, size: 44, color: Colors.white),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          hint,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward,
+                    size: 28,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -251,3 +411,90 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 }
+
+/// Üzerine gelince açıklama gösteren renkli eylem kutusu.
+///
+/// Etiket ne olduğunu söyler; **ne işe yaradığı** [hint] ile üzerine
+/// gelindiğinde çıkar. İkisi birden kutuya sığsaydı ızgara okunmaz olurdu.
+class _Tile extends StatelessWidget {
+  final Key tileKey;
+  final IconData icon;
+  final String label;
+  final String hint;
+  final AccentColor accent;
+  final bool locked;
+  final VoidCallback onTap;
+
+  const _Tile({
+    required this.tileKey,
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.accent,
+    required this.onTap,
+    this.locked = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Tooltip(
+      message: hint,
+      waitDuration: _tileTooltipDelay,
+      child: SizedBox(
+        width: 168,
+        height: 124,
+        child: Material(
+          color: accent.background,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            key: tileKey,
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(icon, size: 30, color: accent.foreground),
+                      const Spacer(),
+                      // rules/05 §5 — kilit renkle değil, SİMGEYLE anlatılır.
+                      if (locked)
+                        Icon(
+                          Icons.lock_outline,
+                          size: 18,
+                          color: accent.foreground.withValues(alpha: 0.85),
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    label,
+                    // Uzun etiketler ("Barkod Tanılama") iki satıra iner;
+                    // üçüncü satır kutuyu taşırır.
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: accent.foreground,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Fare kutunun üzerinde bu kadar durunca açıklama çıkar.
+///
+/// rules/05 §2 animasyon bütçesiyle uyumlu: ekranda gezinirken art arda
+/// balon açılmaz, ama bilgi isteyen kullanıcı beklemez.
+const Duration _tileTooltipDelay = Duration(milliseconds: 400);
