@@ -21,9 +21,9 @@ void main() {
           attempts += 1;
           if (attempts < 3) {
             throw PathAccessException(
-              'Deletion failed',
               'C:\\temp\\canteen_db_test',
               OSError('The process cannot access the file', 32),
+              'Deletion failed',
             );
           }
         },
