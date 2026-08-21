@@ -37,6 +37,7 @@ import '../../data/dao/daos.dart';
 import '../../data/db/canteen_database.dart' show CanteenDatabase;
 import '../../data/repositories/failures.dart';
 import '../../domain/models/category.dart';
+import '../../domain/services/category_icon_keys.dart';
 import 'category_failures.dart';
 
 class CategoryService {
@@ -118,9 +119,13 @@ class CategoryService {
     required String name,
     int sortOrder = 0,
     int? userId,
+    String? iconKey,
   }) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return const Err(CategoryFailures.nameRequired);
+    if (iconKey != null && !isKnownCategoryIconKey(iconKey)) {
+      return const Err(CategoryFailures.unknownIcon);
+    }
 
     final now = _clock().toUtc();
 
@@ -133,13 +138,18 @@ class CategoryService {
           name: trimmed,
           sortOrder: sortOrder,
           now: now,
+          iconKey: iconKey,
         );
         await _writeAudit(
           action: actionCreated,
           now: now,
           userId: userId,
           entityId: id,
-          newValue: {'name': trimmed, 'sort_order': sortOrder},
+          newValue: {
+            'name': trimmed,
+            'sort_order': sortOrder,
+            'icon_key': ?iconKey,
+          },
         );
         return Ok(id);
       } on Object catch (error) {
@@ -149,6 +159,34 @@ class CategoryService {
         return const Err<int>(CategoryFailures.nameExists);
       }
     });
+  }
+
+  /// Kategori ikonunu değiştirir — **OD-029 · REQ-CAT-008.**
+  ///
+  /// [iconKey] `null` ise seçim **kaldırılır** ve ikon yeniden kategori
+  /// adından türetilir (docs/21 §3).
+  ///
+  /// ## `Genel` burada korunmaz
+  ///
+  /// BR-CAT-004 `Genel` için **ad, silme ve pasifleştirmeyi** korur; ikon o
+  /// listede yoktur ve kullanıcının sistem kategorisine ikon seçmesini
+  /// engellemek için bir gerekçe de yoktur.
+  ///
+  /// ## Denetim kaydı YAZILMAZ
+  ///
+  /// rules/03 §9 denetlenecek mutation'ları sayar: stok, fiyat, ürün, satış,
+  /// iptal, iade, import/export, yedek, kimlik doğrulama. İkon bunların
+  /// hiçbiri değildir — hiçbir hesaplama, rapor veya stok davranışı ikona
+  /// bakmaz (docs/10 §1.2a). Görsel bir tercihi denetim izine yazmak, izi
+  /// gürültüyle doldurup asıl olayları gölgelerdi.
+  Future<Result<void>> setIcon(int id, String? iconKey) async {
+    if (iconKey != null && !isKnownCategoryIconKey(iconKey)) {
+      return const Err(CategoryFailures.unknownIcon);
+    }
+
+    final updated = await _categories.updateIconKey(id, iconKey);
+    if (updated == 0) return const Err(CategoryFailures.notFound);
+    return const Ok(null);
   }
 
   /// Kategori adını değiştirir (REQ-CAT-001).

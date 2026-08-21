@@ -10,6 +10,7 @@
 /// - **REQ-CAT-002** — `Genel` kategorisi korumalıdır
 library;
 
+import 'package:canteen/application/reference/category_failures.dart';
 import 'package:canteen/application/reference/category_service.dart';
 import 'package:canteen/core/result/result.dart';
 // Drift, `categories` satırı için domain modeliyle aynı adlı sınıf üretir.
@@ -28,6 +29,11 @@ import '../../support/test_database.dart';
 void main() {
   late CanteenDatabase db;
   late CategoryService service;
+
+  /// Kategorinin veritabanındaki `icon_key` değeri.
+  Future<String?> iconOf(int id) async => (await (db.select(
+    db.categories,
+  )..where((c) => c.id.equals(id))).getSingle()).iconKey;
   late AuditLogsDao auditLogs;
   late int userId;
 
@@ -99,6 +105,105 @@ void main() {
           ),
         );
   }
+
+  group('OD-029 · REQ-CAT-008 — kategori ikonu', () {
+    test('oluştururken ikon seçilebilir', () async {
+      final result = await service.create(
+        name: 'Soğuk İçecek',
+        userId: userId,
+        iconKey: 'drink',
+      );
+
+      expect(result.isErr, isFalse, reason: '${result.failureOrNull}');
+      final id = (result as Ok<int>).value;
+      expect(await iconOf(id), 'drink');
+    });
+
+    test('ikon seçilmezse NULL kalır — "otomatik"', () async {
+      final result = await service.create(name: 'Raf 3', userId: userId);
+      final id = (result as Ok<int>).value;
+
+      expect(
+        await iconOf(id),
+        isNull,
+        reason: 'Varsayılan bir ikon atanırsa "otomatik" davranış kaybolur.',
+      );
+    });
+
+    test('KATALOG DIŞI anahtar reddedilir — oluşturmada', () async {
+      // Katalog dışı bir anahtar veritabanına girerse hiçbir ekranda ikon
+      // göstermez ve kullanıcı nedenini anlayamaz.
+      final result = await service.create(
+        name: 'Deneme',
+        userId: userId,
+        iconKey: 'uydurma',
+      );
+
+      expect(result.failureOrNull, CategoryFailures.unknownIcon);
+      expect(await service.list(), hasLength(1), reason: 'Yalnızca Genel.');
+    });
+
+    test('KATALOG DIŞI anahtar reddedilir — güncellemede', () async {
+      final id =
+          (await service.create(name: 'Deneme', userId: userId) as Ok<int>)
+              .value;
+
+      final result = await service.setIcon(id, 'uydurma');
+
+      expect(result.failureOrNull, CategoryFailures.unknownIcon);
+      expect(await iconOf(id), isNull, reason: 'Yazım yapılmamalıdır.');
+    });
+
+    test('ikon değiştirilebilir ve KALDIRILABİLİR', () async {
+      final id =
+          (await service.create(
+                    name: 'Deneme',
+                    userId: userId,
+                    iconKey: 'snack',
+                  )
+                  as Ok<int>)
+              .value;
+
+      expect((await service.setIcon(id, 'sweet')).isErr, isFalse);
+      expect(await iconOf(id), 'sweet');
+
+      // `null` = "otomatik"e dön.
+      expect((await service.setIcon(id, null)).isErr, isFalse);
+      expect(await iconOf(id), isNull);
+    });
+
+    test('olmayan kategori reddedilir', () async {
+      expect(
+        (await service.setIcon(9999, 'drink')).failureOrNull,
+        CategoryFailures.notFound,
+      );
+    });
+
+    test('BR-CAT-004 — `Genel`in İKONU değiştirilebilir', () async {
+      // Koruma ad, silme ve pasifleştirme içindir; ikon o listede yoktur
+      // (docs/10 §1.2a).
+      final general = (await service.list()).single;
+      expect(general.isSystem, isTrue);
+
+      final result = await service.setIcon(general.id, 'other');
+
+      expect(result.isErr, isFalse, reason: '${result.failureOrNull}');
+      expect(await iconOf(general.id), 'other');
+    });
+
+    test('ikon değişikliği DENETİM İZİNE yazılmaz', () async {
+      // rules/03 §9 denetlenecek mutation'ları sayar; ikon iş verisi
+      // değildir ve izi gürültüyle doldurmamalıdır (docs/10 §1.2a).
+      final id =
+          (await service.create(name: 'Deneme', userId: userId) as Ok<int>)
+              .value;
+      final before = (await AuditLogsDao(db).listRecent()).length;
+
+      await service.setIcon(id, 'drink');
+
+      expect((await AuditLogsDao(db).listRecent()).length, before);
+    });
+  });
 
   group('Oluşturma — REQ-CAT-001 · REQ-CAT-005', () {
     test('kategori oluşturulur ve audit kaydı yazılır', () async {

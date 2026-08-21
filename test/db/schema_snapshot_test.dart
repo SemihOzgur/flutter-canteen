@@ -108,7 +108,14 @@ void main() {
         .where((e) => e['type'] == 'index')
         .length;
 
-    expect(decoded['schemaVersion'], 1);
+    expect(
+      decoded['schemaVersion'],
+      kSupportedSchemaVersion,
+      reason:
+          'Anlık görüntü, kodun desteklediği versiyonun kendisidir; sabit '
+          'bir sayıya bağlanırsa şema yükseltilince sessizce eskir.',
+    );
+    // OD-029 tabloya KOLON ekledi, tablo eklemedi: sayı değişmez.
     expect(tables, 15, reason: 'docs/05 §2 — şema FİNAL: 15 tablo.');
     expect(
       indexes,

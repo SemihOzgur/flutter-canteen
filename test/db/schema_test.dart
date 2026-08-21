@@ -7,6 +7,7 @@
 library;
 
 import 'package:canteen/data/db/canteen_database.dart';
+import 'package:canteen/data/db/schema_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_database.dart';
@@ -206,8 +207,11 @@ void main() {
     );
   });
 
-  test('şema versiyonu 1 — docs/06 §1', () async {
+  test('şema versiyonu kodun DESTEKLEDİĞİ versiyondur — docs/06 §1', () async {
+    // Sabit bir sayıya bağlanırsa şema yükseltilince sessizce eskir; asıl
+    // güvence, açılan veritabanının uygulamanın beklediği versiyonda
+    // olmasıdır.
     final row = await db.customSelect('PRAGMA user_version;').getSingle();
-    expect(row.data['user_version'], 1);
+    expect(row.data['user_version'], kSupportedSchemaVersion);
   });
 }

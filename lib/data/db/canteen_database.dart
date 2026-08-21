@@ -86,7 +86,7 @@ class CanteenDatabase extends _$CanteenDatabase {
     DateTime Function()? clock,
     int schemaVersion = kSupportedSchemaVersion,
     this.applySeed = true,
-  }) : migrationPlan = migrationPlan ?? MigrationPlan.empty,
+  }) : migrationPlan = migrationPlan ?? MigrationPlan.released,
        clock = clock ?? DateTime.now,
        _schemaVersion = schemaVersion;
 

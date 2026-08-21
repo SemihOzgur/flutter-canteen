@@ -10,6 +10,7 @@ import 'package:canteen/core/paths/app_paths.dart';
 import 'package:canteen/data/db/canteen_database.dart';
 import 'package:canteen/data/db/database_opener.dart';
 import 'package:canteen/data/db/migrations/migration_plan.dart';
+import 'package:canteen/data/db/schema_version.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 
@@ -38,7 +39,7 @@ CanteenDatabase memoryDatabase({
   MigrationPlan? migrationPlan,
   int? schemaVersion,
   bool applySeed = true,
-  int supportedSchemaVersion = 1,
+  int supportedSchemaVersion = kSupportedSchemaVersion,
 }) {
   return CanteenDatabase(
     openDatabaseInMemory(supportedSchemaVersion: supportedSchemaVersion),
@@ -56,7 +57,7 @@ CanteenDatabase fileDatabase(
   MigrationPlan? migrationPlan,
   int? schemaVersion,
   bool applySeed = true,
-  int supportedSchemaVersion = 1,
+  int supportedSchemaVersion = kSupportedSchemaVersion,
 }) {
   return CanteenDatabase(
     openDatabaseFile(path, supportedSchemaVersion: supportedSchemaVersion),

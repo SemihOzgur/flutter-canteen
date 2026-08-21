@@ -2,6 +2,7 @@
 ///
 /// ```text
 /// schemaVersion = 1  →  v1.0.0 ile yayınlanan ilk şema
+/// schemaVersion = 2  →  categories.icon_key eklendi (OD-029)
 /// ```
 ///
 /// `schemaVersion` **uygulama sürümünden bağımsızdır.** SQLite'ın `user_version`
@@ -18,4 +19,4 @@ library;
 ///
 /// Artırıldığında [MigrationPlan]'a karşılık gelen adım eklenmeli ve
 /// `test/db/schema/v<N>.json` dump'ı repoya konmalıdır (REQ-MIG-008).
-const int kSupportedSchemaVersion = 1;
+const int kSupportedSchemaVersion = 2;

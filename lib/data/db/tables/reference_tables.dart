@@ -51,6 +51,17 @@ class Categories extends Table {
 
   TextColumn get name => text()();
 
+  /// Sabit katalogdan ikon anahtarı — **v2 · OD-029 · REQ-CAT-008.**
+  ///
+  /// Saklanan şey bir ikon **kod noktası değil**, `category_icon.dart`
+  /// katalogundaki anahtardır (`drink`, `coffee`, `bakery` …). Kod noktası
+  /// bir uygulama ayrıntısıdır: ikon seti değişince eski kayıtlar sessizce
+  /// başka bir şeye işaret ederdi.
+  ///
+  /// `NULL` = kullanıcı seçmedi; o durumda ikon kategori **adından**
+  /// türetilir (docs/21 §3).
+  TextColumn get iconKey => text().nullable()();
+
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   /// `Genel` için `true` — silinemez, pasifleştirilemez, adı değiştirilemez.

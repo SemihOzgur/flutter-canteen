@@ -606,6 +606,17 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _iconKeyMeta = const VerificationMeta(
+    'iconKey',
+  );
+  @override
+  late final GeneratedColumn<String> iconKey = GeneratedColumn<String>(
+    'icon_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -670,6 +681,7 @@ class $CategoriesTable extends Categories
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    iconKey,
     sortOrder,
     isSystem,
     isActive,
@@ -698,6 +710,12 @@ class $CategoriesTable extends Categories
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon_key')) {
+      context.handle(
+        _iconKeyMeta,
+        iconKey.isAcceptableOrUnknown(data['icon_key']!, _iconKeyMeta),
+      );
     }
     if (data.containsKey('sort_order')) {
       context.handle(
@@ -734,6 +752,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      iconKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon_key'],
+      ),
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -775,6 +797,17 @@ class $CategoriesTable extends Categories
 class Category extends DataClass implements Insertable<Category> {
   final int id;
   final String name;
+
+  /// Sabit katalogdan ikon anahtarı — **v2 · OD-029 · REQ-CAT-008.**
+  ///
+  /// Saklanan şey bir ikon **kod noktası değil**, `category_icon.dart`
+  /// katalogundaki anahtardır (`drink`, `coffee`, `bakery` …). Kod noktası
+  /// bir uygulama ayrıntısıdır: ikon seti değişince eski kayıtlar sessizce
+  /// başka bir şeye işaret ederdi.
+  ///
+  /// `NULL` = kullanıcı seçmedi; o durumda ikon kategori **adından**
+  /// türetilir (docs/21 §3).
+  final String? iconKey;
   final int sortOrder;
 
   /// `Genel` için `true` — silinemez, pasifleştirilemez, adı değiştirilemez.
@@ -785,6 +818,7 @@ class Category extends DataClass implements Insertable<Category> {
   const Category({
     required this.id,
     required this.name,
+    this.iconKey,
     required this.sortOrder,
     required this.isSystem,
     required this.isActive,
@@ -796,6 +830,9 @@ class Category extends DataClass implements Insertable<Category> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || iconKey != null) {
+      map['icon_key'] = Variable<String>(iconKey);
+    }
     map['sort_order'] = Variable<int>(sortOrder);
     map['is_system'] = Variable<bool>(isSystem);
     map['is_active'] = Variable<bool>(isActive);
@@ -816,6 +853,9 @@ class Category extends DataClass implements Insertable<Category> {
     return CategoriesCompanion(
       id: Value(id),
       name: Value(name),
+      iconKey: iconKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconKey),
       sortOrder: Value(sortOrder),
       isSystem: Value(isSystem),
       isActive: Value(isActive),
@@ -832,6 +872,7 @@ class Category extends DataClass implements Insertable<Category> {
     return Category(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      iconKey: serializer.fromJson<String?>(json['iconKey']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       isSystem: serializer.fromJson<bool>(json['isSystem']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -845,6 +886,7 @@ class Category extends DataClass implements Insertable<Category> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'iconKey': serializer.toJson<String?>(iconKey),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'isSystem': serializer.toJson<bool>(isSystem),
       'isActive': serializer.toJson<bool>(isActive),
@@ -856,6 +898,7 @@ class Category extends DataClass implements Insertable<Category> {
   Category copyWith({
     int? id,
     String? name,
+    Value<String?> iconKey = const Value.absent(),
     int? sortOrder,
     bool? isSystem,
     bool? isActive,
@@ -864,6 +907,7 @@ class Category extends DataClass implements Insertable<Category> {
   }) => Category(
     id: id ?? this.id,
     name: name ?? this.name,
+    iconKey: iconKey.present ? iconKey.value : this.iconKey,
     sortOrder: sortOrder ?? this.sortOrder,
     isSystem: isSystem ?? this.isSystem,
     isActive: isActive ?? this.isActive,
@@ -874,6 +918,7 @@ class Category extends DataClass implements Insertable<Category> {
     return Category(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      iconKey: data.iconKey.present ? data.iconKey.value : this.iconKey,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       isSystem: data.isSystem.present ? data.isSystem.value : this.isSystem,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
@@ -887,6 +932,7 @@ class Category extends DataClass implements Insertable<Category> {
     return (StringBuffer('Category(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('iconKey: $iconKey, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('isSystem: $isSystem, ')
           ..write('isActive: $isActive, ')
@@ -900,6 +946,7 @@ class Category extends DataClass implements Insertable<Category> {
   int get hashCode => Object.hash(
     id,
     name,
+    iconKey,
     sortOrder,
     isSystem,
     isActive,
@@ -912,6 +959,7 @@ class Category extends DataClass implements Insertable<Category> {
       (other is Category &&
           other.id == this.id &&
           other.name == this.name &&
+          other.iconKey == this.iconKey &&
           other.sortOrder == this.sortOrder &&
           other.isSystem == this.isSystem &&
           other.isActive == this.isActive &&
@@ -922,6 +970,7 @@ class Category extends DataClass implements Insertable<Category> {
 class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<int> id;
   final Value<String> name;
+  final Value<String?> iconKey;
   final Value<int> sortOrder;
   final Value<bool> isSystem;
   final Value<bool> isActive;
@@ -930,6 +979,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.iconKey = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.isSystem = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -939,6 +989,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.iconKey = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.isSystem = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -950,6 +1001,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   static Insertable<Category> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<String>? iconKey,
     Expression<int>? sortOrder,
     Expression<bool>? isSystem,
     Expression<bool>? isActive,
@@ -959,6 +1011,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (iconKey != null) 'icon_key': iconKey,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (isSystem != null) 'is_system': isSystem,
       if (isActive != null) 'is_active': isActive,
@@ -970,6 +1023,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   CategoriesCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
+    Value<String?>? iconKey,
     Value<int>? sortOrder,
     Value<bool>? isSystem,
     Value<bool>? isActive,
@@ -979,6 +1033,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     return CategoriesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      iconKey: iconKey ?? this.iconKey,
       sortOrder: sortOrder ?? this.sortOrder,
       isSystem: isSystem ?? this.isSystem,
       isActive: isActive ?? this.isActive,
@@ -995,6 +1050,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (iconKey.present) {
+      map['icon_key'] = Variable<String>(iconKey.value);
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
@@ -1023,6 +1081,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     return (StringBuffer('CategoriesCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('iconKey: $iconKey, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('isSystem: $isSystem, ')
           ..write('isActive: $isActive, ')
@@ -9864,6 +9923,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
     CategoriesCompanion Function({
       Value<int> id,
       required String name,
+      Value<String?> iconKey,
       Value<int> sortOrder,
       Value<bool> isSystem,
       Value<bool> isActive,
@@ -9874,6 +9934,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
     CategoriesCompanion Function({
       Value<int> id,
       Value<String> name,
+      Value<String?> iconKey,
       Value<int> sortOrder,
       Value<bool> isSystem,
       Value<bool> isActive,
@@ -9921,6 +9982,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get iconKey => $composableBuilder(
+    column: $table.iconKey,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9996,6 +10062,11 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get iconKey => $composableBuilder(
+    column: $table.iconKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -10036,6 +10107,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get iconKey =>
+      $composableBuilder(column: $table.iconKey, builder: (column) => column);
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -10108,6 +10182,7 @@ class $$CategoriesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> iconKey = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -10116,6 +10191,7 @@ class $$CategoriesTableTableManager
               }) => CategoriesCompanion(
                 id: id,
                 name: name,
+                iconKey: iconKey,
                 sortOrder: sortOrder,
                 isSystem: isSystem,
                 isActive: isActive,
@@ -10126,6 +10202,7 @@ class $$CategoriesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
+                Value<String?> iconKey = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -10134,6 +10211,7 @@ class $$CategoriesTableTableManager
               }) => CategoriesCompanion.insert(
                 id: id,
                 name: name,
+                iconKey: iconKey,
                 sortOrder: sortOrder,
                 isSystem: isSystem,
                 isActive: isActive,
