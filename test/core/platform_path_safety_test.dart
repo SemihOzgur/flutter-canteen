@@ -169,8 +169,8 @@ void main() {
       expect(lock.tryAcquire(), InstanceLockResult.acquired);
       expect(lock.isHeld, isTrue);
       expect(
-        File(paths.lockFile).readAsStringSync(),
-        '4242',
+        lock.readRecordedPid(),
+        4242,
         reason:
             'Çökme sonrası kalan kilidin PID kontrolüyle temizlenebilmesi '
             'için dosyada PID bulunmalıdır (rules/03 §5).',
