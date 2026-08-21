@@ -82,7 +82,7 @@ void main() {
       }
 
       expect(
-        file.readAsStringSync(),
+        file.readAsStringSync().replaceAll('\r\n', '\n'),
         encoded,
         reason:
             'Şema, repodaki v$kSupportedSchemaVersion anlık görüntüsünden SAPTI. '

@@ -18,6 +18,7 @@
 /// **W11** ile doğrulanır (docs/27 §8).
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -97,6 +98,18 @@ class InstanceLock {
   /// Kilit dosyasındaki PID — tanılama amaçlıdır.
   /// Dosya yoksa veya okunamıyorsa `null`.
   int? readRecordedPid() {
+    final handle = _handle;
+    if (handle != null) {
+      try {
+        handle.setPositionSync(0);
+        return int.tryParse(
+          utf8.decode(handle.readSync(handle.lengthSync())).trim(),
+        );
+      } on FileSystemException {
+        return null;
+      }
+    }
+
     final file = File(lockFilePath);
     if (!file.existsSync()) return null;
     try {
