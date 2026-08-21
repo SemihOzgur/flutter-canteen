@@ -83,7 +83,31 @@ class TempAppPaths {
   }
 
   void dispose() {
-    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    deleteDirectoryWithRetry(dir);
+  }
+}
+
+void deleteDirectoryWithRetry(
+  Directory directory, {
+  int maxAttempts = 5,
+  Duration retryDelay = const Duration(milliseconds: 100),
+  void Function()? deleteAction,
+  bool windowsFileLockRetryEnabled = Platform.isWindows,
+}) {
+  if (!directory.existsSync()) return;
+
+  var attempt = 0;
+  while (true) {
+    try {
+      (deleteAction ?? () => directory.deleteSync(recursive: true)).call();
+      return;
+    } on PathAccessException catch (e) {
+      attempt += 1;
+      final isWindowsFileInUse =
+          windowsFileLockRetryEnabled && e.osError?.errorCode == 32;
+      if (!isWindowsFileInUse || attempt >= maxAttempts) rethrow;
+      sleep(retryDelay);
+    }
   }
 }
 
