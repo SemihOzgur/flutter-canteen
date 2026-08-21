@@ -85,6 +85,11 @@ sayfanın altındaki **Artifacts**:
 | `KantinOtomasyonu-kurulum-<sürüm>` | Kurulum paketi (`.exe`) — asıl dağıtılan dosya |
 | `KantinOtomasyonu-tasinabilir-<sürüm>` | Kurulumsuz deneme; klasörü açıp `canteen.exe` çalıştırın |
 
+`publish_release = true` seçilirse aynı dosyalar otomatik olarak
+**Releases** sekmesine de yüklenir; böylece tek linkten `.exe` indirilebilir.
+
+Alternatif olarak `v1.0.0` gibi bir tag push edilirse workflow release'i otomatik yayınlar.
+
 Aynı çalışma testleri de **Windows üzerinde** yürütür; bu, macOS'ta
 görünmeyen yol/kilitleme farklarını yakalayan tek yerdir (rules/05 §6).
 
