@@ -21,6 +21,40 @@ import 'package:canteen/core/money/money_formatter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('MoneyFormatter.compact — grafik ekseni', () {
+    test('bin altı olduğu gibi yazılır', () {
+      expect(MoneyFormatter.compact(const Money(0)), '₺0');
+      expect(MoneyFormatter.compact(const Money(2550)), '₺25');
+      expect(MoneyFormatter.compact(const Money(99999)), '₺999');
+    });
+
+    test('SINIR — tam 1.000 lira `B` olur', () {
+      expect(MoneyFormatter.compact(const Money(99999)), '₺999');
+      expect(MoneyFormatter.compact(const Money(100000)), '₺1B');
+    });
+
+    test('bin ve milyon kısaltılır', () {
+      expect(MoneyFormatter.compact(const Money(150000)), '₺1,5B');
+      expect(MoneyFormatter.compact(const Money(1234500)), '₺12,3B');
+      expect(MoneyFormatter.compact(const Money(100000000)), '₺1M');
+      expect(MoneyFormatter.compact(const Money(250000000)), '₺2,5M');
+    });
+
+    test('gereksiz `,0` yazılmaz — eksende yer kaplar', () {
+      expect(MoneyFormatter.compact(const Money(200000)), '₺2B');
+    });
+
+    test('negatif değer eksi işaretini korur', () {
+      expect(MoneyFormatter.compact(const Money(-150000)), '−₺1,5B');
+    });
+
+    test('kısaltma YALNIZCA grafik içindir — tam biçim değişmez', () {
+      // BR-FIN-005: kullanıcı ödediği rakamı tam görür. Kısaltma fiş,
+      // sepet veya raporda kullanılmaz.
+      expect(MoneyFormatter.format(const Money(150000)), '₺1.500,00');
+    });
+  });
+
   group('Money — aritmetik (BR-FIN-001)', () {
     test('toplama ve çıkarma kayıpsızdır', () {
       expect((const Money(2550) + const Money(1000)).minor, 3550);

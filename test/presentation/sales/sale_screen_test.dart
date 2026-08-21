@@ -51,6 +51,9 @@ import 'package:canteen/presentation/sales/cart_panel.dart';
 import 'package:canteen/presentation/sales/product_picker.dart';
 import 'package:canteen/presentation/sales/sale_screen.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:canteen/presentation/products/product_image_view.dart';
+import 'package:canteen/application/reference/providers.dart';
+import 'package:canteen/presentation/products/category_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -95,12 +98,17 @@ void main() {
     int initialStock = 10,
     List<String> barcodes = const [],
     bool isFavorite = false,
+    int? categoryId,
   }) async {
     final result = await withServices(
       (container) => container
           .read(productServiceProvider)
           .create(
-            ProductDraft(name: name, salePrice: Money(salePriceMinor)),
+            ProductDraft(
+              name: name,
+              salePrice: Money(salePriceMinor),
+              categoryId: categoryId,
+            ),
             userId: userId,
             initialStock: initialStock,
             barcodes: barcodes,
@@ -194,6 +202,113 @@ void main() {
             'rules/05 §2: sepet paneli hiçbir çözünürlükte gizlenmez veya '
             'sekmeye dönüşmez.',
       );
+    });
+
+    testWidgets('ürün kartı GÖRSEL taşır', (tester) async {
+      // Görsel yoksa varsayılan ikon gelir; hata GÖSTERİLMEZ (REQ-IMG-009).
+      // Kart yüksekliği görselli ve görselsiz üründe aynıdır — aksi hâlde
+      // ızgara satır satır kayardı.
+      await createProduct(name: 'Ayran');
+      await pumpSale(tester);
+
+      final card = find.byKey(const Key('sale_product_1'));
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.byType(ProductImageView)),
+        findsOneWidget,
+        reason: 'Satış ekranı ürün kartı görsel alanı taşımalıdır.',
+      );
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.byKey(ProductImageView.fallbackKey),
+        ),
+        findsOneWidget,
+        reason: 'Görselsiz üründe varsayılan ikon gelir, hata değil.',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('görselsiz ürün KATEGORİ ikonuyla gösterilir', (tester) async {
+      // docs/21 §3 · REQ-IMG-009: "Ürün kategori ikonuyla gösterilir."
+      // Nötr kutu ikonu, kategorisi belli bir üründe bilgi kaybıdır —
+      // ızgarada hangi rafa ait olduğu ilk bakışta görünmeli.
+      final categoryId = await withServices((container) async {
+        final created = await container
+            .read(categoryServiceProvider)
+            .create(name: 'Soğuk İçecekler', userId: userId);
+        return (created as Ok<int>).value;
+      });
+      await createProduct(name: 'Kola', categoryId: categoryId);
+      await pumpSale(tester);
+
+      final card = find.byKey(const Key('sale_product_1'));
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.byIcon(Icons.local_drink_outlined),
+        ),
+        findsOneWidget,
+        reason: 'İçecek kategorisi bardak ikonuyla gösterilmelidir.',
+      );
+    });
+
+    testWidgets('bilinmeyen kategoride NÖTR ikon kalır', (tester) async {
+      // Yanlış ikon göstermektense nötr ikon göstermek yeğdir; kasadaki
+      // kişi "Kalemler" kategorisinde bardak görürse ekrana güvenmez.
+      await createProduct(name: 'Silgi');
+      await pumpSale(tester);
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('sale_product_1')),
+          matching: find.byIcon(fallbackCategoryIcon),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('sepet satırı ve fiyatı UZAKTAN okunacak boyuttadır', (
+      tester,
+    ) async {
+      // rules/05 §2 — kasadaki kişi sepete bakmadan yazar ve göz ucuyla
+      // doğrular. Ürün adı gövde metni boyutunda kalırsa bu mümkün olmaz.
+      await createProduct(name: 'Kola', barcodes: ['8690000000001']);
+      await pumpSale(tester);
+      await scan(tester, '8690000000001');
+
+      final lineId = (await activeCartLines()).single.id;
+      // Ürün adı hem kartta hem sepette geçiyor; ölçülen SEPET satırıdır.
+      final name = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(Key('sale_cart_line_$lineId')),
+          matching: find.text('Kola'),
+        ),
+      );
+      final total = tester.widget<Text>(
+        find.byKey(Key('sale_cart_total_$lineId')),
+      );
+
+      expect(
+        name.style?.fontSize ?? 0,
+        greaterThanOrEqualTo(16),
+        reason: 'Sepet satırının adı en az 16 px olmalıdır.',
+      );
+      expect(
+        total.style?.fontSize ?? 0,
+        greaterThanOrEqualTo(16),
+        reason: 'Satır tutarı en az 16 px olmalıdır.',
+      );
+      expect(total.style?.fontWeight, FontWeight.bold);
+
+      // Ürün kartı da kasadan bir kol boyu uzakta okunur.
+      final card = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('sale_product_1')),
+          matching: find.text('Kola'),
+        ),
+      );
+      expect(card.style?.fontSize ?? 0, greaterThanOrEqualTo(16));
     });
 
     testWidgets('REQ-UX-014 — toplam 32 px kalın gösterilir', (tester) async {

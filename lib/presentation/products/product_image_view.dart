@@ -4,6 +4,7 @@
 /// |---|---|
 /// | Ürün listesi satırı | 40×40 |
 /// | Ürün formu | 200×200 |
+/// | Satış ekranı ürün kartı | kart genişliği × 72 |
 ///
 /// ## Kırık görsel HATA DEĞİLDİR
 ///
@@ -15,6 +16,12 @@
 /// listesini kırmızı ünlemlerle doldurmak yalnızca gürültü üretir. Bu yüzden
 /// hem `null` yol hem de okuma hatası **aynı** sonuca çıkar: varsayılan ikon.
 ///
+/// ## Varsayılan ikon KATEGORİYE göredir
+///
+/// docs/21 §3 ve REQ-IMG-009 kabul kriteri *"ürün **kategori ikonuyla**
+/// gösterilir"* der. [categoryName] verilirse ikon addan türetilir
+/// (`category_icon.dart`); verilmezse nötr ürün ikonu kalır.
+///
 /// Dosyanın varlığı **önceden kontrol edilmez**: her liste satırında senkron
 /// `existsSync` çağırmak UI thread'i dosya sistemine indirirdi (`rules/01 §8`).
 /// Hata yolu `errorBuilder` ile karşılanır.
@@ -23,7 +30,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme/app_palette.dart';
 import '../../data/files/providers.dart';
+import 'category_icon.dart';
 
 class ProductImageView extends ConsumerWidget {
   static const Key fallbackKey = Key('product_image_fallback');
@@ -32,13 +41,42 @@ class ProductImageView extends ConsumerWidget {
   /// Veri dizinine **göreli** yol (`images/<uuid>.jpg`) — docs/21 §1.
   final String? relativePath;
 
+  /// Kare gösterim kenarı. [width]/[height] verilirse yok sayılır.
   final double size;
+
+  /// Kare olmayan gösterim için genişlik — satış ekranı kartı gibi.
+  final double? width;
+
+  /// Kare olmayan gösterim için yükseklik.
+  final double? height;
+
+  /// Köşe yuvarlaması — kartın üstüne oturan görselde alt köşeler düz kalır.
+  final BorderRadius? borderRadius;
+
+  /// Ürünün kategorisinin **adı** — varsayılan ikon bundan türetilir
+  /// (docs/21 §3 · REQ-IMG-009). `null` ise nötr ürün ikonu kullanılır.
+  final String? categoryName;
+
+  /// Varsayılan ikonun rengini sabitleyen anahtar — genelde kategori id'si.
+  ///
+  /// Aynı kategori her açılışta ve her ekranda aynı rengi alır; renk ürün
+  /// adına göre değişseydi aynı rafın ürünleri farklı renklerde görünürdü.
+  final int? categoryColorSeed;
 
   const ProductImageView({
     required this.relativePath,
     required this.size,
+    this.width,
+    this.height,
+    this.borderRadius,
+    this.categoryName,
+    this.categoryColorSeed,
     super.key,
   });
+
+  double get _width => width ?? size;
+  double get _height => height ?? size;
+  BorderRadius get _radius => borderRadius ?? BorderRadius.circular(6);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,12 +84,12 @@ class ProductImageView extends ConsumerWidget {
     if (provider == null) return _fallback(context);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: _radius,
       child: Image(
         key: imageKey,
         image: provider,
-        width: size,
-        height: size,
+        width: _width,
+        height: _height,
         fit: BoxFit.cover,
         // docs/21 §3 — liste kaydırılırken görseller tembel yüklenir; çözünen
         // kare belirene kadar varsayılan ikon durur, boş kutu görünmez.
@@ -65,14 +103,39 @@ class ProductImageView extends ConsumerWidget {
     );
   }
 
-  Widget _fallback(BuildContext context) => Container(
-    key: fallbackKey,
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Icon(Icons.inventory_2_outlined, size: size * 0.55),
-  );
+  Widget _fallback(BuildContext context) {
+    final icon = categoryIconFor(categoryName);
+    // Kategori bilinmiyorsa nötr yüzey rengi kalır: renk, bilgi taşımadığı
+    // durumda bilgi taşıyormuş gibi görünmemelidir (rules/05 §5).
+    final accent = categoryColorSeed == null
+        ? null
+        : AppPalette.categoryColor(categoryColorSeed!);
+
+    return Container(
+      key: fallbackKey,
+      width: _width,
+      height: _height,
+      decoration: BoxDecoration(
+        color:
+            accent?.withValues(alpha: 0.14) ??
+            Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: _radius,
+      ),
+      child: Icon(
+        icon,
+        size: _iconSize,
+        color: accent ?? Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+
+  /// Varsayılan ikonun kenarı.
+  ///
+  /// Kısa kenara göre ölçeklenir; ancak kutu bir `Expanded` içindeyse kenar
+  /// `double.infinity` olur ve sonsuz font boyutu Flutter'ı assert'e
+  /// düşürürdü. O durumda [size] bir taban değer olarak kullanılır.
+  double get _iconSize {
+    final shorter = _width < _height ? _width : _height;
+    return (shorter.isFinite ? shorter : size) * 0.55;
+  }
 }

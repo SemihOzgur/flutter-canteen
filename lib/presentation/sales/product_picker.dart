@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/l10n/app_strings_tr.dart';
 import '../../core/money/money_formatter.dart';
+import '../products/product_image_view.dart';
 import '../../domain/models/category.dart';
 import '../../domain/models/product.dart';
 import 'sale_dialogs.dart';
@@ -120,6 +121,16 @@ class ProductPicker extends StatelessWidget {
     );
   }
 
+  /// Ürünün kategorisinin adı — varsayılan ikon bundan türetilir
+  /// (docs/21 §3). Kategori listede yoksa (pasifleşmiş olabilir) `null`
+  /// döner ve nötr ikon kalır.
+  String? _categoryNameOf(Product product) {
+    for (final category in categories) {
+      if (category.id == product.categoryId) return category.name;
+    }
+    return null;
+  }
+
   Widget _grid(BuildContext context, ThemeData theme) {
     if (products.isEmpty) return _empty(theme);
 
@@ -132,7 +143,9 @@ class ProductPicker extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns < 2 ? 2 : columns,
-            childAspectRatio: 2.1,
+            // Kart artık görsel taşıyor; sütun sayısı docs/23 §4'teki gibi
+            // kalır, yalnızca yükseklik artar.
+            childAspectRatio: 1.15,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
           ),
@@ -145,42 +158,72 @@ class ProductPicker extends StatelessWidget {
                 // REQ-CART-009 — barkodsuz ürün TIKLANARAK sepete eklenir.
                 key: Key('sale_product_${product.id}'),
                 onTap: () => onPickProduct(product),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        product.name,
-                        style: theme.textTheme.bodyMedium,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // docs/21 §3 — görsel yoksa veya okunamıyorsa varsayılan
+                    // ikon gelir; hata GÖSTERİLMEZ (REQ-IMG-009). Kart
+                    // yüksekliği görselli ve görselsiz üründe aynıdır, yoksa
+                    // ızgara satır satır kayardı.
+                    Expanded(
+                      child: ProductImageView(
+                        relativePath: product.imagePath,
+                        size: 72,
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        categoryName: _categoryNameOf(product),
+                        categoryColorSeed: product.categoryId,
                       ),
-                      // Rozet + fiyat dar kartta taşabilir; ikisi de esnektir
-                      // ve fiyat asla kırpılmaz — kasada okunması gereken
-                      // değer odur.
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // docs/13 §4 — negatif stok GİZLENMEZ, vurgulanır.
-                          Flexible(
-                            child:
-                                stockBadge(context, product) ??
-                                const SizedBox(),
-                          ),
-                          Flexible(
-                            child: Text(
-                              MoneyFormatter.format(product.salePrice),
-                              style: theme.textTheme.titleSmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            // Kart kasadan bir kol boyu uzakta okunuyor;
+                            // gövde metni bu mesafede seçilemiyordu.
+                            product.name,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
+                            // Görsel tanımayı zaten sağlıyor; ad tek satırda
+                            // kalır ve kart yüksekliği ürüne göre değişmez.
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          // Rozet + fiyat dar kartta taşabilir; ikisi de esnektir
+                          // ve fiyat asla kırpılmaz — kasada okunması gereken
+                          // değer odur.
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // docs/13 §4 — negatif stok GİZLENMEZ.
+                              Flexible(
+                                child:
+                                    stockBadge(context, product) ??
+                                    const SizedBox(),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  MoneyFormatter.format(product.salePrice),
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );

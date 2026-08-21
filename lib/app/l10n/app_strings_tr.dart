@@ -27,6 +27,48 @@ class AppStringsTr {
 
   // ── Ana ekran ────────────────────────────────────────────────────────────
   static const String homeWelcome = 'Hoş geldiniz';
+
+  /// Ana ekran bölüm başlıkları — 15 eylem tek yığın hâlinde anlaşılmıyordu.
+  static const String homeSectionDaily = 'Günlük İş';
+  static const String homeSectionCatalog = 'Ürün ve Katalog';
+  static const String homeSectionData = 'Veri ve Bakım';
+  static const String homeSectionFinancial = 'Finansal — parola ister';
+
+  /// Kutuların üzerine gelince çıkan açıklamalar.
+  ///
+  /// Etiket ne olduğunu söyler, açıklama **ne işe yaradığını**. İkisini tek
+  /// satırda vermek kutuları okunmaz hâle getirirdi.
+  static const String homeHintSale =
+      'Barkod okutarak satış yapın. Kısayolların tamamı F1 ile listelenir.';
+  static const String homeHintSaleHistory =
+      'Geçmiş satışları görün; buradan iade ve iptal yapılır.';
+  static const String homeHintStock =
+      'Stok girişi, fire ve sayım düzeltmesi. Her hareket deftere yazılır.';
+  static const String homeHintProducts =
+      'Ürün ekleyin, fiyat ve barkod düzenleyin, favorileri belirleyin.';
+  static const String homeHintCategories =
+      'Ürünleri gruplayan kategorileri yönetin.';
+  static const String homeHintSuppliers =
+      'Tedarikçileri yönetin; stok girişinde seçilir.';
+  static const String homeHintVatRates =
+      'KDV oranlarını tanımlayın. Satış fiyatı KDV dahildir.';
+  static const String homeHintUsers =
+      'Kullanıcı ekleyin. Yetki farkı yoktur; amaç izlenebilirliktir.';
+  static const String homeHintBackup =
+      'Yedek alın ve geri yükleyin. Yedeği başka bir diske kopyalayın.';
+  static const String homeHintImportExport =
+      'Ürünleri CSV ile toplu aktarın. Önizleme onaylanmadan kayıt oluşmaz.';
+  static const String homeHintConsistency =
+      'Stok önbelleğini defterle karşılaştırır; sapma varsa bildirir.';
+  static const String homeHintBarcodeDiagnostics =
+      'Barkod okuyucunun okuduğunu görün; "neden çalışmıyor?" burada çözülür.';
+  static const String homeHintDashboard =
+      'Ciro, kâr ve grafikler. Dashboard parolası ister.';
+  static const String homeHintReports =
+      'Ayrıntılı raporlar ve CSV dışa aktarma. Dashboard parolası ister.';
+  static const String homeHintFinancialAccess =
+      'Dashboard parolasını değiştirin, yeni kurtarma kodu üretin.';
+
   static const String homeDescription =
       'Satışa başlamak için Satış Ekranı\'nı açın. Kısayolların tamamı '
       'satış ekranında F1 ile listelenir.';
@@ -1007,6 +1049,11 @@ class AppStringsTr {
   static const String dashboardTopProducts = 'En Çok Satan Ürünler';
   static const String dashboardCategories = 'Kategori Dağılımı';
   static const String dashboardRecentSales = 'Son Satışlar';
+
+  /// Saatlik yoğunluk grafiğinin dokunma balonu.
+  static String dashboardHourlyTooltip(String hour, int count) =>
+      '$hour · $count satış';
+
   static const String dashboardNoData = 'Bu dönemde veri yok.';
   static const String dashboardOtherCategories = 'Diğer';
 
