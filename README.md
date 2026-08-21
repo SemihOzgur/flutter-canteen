@@ -73,6 +73,23 @@ düşürür. Bir madde artık test ediliyorsa kaydının silinmesi de zorunludur
 
 ## Windows sürümü
 
+### GitHub Actions ile (macOS'ta geliştirirken)
+
+Geliştirme macOS'ta yapıldığı için Windows çıktısı CI'da üretilir:
+
+**Actions** → **Windows sürümü** → **Run workflow** → çalışma bitince
+sayfanın altındaki **Artifacts**:
+
+| Artefakt | İçerik |
+|---|---|
+| `KantinOtomasyonu-kurulum-<sürüm>` | Kurulum paketi (`.exe`) — asıl dağıtılan dosya |
+| `KantinOtomasyonu-tasinabilir-<sürüm>` | Kurulumsuz deneme; klasörü açıp `canteen.exe` çalıştırın |
+
+Aynı çalışma testleri de **Windows üzerinde** yürütür; bu, macOS'ta
+görünmeyen yol/kilitleme farklarını yakalayan tek yerdir (rules/05 §6).
+
+### Elle (Windows makinede)
+
 ```bat
 flutter build windows --release
 ISCC.exe installer\canteen.iss

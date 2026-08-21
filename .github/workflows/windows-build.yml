@@ -1,0 +1,139 @@
+# Windows sürümü — derleme ve kurulum paketi
+#
+# docs/31 Faz 12 · rules/05 §6: "macOS'ta çalışan bir şeyin Windows'ta
+# çalıştığı VARSAYILAMAZ." Geliştirme macOS'ta yapıldığı için Windows
+# çıktısı ancak burada üretilebilir.
+#
+# İki iş vardır ve **birbirini bloklamaz**:
+#
+#   build  → .exe ve kurulum paketini üretir, artefakt olarak yükler
+#   test   → analyzer + test paketini WINDOWS üzerinde çalıştırır
+#
+# Ayrılmalarının nedeni: testte Windows'a özgü bir sorun çıksa bile
+# indirilebilir bir çıktı olmalıdır — sorunu incelemek için çoğu zaman
+# uygulamanın kendisi gerekir.
+
+name: Windows sürümü
+
+on:
+  # Elle tetikleme: Actions sekmesi → "Windows sürümü" → "Run workflow".
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # Yalnızca Windows çıktısını etkileyebilecek yollar.
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'windows/**'
+      - 'installer/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/windows-build.yml'
+  pull_request:
+    branches: [main]
+
+# Aynı dal için yeni bir çalıştırma başlarsa öncekini iptal et: eski bir
+# derlemenin artefaktını beklemek kimseye bir şey kazandırmaz.
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Yerel geliştirme ortamıyla AYNI sürüm. Sabitlenmezse CI bir gün başka
+  # bir Flutter'a geçer ve "bende çalışıyordu" ayrımı ortaya çıkar.
+  FLUTTER_VERSION: '3.41.7'
+
+jobs:
+  build:
+    name: Derleme ve kurulum paketi
+    runs-on: windows-latest
+
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Bağımlılıklar
+        run: flutter pub get
+
+      - name: Sürümü oku
+        id: version
+        shell: pwsh
+        run: |
+          # pubspec `version: 1.0.0+1` → `1.0.0`
+          $line = Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$'
+          $full = $line.Matches[0].Groups[1].Value.Trim()
+          $semver = $full.Split('+')[0]
+          "semver=$semver" >> $env:GITHUB_OUTPUT
+          Write-Host "Sürüm: $semver"
+
+      - name: Windows derlemesi (release)
+        run: flutter build windows --release
+
+      - name: Inno Setup kur
+        run: choco install innosetup --no-progress -y
+
+      - name: Kurulum paketini üret
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            throw "ISCC.exe bulunamadı: $iscc"
+          }
+          & $iscc "installer\canteen.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup başarısız oldu." }
+
+      - name: Kurulum paketini yükle
+        uses: actions/upload-artifact@v4
+        with:
+          # İndirilecek asıl dosya budur.
+          name: KantinOtomasyonu-kurulum-${{ steps.version.outputs.semver }}
+          path: build/installer/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Taşınabilir sürümü yükle
+        uses: actions/upload-artifact@v4
+        with:
+          # Kurulum yapmadan denemek için: klasörü açıp canteen.exe çalıştırın.
+          # Veri yine %APPDATA%\CanteenApp altına yazılır (BR-DATA-001).
+          name: KantinOtomasyonu-tasinabilir-${{ steps.version.outputs.semver }}
+          path: build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14
+
+  test:
+    name: Windows üzerinde testler
+    runs-on: windows-latest
+
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Flutter kur
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Bağımlılıklar
+        run: flutter pub get
+
+      - name: Biçim denetimi
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyzer
+        run: flutter analyze
+
+      # Windows'ta İLK KEZ çalışır. Dosya yolu, dosya kilitleme ve satır
+      # sonu davranışı Unix'ten farklıdır (rules/05 §6); buradaki bir
+      # başarısızlık macOS'ta görünmeyen gerçek bir sorundur.
+      - name: Testler
+        run: flutter test --reporter expanded
