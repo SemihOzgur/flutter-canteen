@@ -15,6 +15,7 @@ extension CategoryRowToDomain on db.Category {
   Category toDomain() => Category(
     id: id,
     name: name,
+    iconKey: iconKey,
     sortOrder: sortOrder,
     isSystem: isSystem,
     isActive: isActive,

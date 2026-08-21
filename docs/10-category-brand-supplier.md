@@ -10,10 +10,26 @@ tek seviye yeterlidir ve raporlamayı basit tutar. İhtiyaç doğarsa [30](30-fu
 | İşlem | Davranış |
 |---|---|
 | Oluştur | İsim benzersiz olmalı (pasifler dahil) |
-| Düzenle | İsim ve sıralama değiştirilebilir |
+| Düzenle | İsim, sıralama ve **ikon** değiştirilebilir |
 | Pasifleştir | İçinde ürün olsa bile mümkün; ürünler etkilenmez (BR-CAT-003) |
 | **Yeniden aktifleştir** | **Mümkün** — `categoryActivated` (OD-020) |
 | **Sil** | 🟡 **Yalnızca hiç kullanılmamışsa** (BR-CAT-005) — §1.3 |
+
+### 1.2a Kategori ikonu (OD-029 · REQ-CAT-008)
+
+Kategori sabit bir katalogdan **bir ikon** taşıyabilir (`categories.icon_key`). İkon
+satış ekranında **görseli olmayan** ürünlerde gösterilir ([21 §3](21-image-storage.md)).
+
+| Kural | |
+|---|---|
+| Zorunlu mu | ❌ Hayır — boş bırakılabilir |
+| Boş bırakılırsa | İkon kategori **adından** türetilir; ad da eşleşmezse nötr ürün ikonu |
+| Saklanan | Katalog **anahtarı** (`drink`, `coffee` …), ikon kod noktası **değil** |
+| Katalog dışı anahtar | Reddedilir; veritabanına yazılmaz |
+| `Genel` sistem kategorisi | İkonu **değiştirilebilir** — koruma yalnızca ad ve silme içindir (BR-CAT-004) |
+
+> İkon bir **görsel yardımdır**, iş verisi değildir: hiçbir hesaplama, rapor veya stok
+> davranışı ikona bakmaz.
 
 ### 1.2b Kategori silme koşulu
 

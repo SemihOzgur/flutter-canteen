@@ -29,6 +29,14 @@ class Category {
   /// (REQ-CAT-005 · docs/05 §2.2 `UNIQUE(name)`).
   final String name;
 
+  /// Sabit katalogdan ikon anahtarı — **OD-029 · REQ-CAT-008.**
+  ///
+  /// `null` = kullanıcı seçmedi; ikon kategori **adından** türetilir
+  /// (docs/21 §3). Anahtarın hangi ikona karşılık geldiği bir
+  /// **presentation** ayrıntısıdır ve domain onu bilmez — burada yalnızca
+  /// bir kimlik taşınır.
+  final String? iconKey;
+
   /// Satış ekranı sıralaması.
   final int sortOrder;
 
@@ -46,6 +54,7 @@ class Category {
   const Category({
     required this.id,
     required this.name,
+    this.iconKey,
     required this.sortOrder,
     required this.isSystem,
     required this.isActive,
@@ -58,6 +67,7 @@ class Category {
       other is Category &&
       other.id == id &&
       other.name == name &&
+      other.iconKey == iconKey &&
       other.sortOrder == sortOrder &&
       other.isSystem == isSystem &&
       other.isActive == isActive &&
@@ -68,6 +78,7 @@ class Category {
   int get hashCode => Object.hash(
     id,
     name,
+    iconKey,
     sortOrder,
     isSystem,
     isActive,

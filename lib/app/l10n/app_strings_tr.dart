@@ -265,6 +265,13 @@ class AppStringsTr {
       'etkilenmez.';
   static const String categoryAddTitle = 'Yeni kategori';
   static const String categoryAddAction = 'Kategori Ekle';
+
+  /// OD-029 — kategori ikonu seçimi.
+  static const String categoryIconLabel = 'İkon';
+  static const String categoryIconNone = 'Otomatik';
+  static const String categoryIconAutoHint =
+      'Seçmezseniz ikon kategori adından belirlenir.';
+
   static const String categoryNameLabel = 'Kategori adı';
   static const String categoryNameRequired = 'Kategori adı boş olamaz.';
   static const String categoryRenameTitle = 'Kategori adını değiştir';

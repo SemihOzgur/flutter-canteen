@@ -24,6 +24,7 @@ import 'package:canteen/data/db/migrations/migration_plan.dart';
 import 'package:canteen/data/db/raw_sqlite_file.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:canteen/data/db/schema_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -189,11 +190,14 @@ void main() {
       final first = await DatabaseBootstrap(paths: temp.paths).open();
       await first.database.close();
 
-      // v1 → v2: açılış `migrated` yolundan geçer.
+      // Açılış `migrated` yolundan geçsin diye MEVCUT versiyonun bir
+      // üstüne çıkan sentetik bir adım kurulur. Sabit `1 → 2` yazılsaydı
+      // şema her yükseltildiğinde bu test sessizce `opened` yolunu ölçmeye
+      // başlardı.
       final plan = MigrationPlan([
         MigrationStep.sql(
-          from: 1,
-          to: 2,
+          from: kSupportedSchemaVersion,
+          to: kSupportedSchemaVersion + 1,
           statements: const [
             'ALTER TABLE products ADD COLUMN shelf_note TEXT NULL;',
           ],
@@ -203,7 +207,7 @@ void main() {
       final result = await DatabaseBootstrap(
         paths: temp.paths,
         migrationPlan: plan,
-        supportedSchemaVersion: 2,
+        supportedSchemaVersion: kSupportedSchemaVersion + 1,
       ).open();
       addTearDown(result.database.close);
       final db = result.database;

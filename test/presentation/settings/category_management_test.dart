@@ -81,6 +81,93 @@ void main() {
         .map((w) => w.data ?? ''),
   ].join('\n');
 
+  Future<String?> iconOf(int id) async => (await (db.select(
+    db.categories,
+  )..where((c) => c.id.equals(id))).getSingle()).iconKey;
+
+  group('OD-029 · REQ-CAT-008 — kategori ikonu', () {
+    testWidgets('yeni kategoriye ikon seçilebilir', (tester) async {
+      await pumpScreen(tester);
+
+      await tester.tap(find.byKey(CategoryManagementScreen.addButtonKey));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('category_form_name')),
+        'Soğuk İçecek',
+      );
+      await tester.tap(find.byKey(const Key('category_form_icon_drink')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('category_form_submit')));
+      await tester.pumpAndSettle();
+
+      final created = await withServices(
+        (container) => container.read(categoryServiceProvider).list(),
+      );
+      final category = created.firstWhere((c) => c.name == 'Soğuk İçecek');
+      expect(category.iconKey, 'drink');
+    });
+
+    testWidgets('"Otomatik" seçiliyken ikon YAZILMAZ', (tester) async {
+      // Varsayılan seçim budur; kullanıcı ikon seçmek zorunda değildir.
+      await pumpScreen(tester);
+
+      await tester.tap(find.byKey(CategoryManagementScreen.addButtonKey));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('category_form_name')),
+        'Raf 3',
+      );
+      await tester.tap(find.byKey(const Key('category_form_submit')));
+      await tester.pumpAndSettle();
+
+      final created = await withServices(
+        (container) => container.read(categoryServiceProvider).list(),
+      );
+      expect(created.firstWhere((c) => c.name == 'Raf 3').iconKey, isNull);
+    });
+
+    testWidgets('mevcut kategorinin ikonu DEĞİŞTİRİLEBİLİR', (tester) async {
+      final id = await createCategory('Deneme');
+      await pumpScreen(tester);
+
+      await tester.tap(
+        find.byKey(CategoryManagementScreen.renameButtonKey(id)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('category_form_icon_snack')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('category_form_submit')));
+      await tester.pumpAndSettle();
+
+      expect(await iconOf(id), 'snack');
+    });
+
+    testWidgets('BR-CAT-004 — `Genel`in İKONU değiştirilebilir', (
+      tester,
+    ) async {
+      // Koruma ad, silme ve pasifleştirme içindir; ikon o listede yoktur.
+      // `Genel` için "yeniden adlandır" SUNULMAZ, bu yüzden ikon düzenleme
+      // ayrı bir yoldan açılmalıdır.
+      final id = await systemCategoryId();
+      await pumpScreen(tester);
+
+      expect(
+        find.byKey(CategoryManagementScreen.iconKeyOf(id)),
+        findsOneWidget,
+        reason: '`Genel` için ikon düzenleme sunulmalıdır.',
+      );
+
+      await tester.tap(find.byKey(CategoryManagementScreen.iconKeyOf(id)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('category_form_icon_other')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('category_form_submit')));
+      await tester.pumpAndSettle();
+
+      expect(await iconOf(id), 'other');
+    });
+  });
+
   testWidgets('kategoriler listelenir; pasifler ikon + metinle işaretlenir', (
     tester,
   ) async {

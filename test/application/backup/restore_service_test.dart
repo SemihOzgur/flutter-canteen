@@ -39,6 +39,7 @@ import 'package:canteen/application/backup/backup_service.dart';
 import 'package:canteen/application/backup/restore_service.dart';
 import 'package:canteen/core/result/result.dart';
 import 'package:canteen/data/dao/backup_dao.dart';
+import 'package:canteen/data/db/schema_version.dart';
 import 'package:canteen/data/dao/daos.dart';
 import 'package:canteen/data/db/app_setting_keys.dart';
 import 'package:canteen/data/db/canteen_database.dart'
@@ -204,7 +205,13 @@ void main() {
       final tampered = await _rewriteMetadata(
         temp,
         file,
-        (json) => json.replaceAll('"schemaVersion": 1', '"schemaVersion": 99'),
+        // Metindeki mevcut versiyon aranır: sabit `1` yazılsaydı şema
+        // yükseltilince değiştirme sessizce hiçbir şey yapmaz ve test
+        // "reddedildi" yerine "kabul edildi"yi ölçerdi.
+        (json) => json.replaceAll(
+          '"schemaVersion": $kSupportedSchemaVersion',
+          '"schemaVersion": 99',
+        ),
       );
 
       final result = await restore.validate(tampered);

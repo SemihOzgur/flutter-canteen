@@ -4,6 +4,7 @@
 /// > gösterilir."*
 library;
 
+import 'package:canteen/domain/services/category_icon_keys.dart';
 import 'package:canteen/presentation/products/category_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +65,84 @@ void main() {
       expect(categoryIconFor(null), fallbackCategoryIcon);
       expect(categoryIconFor(''), fallbackCategoryIcon);
       expect(categoryIconFor('   '), fallbackCategoryIcon);
+    });
+  });
+
+  group('OD-029 — SEÇİLEN ikon addan türetmeyi EZER', () {
+    test('kullanıcı seçimi kazanır', () {
+      // Adı "İçecekler" olan bir kategoriye kullanıcı bilerek kırtasiye
+      // ikonu seçtiyse, tahmin onu geçersiz kılamaz.
+      expect(
+        categoryIconFor('İçecekler', iconKey: 'stationery'),
+        Icons.edit_outlined,
+      );
+    });
+
+    test('anahtar boşsa addan türetilir', () {
+      expect(
+        categoryIconFor('İçecekler', iconKey: null),
+        Icons.local_drink_outlined,
+      );
+    });
+
+    test('TANINMAYAN anahtar addan türetmeye düşer', () {
+      // Katalogdan bir anahtar kaldırılırsa ona işaret eden eski kayıtlar
+      // kalır; o kayıtlar boş kutu değil, makul bir ikon göstermelidir.
+      expect(
+        categoryIconFor('İçecekler', iconKey: 'silinmis_anahtar'),
+        Icons.local_drink_outlined,
+      );
+    });
+
+    test('tanınmayan anahtar VE eşleşmeyen ad → nötr ikon', () {
+      expect(
+        categoryIconFor('Zımba Telleri', iconKey: 'yok'),
+        fallbackCategoryIcon,
+      );
+    });
+  });
+
+  group('katalog', () {
+    test('her katalog girdisi geçerli bir anahtardır', () {
+      for (final option in categoryIconCatalog) {
+        expect(
+          isKnownCategoryIconKey(option.key),
+          isTrue,
+          reason: '${option.key} domain listesinde yok.',
+        );
+      }
+    });
+
+    test('domain listesindeki her anahtarın bir ikonu vardır', () {
+      // İki liste ayrı katmanlarda yaşıyor (biri Flutter'a bağlı, diğeri
+      // değil); ayrışırlarsa geçerli bir anahtar ikonsuz kalırdı.
+      for (final key in categoryIconKeys) {
+        expect(
+          iconForCategoryKey(key),
+          isNotNull,
+          reason: '$key için ikon tanımlı değil.',
+        );
+      }
+      expect(categoryIconCatalog.length, categoryIconKeys.length);
+    });
+
+    test('anahtarlar benzersizdir', () {
+      final keys = categoryIconCatalog.map((o) => o.key).toSet();
+      expect(keys.length, categoryIconCatalog.length);
+    });
+
+    test('addan türetme YALNIZCA geçerli anahtar üretir', () {
+      for (final name in const [
+        'İçecekler',
+        'Sıcak İçecek',
+        'Unlu Mamüller',
+        'Tatlılar',
+        'Kırtasiye',
+      ]) {
+        final key = categoryIconKeyFromName(name);
+        expect(key, isNotNull, reason: name);
+        expect(isKnownCategoryIconKey(key!), isTrue, reason: '$name → $key');
+      }
     });
   });
 

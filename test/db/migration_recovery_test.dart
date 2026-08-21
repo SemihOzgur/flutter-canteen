@@ -23,6 +23,7 @@ import 'package:canteen/data/db/database_bootstrap.dart';
 import 'package:canteen/data/db/migrations/migration_coordinator.dart';
 import 'package:canteen/data/db/migrations/migration_plan.dart';
 import 'package:canteen/data/db/raw_sqlite_file.dart';
+import 'package:canteen/data/db/schema_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -315,9 +316,12 @@ void main() {
       final before = await seedV1();
 
       final plan = MigrationPlan([
+        // Sentetik adım MEVCUT versiyonun üstüne kurulur; sabit `1 → 2`
+        // yazılsaydı şema yükseltilince bu test migration yolunu değil,
+        // normal açılışı ölçmeye başlardı.
         MigrationStep.sql(
-          from: 1,
-          to: 2,
+          from: kSupportedSchemaVersion,
+          to: kSupportedSchemaVersion + 1,
           statements: const [
             'ALTER TABLE products ADD COLUMN shelf_note TEXT NULL;',
           ],
@@ -328,7 +332,7 @@ void main() {
         paths: temp.paths,
         clock: clock.fn,
         migrationPlan: plan,
-        supportedSchemaVersion: 2,
+        supportedSchemaVersion: kSupportedSchemaVersion + 1,
       ).open();
       addTearDown(result.database.close);
 
@@ -358,8 +362,8 @@ void main() {
 
         final failingPlan = MigrationPlan([
           MigrationStep(
-            from: 1,
-            to: 2,
+            from: kSupportedSchemaVersion,
+            to: kSupportedSchemaVersion + 1,
             apply: (m, database) async {
               throw StateError('enjekte edilmiş hata');
             },
@@ -371,7 +375,7 @@ void main() {
             paths: temp.paths,
             clock: clock.fn,
             migrationPlan: failingPlan,
-            supportedSchemaVersion: 2,
+            supportedSchemaVersion: kSupportedSchemaVersion + 1,
           ).open(),
           throwsA(isA<StateError>()),
         );
@@ -379,7 +383,7 @@ void main() {
         // Şema versiyonu ilerlememiş.
         expect(
           await RawSqliteFile(temp.paths.databaseFile).readUserVersion(),
-          1,
+          kSupportedSchemaVersion,
         );
 
         // Sonraki açılış kurtarma ister — yarım şemayla çalışılmaz.
@@ -388,7 +392,7 @@ void main() {
             paths: temp.paths,
             clock: clock.fn,
             migrationPlan: failingPlan,
-            supportedSchemaVersion: 2,
+            supportedSchemaVersion: kSupportedSchemaVersion + 1,
           ).open(),
           throwsA(isA<MigrationRecoveryRequiredException>()),
         );

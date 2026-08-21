@@ -121,12 +121,13 @@ class ProductPicker extends StatelessWidget {
     );
   }
 
-  /// Ürünün kategorisinin adı — varsayılan ikon bundan türetilir
-  /// (docs/21 §3). Kategori listede yoksa (pasifleşmiş olabilir) `null`
-  /// döner ve nötr ikon kalır.
-  String? _categoryNameOf(Product product) {
+  /// Ürünün kategorisi — varsayılan ikon bundan gelir (docs/21 §3).
+  ///
+  /// Kategori listede yoksa (pasifleşmiş olabilir) `null` döner ve nötr
+  /// ikon kalır.
+  Category? _categoryOf(Product product) {
     for (final category in categories) {
-      if (category.id == product.categoryId) return category.name;
+      if (category.id == product.categoryId) return category;
     }
     return null;
   }
@@ -174,7 +175,8 @@ class ProductPicker extends StatelessWidget {
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(12),
                         ),
-                        categoryName: _categoryNameOf(product),
+                        categoryName: _categoryOf(product)?.name,
+                        categoryIconKey: _categoryOf(product)?.iconKey,
                         categoryColorSeed: product.categoryId,
                       ),
                     ),

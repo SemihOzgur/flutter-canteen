@@ -197,14 +197,22 @@ class CategoriesDao extends DatabaseAccessor<CanteenDatabase>
     required String name,
     required int sortOrder,
     required DateTime now,
+    String? iconKey,
   }) => into(categories).insert(
     CategoriesCompanion.insert(
       name: name,
+      iconKey: Value(iconKey),
       sortOrder: Value(sortOrder),
       createdAt: now,
       updatedAt: now,
     ),
   );
+
+  /// OD-029 — kategori ikonunu değiştirir. `null` seçimi **kaldırır**.
+  Future<int> updateIconKey(int id, String? iconKey) =>
+      (update(categories)..where((c) => c.id.equals(id))).write(
+        CategoriesCompanion(iconKey: Value(iconKey), updatedAt: Value(_now())),
+      );
 
   Future<int> updateName(int id, String name) =>
       (update(categories)..where((c) => c.id.equals(id))).write(

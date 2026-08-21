@@ -69,8 +69,27 @@ class MigrationPlan {
         List.of(steps)..sort((a, b) => a.from - b.from),
       );
 
-  /// Faz 2 — yayınlanmış şema değişikliği yok.
+  /// Yayınlanmış şema değişikliği yok — testler ve sentetik planlar için.
   static final MigrationPlan empty = MigrationPlan(const []);
+
+  /// Uygulamanın **gerçek** planı — docs/06 §1.
+  ///
+  /// `kSupportedSchemaVersion` artırıldığında buraya karşılık gelen adım
+  /// eklenir; eklenmezse `apply` açıkça `StateError` atar ve sessiz bir
+  /// şema uyuşmazlığı oluşmaz.
+  static final MigrationPlan released = MigrationPlan([
+    // v1 → v2 · OD-029 · REQ-CAT-008
+    //
+    // Kolon **nullable** eklenir: mevcut kategorilerin hiçbiri ikon
+    // kazanmış gibi görünmez ve rules/03 §3'ün "yeni NOT NULL kolon daima
+    // varsayılan değerle eklenir" kuralı gereksiz kalır. Veri kaybı yoktur;
+    // tek işlem bir ADD COLUMN'dur.
+    MigrationStep.sql(
+      from: 1,
+      to: 2,
+      statements: const ['ALTER TABLE categories ADD COLUMN icon_key TEXT'],
+    ),
+  ]);
 
   /// [from]'dan [to]'ya kadarki adımları **sırayla** uygular.
   ///

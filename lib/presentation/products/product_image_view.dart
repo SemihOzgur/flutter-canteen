@@ -53,8 +53,14 @@ class ProductImageView extends ConsumerWidget {
   /// Köşe yuvarlaması — kartın üstüne oturan görselde alt köşeler düz kalır.
   final BorderRadius? borderRadius;
 
-  /// Ürünün kategorisinin **adı** — varsayılan ikon bundan türetilir
-  /// (docs/21 §3 · REQ-IMG-009). `null` ise nötr ürün ikonu kullanılır.
+  /// Kategorinin **seçilmiş** ikon anahtarı (`categories.icon_key`).
+  ///
+  /// Zincirin ilk halkasıdır ve **önceliklidir**: kullanıcı bir ikon
+  /// seçtiyse addan türetme onu ezmez (OD-029 · docs/21 §3).
+  final String? categoryIconKey;
+
+  /// Ürünün kategorisinin **adı** — [categoryIconKey] boşsa ikon bundan
+  /// türetilir (docs/21 §3 · REQ-IMG-009).
   final String? categoryName;
 
   /// Varsayılan ikonun rengini sabitleyen anahtar — genelde kategori id'si.
@@ -70,6 +76,7 @@ class ProductImageView extends ConsumerWidget {
     this.height,
     this.borderRadius,
     this.categoryName,
+    this.categoryIconKey,
     this.categoryColorSeed,
     super.key,
   });
@@ -104,7 +111,7 @@ class ProductImageView extends ConsumerWidget {
   }
 
   Widget _fallback(BuildContext context) {
-    final icon = categoryIconFor(categoryName);
+    final icon = categoryIconFor(categoryName, iconKey: categoryIconKey);
     // Kategori bilinmiyorsa nötr yüzey rengi kalır: renk, bilgi taşımadığı
     // durumda bilgi taşıyormuş gibi görünmemelidir (rules/05 §5).
     final accent = categoryColorSeed == null

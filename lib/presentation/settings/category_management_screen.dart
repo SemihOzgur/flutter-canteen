@@ -42,9 +42,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/l10n/app_strings_tr.dart';
+import '../../application/reference/category_service.dart';
 import '../../application/reference/providers.dart';
 import '../../core/result/result.dart';
 import '../../domain/models/category.dart';
+import '../../domain/services/category_icon_keys.dart';
+import '../products/category_icon.dart';
 import '../common/current_user.dart';
 import '../common/form_message.dart';
 import '../common/submit_button.dart';
@@ -72,6 +75,10 @@ class CategoryManagementScreen extends ConsumerStatefulWidget {
   static Key deleteButtonKey(int id) => ValueKey('category_delete_$id');
   static Key activeSwitchKey(int id) => ValueKey('category_active_$id');
   static Key moveTargetKey(int id) => ValueKey('category_move_target_$id');
+
+  /// OD-029 — ikon düzenleme. **Her** kategoride sunulur; `Genel` dahil,
+  /// çünkü BR-CAT-004 yalnızca ad, silme ve pasifleştirmeyi korur.
+  static Key iconKeyOf(int id) => ValueKey('category_icon_$id');
 
   const CategoryManagementScreen({super.key});
 
@@ -390,9 +397,14 @@ class _CategoryManagementScreenState
         return ListTile(
           key: CategoryManagementScreen.tileKey(category.id),
           // rules/05 §5: durum renkle değil, ikon + metinle de anlatılır.
+          //
+          // Aktif kategoride kategorinin KENDİ ikonu gösterilir (OD-029) —
+          // kullanıcı seçtiği ikonu listede görebilmelidir. Pasiflik ise
+          // kendi işaretini korur: "kapalı klasör" o durumun tek görsel
+          // sinyalidir ve kategori ikonu onu ezmemelidir.
           leading: Icon(
             category.isActive
-                ? Icons.folder_outlined
+                ? categoryIconFor(category.name, iconKey: category.iconKey)
                 : Icons.folder_off_outlined,
           ),
           title: Text(category.name),
@@ -417,6 +429,14 @@ class _CategoryManagementScreenState
                     : AppStringsTr.categoryRenameTitle,
                 onPressed: protected ? null : () => _rename(category),
                 icon: const Icon(Icons.edit_outlined),
+              ),
+              IconButton(
+                key: CategoryManagementScreen.iconKeyOf(category.id),
+                tooltip: AppStringsTr.categoryIconLabel,
+                onPressed: () => _rename(category),
+                icon: Icon(
+                  categoryIconFor(category.name, iconKey: category.iconKey),
+                ),
               ),
               IconButton(
                 key: CategoryManagementScreen.sortButtonKey(category.id),
@@ -452,6 +472,10 @@ class _CategoryManagementScreenState
 class _CategoryNameDialog extends ConsumerStatefulWidget {
   static const Key nameFieldKey = Key('category_form_name');
   static const Key submitButtonKey = Key('category_form_submit');
+  static const Key iconAutoKey = Key('category_form_icon_auto');
+
+  /// OD-029 — katalogdaki her ikon için seçilebilir düğme.
+  static Key iconKeyOf(String key) => Key('category_form_icon_$key');
 
   /// `null` ise yeni kategori oluşturulur.
   final Category? category;
@@ -468,6 +492,9 @@ class _CategoryNameDialogState extends ConsumerState<_CategoryNameDialog> {
   late final TextEditingController _name = TextEditingController(
     text: widget.category?.name ?? '',
   );
+
+  /// `null` = "Otomatik": ikon kategori adından türetilir (OD-029).
+  late String? _iconKey = widget.category?.iconKey;
 
   String? _message;
   bool _submitting = false;
@@ -490,9 +517,16 @@ class _CategoryNameDialogState extends ConsumerState<_CategoryNameDialog> {
       final userId = await currentUserId(ref);
       final category = widget.category;
 
+      // İkon adla aynı diyalogda düzenlenir ama AYRI bir servis çağrısıdır:
+      // `rename` BR-CAT-004 gereği `Genel`i reddeder, ikon ise sistem
+      // kategorisinde de değiştirilebilir (docs/10 §1.2a).
       final Result<void> result = category == null
-          ? await service.create(name: _name.text, userId: userId)
-          : await service.rename(category.id, _name.text, userId: userId);
+          ? await service.create(
+              name: _name.text,
+              userId: userId,
+              iconKey: _iconKey,
+            )
+          : await _saveExisting(service, category, userId);
       if (!mounted) return;
 
       switch (result) {
@@ -504,6 +538,24 @@ class _CategoryNameDialogState extends ConsumerState<_CategoryNameDialog> {
     } finally {
       _submitting = false;
     }
+  }
+
+  /// Mevcut kategoride önce **ikon**, sonra ad kaydedilir.
+  ///
+  /// Ad değişmediyse `rename` hiç çağrılmaz: `Genel`in adı değiştirilemez
+  /// (BR-CAT-004) ve yalnızca ikonunu değiştirmek isteyen kullanıcı
+  /// gereksiz bir hatayla karşılaşmamalıdır.
+  Future<Result<void>> _saveExisting(
+    CategoryService service,
+    Category category,
+    int? userId,
+  ) async {
+    if (_iconKey != category.iconKey) {
+      final icon = await service.setIcon(category.id, _iconKey);
+      if (icon.isErr) return icon;
+    }
+    if (_name.text.trim() == category.name) return const Ok(null);
+    return service.rename(category.id, _name.text, userId: userId);
   }
 
   @override
@@ -527,8 +579,13 @@ class _CategoryNameDialogState extends ConsumerState<_CategoryNameDialog> {
               TextFormField(
                 key: _CategoryNameDialog.nameFieldKey,
                 controller: _name,
+                // BR-CAT-004 · EC-CAT-001 — `Genel`in adı değiştirilemez.
+                // Alan burada KAPATILIR: aynı diyalog ikon düzenlemek için
+                // de açılıyor ve kullanıcı yazabilseydi kaydederken
+                // anlamadığı bir hata alırdı.
+                enabled: !(widget.category?.isSystem ?? false),
                 // rules/05 §1: dialog açıldığında odak ilk alandadır.
-                autofocus: true,
+                autofocus: !(widget.category?.isSystem ?? false),
                 textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: AppStringsTr.categoryNameLabel,
@@ -538,6 +595,12 @@ class _CategoryNameDialogState extends ConsumerState<_CategoryNameDialog> {
                     ? AppStringsTr.categoryNameRequired
                     : null,
                 onFieldSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: 20),
+              _IconPicker(
+                selected: _iconKey,
+                categoryName: _name.text,
+                onSelected: (key) => setState(() => _iconKey = key),
               ),
               if (_message != null) ...[
                 const SizedBox(height: 16),
@@ -558,6 +621,121 @@ class _CategoryNameDialogState extends ConsumerState<_CategoryNameDialog> {
           onPressed: _submit,
         ),
       ],
+    );
+  }
+}
+
+/// Kategori ikonu seçici — **OD-029 · REQ-CAT-008.**
+///
+/// "Otomatik" seçeneği `icon_key = NULL` demektir ve **varsayılandır**:
+/// kullanıcı ikon seçmek zorunda değildir (docs/10 §1.2a). O seçenek,
+/// yazılmakta olan ada göre hangi ikonun geleceğini **önceden gösterir** —
+/// aksi hâlde "otomatik"in ne yapacağı ancak kaydettikten sonra anlaşılırdı.
+class _IconPicker extends StatelessWidget {
+  final String? selected;
+  final String categoryName;
+  final ValueChanged<String?> onSelected;
+
+  const _IconPicker({
+    required this.selected,
+    required this.categoryName,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final derived = categoryIconKeyFromName(categoryName);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(AppStringsTr.categoryIconLabel, style: theme.textTheme.labelLarge),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _Choice(
+              key: _CategoryNameDialog.iconAutoKey,
+              icon: categoryIconFor(categoryName),
+              label: AppStringsTr.categoryIconNone,
+              selected: selected == null,
+              // Otomatik seçiliyken hangi ikonun geleceğini göstermek için
+              // ad çözümlenir; ad eşleşmiyorsa nötr ikon görünür.
+              muted: derived == null,
+              onTap: () => onSelected(null),
+            ),
+            for (final option in categoryIconCatalog)
+              _Choice(
+                key: _CategoryNameDialog.iconKeyOf(option.key),
+                icon: option.icon,
+                label: option.label,
+                selected: selected == option.key,
+                muted: false,
+                onTap: () => onSelected(option.key),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          AppStringsTr.categoryIconAutoHint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Choice extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final bool muted;
+  final VoidCallback onTap;
+
+  const _Choice({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.muted,
+    required this.onTap,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final foreground = selected
+        ? theme.colorScheme.onPrimaryContainer
+        : (muted
+              ? theme.colorScheme.outline
+              : theme.colorScheme.onSurfaceVariant);
+
+    // rules/05 §5 — seçim renkle DEĞİL, çerçeve ve etiketle de anlatılır.
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: selected ? theme.colorScheme.primaryContainer : null,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outlineVariant,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Icon(icon, size: 22, color: foreground),
+        ),
+      ),
     );
   }
 }

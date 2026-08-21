@@ -26,6 +26,15 @@ abstract final class CategoryFailures {
         'kullanamaz; farklı bir ad girin.',
   );
 
+  /// OD-029 — katalog dışı anahtar veritabanına YAZILMAZ.
+  ///
+  /// Girerse hiçbir ekranda ikon göstermez ve kullanıcı nedenini anlayamaz;
+  /// sessizce çalışmayan bir kayıt, açık bir hatadan kötüdür.
+  static const Failure unknownIcon = Failure(
+    code: 'category_icon_unknown',
+    userMessage: 'Seçilen ikon tanınmıyor. Listeden bir ikon seçin.',
+  );
+
   static const Failure notFound = Failure(
     code: 'category_not_found',
     userMessage: 'Kategori bulunamadı.',

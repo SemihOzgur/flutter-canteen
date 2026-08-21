@@ -582,7 +582,67 @@ Faz 8  →  fl_chart; Raporlar kilit arkasında; iptal, iptal tarihine
 Faz 9  →  ZIP yedek; restore işareti veritabanı dışında (OD-027)
 Faz 10 →  CSV birincil + Excel abstraction
 Faz 12 →  Inno Setup
+v1.1   →  Kategori ikonu; şema v2 (OD-029)
 ```
+
+### OD-029 — Kategoriye **ikon alanı** eklenir (`categories.icon_key`, şema v2)
+
+**Karar:** `categories` tablosuna `icon_key TEXT NULL` kolonu eklenir. Kullanıcı Kategori
+Yönetimi'nden sabit bir katalogdan ikon seçer; seçmezse alan `NULL` kalır ve ikon **kategori
+adından türetilir** (bugünkü davranış). Şema **v1 → v2**'ye çıkar ve ilk gerçek migration
+adımı yayınlanır.
+
+**Çözülen boşluk:** [21 §3](21-image-storage.md) ve REQ-IMG-009 *"görseli olmayan ürün
+**kategori ikonuyla** gösterilir"* der ama `categories` tablosunda ikon **yoktur**
+([05 §2.2](05-database-architecture.md)). Uygulama bu boşluğu kategori adından tahmin ederek
+kapatıyordu; tahmin "Kalemler", "Raf 3", "Diğer" gibi adlarda nötr ikona düşer ve kullanıcı
+bunu **düzeltemez.**
+
+**Options:**
+
+| | Yaklaşım | Sonuç |
+|---|---|---|
+| **A** | Kolon eklenmez; ikon addan türetilmeye devam eder | Şema değişmez. Ama ikon kullanıcı denetiminde değildir ve adı eşleşmeyen her kategori nötr ikonda kalır. |
+| **B** | `icon_key TEXT NULL` — **sabit katalogdan anahtar** (`drink`, `coffee`, `bakery` …) | Anahtar anlamlıdır ve sürümler arası taşınabilir. Flutter'ın ikon tree-shaking'i korunur. `NULL` kalabildiği için mevcut kategoriler bozulmaz. |
+| **C** | `icon_codepoint INTEGER` — herhangi bir Material ikon kod noktası | En esnek. Ancak tree-shaking kırılır (`--no-tree-shake-icons` zorunlu, paket büyür), veritabanında anlamsız bir sayı durur ve ikon seti değişirse eski kayıtlar sessizce başka bir şeye işaret eder. |
+
+**Recommendation: B.**
+
+- Kod noktası bir **uygulama ayrıntısıdır**; veritabanı iş verisi tutar. `'drink'` on yıl sonra
+  da okunabilir, `0xe1a5` okunamaz.
+- Tree-shaking kırmak, bir kategori ikonu için tüm Material ikon fontunu pakete koymak demektir.
+- **Addan türetme KALDIRILMAZ**, `NULL` durumunun karşılığı olarak kalır: 40 kategorili bir
+  kurulumda kullanıcı hepsini elle seçmek zorunda bırakılmaz. Zincir şudur:
+
+```text
+icon_key dolu      → seçilen ikon
+icon_key NULL      → kategori ADINDAN türetilen ikon
+ad da eşleşmiyor   → nötr ürün ikonu
+```
+
+**Neden v2 ve migration — v1'i düzenlemek değil:** [rules/03 §3](../.claude/rules/03-data-and-persistence.md)
+koşulsuzdur: *"Şema doğrudan değiştirilemez. Her değişiklik versiyonlu bir migration adımıdır."*
+v1.0.0 henüz yayınlanmamış olsa da geliştirme veritabanları v1 şemasıyla duruyor; `onCreate`'i
+değiştirmek onları versiyon numarası aynı kaldığı için **sessizce eski şemada bırakırdı.**
+Ayrıca bu, bugüne kadar yalnızca sentetik adımlarla test edilmiş migration altyapısının
+**gerçek bir adımla** çalıştığını kanıtlar.
+
+**Impact:**
+
+| Doküman | Değişiklik |
+|---|---|
+| [04 §3.2](04-domain-model.md) | `Category` entity'sine `iconKey` alanı |
+| [05 §2.2](05-database-architecture.md) | `categories.icon_key TEXT NULL`; şema versiyonu 2 |
+| [06](06-database-migrations.md) | v1 → v2 adımı; ilk yayınlanmış migration |
+| [10 §1](10-category-brand-supplier.md) | Kategori formunda ikon seçici |
+| [21 §3](21-image-storage.md) | Görselsiz ürün ikonu zinciri netleşir |
+| [25](25-functional-requirements.md) | REQ-CAT-009 · REQ-IMG-013 |
+| [27](27-testing-strategy.md) | v1 → v2 migration testi (veri koruma) |
+
+Kapsam etkisi: **v1 mimarisi genişlemez.** Yeni tablo, yeni entity ve yeni servis yoktur;
+mevcut `Category` bir alan kazanır.
+
+---
 
 ---
 
@@ -590,7 +650,7 @@ Faz 12 →  Inno Setup
 
 Geliştirme sırasında kararlaştırılmamış bir konu ortaya çıkarsa:
 
-1. Bu dokümana `OD-029`'dan başlayarak yeni bir kayıt açılır.
+1. Bu dokümana `OD-030`'dan başlayarak yeni bir kayıt açılır.
 2. `Decision / Options / Recommendation / Impact` formatı kullanılır.
 3. Karar kapanmadan ilgili kod yazılmaz.
 4. Kapandığında bu dokümandaki karar kaydına ve ilgili business rule'a dönüştürülür.

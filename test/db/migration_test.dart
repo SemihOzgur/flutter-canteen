@@ -18,6 +18,7 @@ import 'package:canteen/data/db/migrations/migration_plan.dart';
 import 'package:canteen/data/db/migrations/migration_safety.dart';
 import 'package:canteen/data/db/raw_sqlite_file.dart';
 import 'package:drift/drift.dart' show Migrator;
+import 'package:canteen/data/db/schema_version.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/test_database.dart';
@@ -37,7 +38,10 @@ void main() {
 
   /// v1 şemasında bir veritabanı oluşturur ve örnek veri yazar.
   Future<({int products, int users})> createV1WithData() async {
-    final db = fileDatabase(path);
+    // Sürüm AÇIKÇA sabitlenir: bu testler altyapıyı **sentetik** adımlarla
+    // doğrular ve uygulamanın gerçek şema versiyonundan bağımsız olmalıdır.
+    // Gerçek v1 → v2 adımı `migration_v2_test.dart` içindedir.
+    final db = fileDatabase(path, supportedSchemaVersion: 1);
     await db.customStatement('SELECT 1;');
 
     final userId = await insertTestUser(db);
@@ -225,7 +229,11 @@ void main() {
         );
 
         // Veri eksiksiz ve şema v1 hâlinde olmalı.
-        final reopened = fileDatabase(path);
+        //
+        // Sürüm yine sabitlenir: burada doğrulanan şey **rollback**'tir.
+        // Sabitlenmezse uygulamanın gerçek v1 → v2 adımı çalışır ve testin
+        // ölçtüğü şey değişir.
+        final reopened = fileDatabase(path, supportedSchemaVersion: 1);
         await reopened.customStatement('SELECT 1;');
         final products = await reopened.select(reopened.products).get();
         final columns = await tableColumns(reopened, 'products');
@@ -270,7 +278,7 @@ void main() {
         fail('SchemaVersionException bekleniyordu');
       } on SchemaVersionException catch (e) {
         expect(e.databaseVersion, 7);
-        expect(e.supportedVersion, 1);
+        expect(e.supportedVersion, kSupportedSchemaVersion);
         expect(e.userMessage, contains('güncelleyin'));
         // REQ-SEC-007: teknik detay kullanıcı mesajında olmamalı.
         expect(e.userMessage, isNot(contains('user_version')));
@@ -384,8 +392,24 @@ void main() {
       );
     });
 
-    test('Faz 2 planı boştur — yayınlanmış şema değişikliği yok', () {
+    test('boş plan gerçekten boştur — sentetik testlerin tabanı', () {
       expect(MigrationPlan.empty.steps, isEmpty);
+    });
+
+    test('YAYINLANAN plan desteklenen versiyona kadar KESİNTİSİZ gider', () {
+      // Adım eksikse `apply` açıkça `StateError` atar; ama bunu açılışta
+      // öğrenmek, kullanıcının veritabanı kilitliyken öğrenmesi demektir.
+      // Burada eksiklik derlemede değil, testte yakalanır.
+      final steps = MigrationPlan.released.steps;
+      expect(steps, hasLength(kSupportedSchemaVersion - 1));
+
+      for (var version = 1; version < kSupportedSchemaVersion; version++) {
+        expect(
+          steps.where((step) => step.from == version),
+          hasLength(1),
+          reason: 'v$version → v${version + 1} adımı yok veya birden fazla.',
+        );
+      }
     });
   });
 }
