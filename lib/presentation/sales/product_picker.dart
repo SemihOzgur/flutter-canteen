@@ -121,6 +121,16 @@ class ProductPicker extends StatelessWidget {
     );
   }
 
+  /// Ürünün kategorisinin adı — varsayılan ikon bundan türetilir
+  /// (docs/21 §3). Kategori listede yoksa (pasifleşmiş olabilir) `null`
+  /// döner ve nötr ikon kalır.
+  String? _categoryNameOf(Product product) {
+    for (final category in categories) {
+      if (category.id == product.categoryId) return category.name;
+    }
+    return null;
+  }
+
   Widget _grid(BuildContext context, ThemeData theme) {
     if (products.isEmpty) return _empty(theme);
 
@@ -164,6 +174,8 @@ class ProductPicker extends StatelessWidget {
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(12),
                         ),
+                        categoryName: _categoryNameOf(product),
+                        categoryColorSeed: product.categoryId,
                       ),
                     ),
                     Padding(

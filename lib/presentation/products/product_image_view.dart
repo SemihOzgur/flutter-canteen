@@ -16,6 +16,12 @@
 /// listesini kırmızı ünlemlerle doldurmak yalnızca gürültü üretir. Bu yüzden
 /// hem `null` yol hem de okuma hatası **aynı** sonuca çıkar: varsayılan ikon.
 ///
+/// ## Varsayılan ikon KATEGORİYE göredir
+///
+/// docs/21 §3 ve REQ-IMG-009 kabul kriteri *"ürün **kategori ikonuyla**
+/// gösterilir"* der. [categoryName] verilirse ikon addan türetilir
+/// (`category_icon.dart`); verilmezse nötr ürün ikonu kalır.
+///
 /// Dosyanın varlığı **önceden kontrol edilmez**: her liste satırında senkron
 /// `existsSync` çağırmak UI thread'i dosya sistemine indirirdi (`rules/01 §8`).
 /// Hata yolu `errorBuilder` ile karşılanır.
@@ -24,7 +30,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme/app_palette.dart';
 import '../../data/files/providers.dart';
+import 'category_icon.dart';
 
 class ProductImageView extends ConsumerWidget {
   static const Key fallbackKey = Key('product_image_fallback');
@@ -45,12 +53,24 @@ class ProductImageView extends ConsumerWidget {
   /// Köşe yuvarlaması — kartın üstüne oturan görselde alt köşeler düz kalır.
   final BorderRadius? borderRadius;
 
+  /// Ürünün kategorisinin **adı** — varsayılan ikon bundan türetilir
+  /// (docs/21 §3 · REQ-IMG-009). `null` ise nötr ürün ikonu kullanılır.
+  final String? categoryName;
+
+  /// Varsayılan ikonun rengini sabitleyen anahtar — genelde kategori id'si.
+  ///
+  /// Aynı kategori her açılışta ve her ekranda aynı rengi alır; renk ürün
+  /// adına göre değişseydi aynı rafın ürünleri farklı renklerde görünürdü.
+  final int? categoryColorSeed;
+
   const ProductImageView({
     required this.relativePath,
     required this.size,
     this.width,
     this.height,
     this.borderRadius,
+    this.categoryName,
+    this.categoryColorSeed,
     super.key,
   });
 
@@ -83,16 +103,31 @@ class ProductImageView extends ConsumerWidget {
     );
   }
 
-  Widget _fallback(BuildContext context) => Container(
-    key: fallbackKey,
-    width: _width,
-    height: _height,
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: _radius,
-    ),
-    child: Icon(Icons.inventory_2_outlined, size: _iconSize),
-  );
+  Widget _fallback(BuildContext context) {
+    final icon = categoryIconFor(categoryName);
+    // Kategori bilinmiyorsa nötr yüzey rengi kalır: renk, bilgi taşımadığı
+    // durumda bilgi taşıyormuş gibi görünmemelidir (rules/05 §5).
+    final accent = categoryColorSeed == null
+        ? null
+        : AppPalette.categoryColor(categoryColorSeed!);
+
+    return Container(
+      key: fallbackKey,
+      width: _width,
+      height: _height,
+      decoration: BoxDecoration(
+        color:
+            accent?.withValues(alpha: 0.14) ??
+            Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: _radius,
+      ),
+      child: Icon(
+        icon,
+        size: _iconSize,
+        color: accent ?? Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
 
   /// Varsayılan ikonun kenarı.
   ///

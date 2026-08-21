@@ -52,6 +52,8 @@ import 'package:canteen/presentation/sales/product_picker.dart';
 import 'package:canteen/presentation/sales/sale_screen.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:canteen/presentation/products/product_image_view.dart';
+import 'package:canteen/application/reference/providers.dart';
+import 'package:canteen/presentation/products/category_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -96,12 +98,17 @@ void main() {
     int initialStock = 10,
     List<String> barcodes = const [],
     bool isFavorite = false,
+    int? categoryId,
   }) async {
     final result = await withServices(
       (container) => container
           .read(productServiceProvider)
           .create(
-            ProductDraft(name: name, salePrice: Money(salePriceMinor)),
+            ProductDraft(
+              name: name,
+              salePrice: Money(salePriceMinor),
+              categoryId: categoryId,
+            ),
             userId: userId,
             initialStock: initialStock,
             barcodes: barcodes,
@@ -220,6 +227,45 @@ void main() {
         reason: 'Görselsiz üründe varsayılan ikon gelir, hata değil.',
       );
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('görselsiz ürün KATEGORİ ikonuyla gösterilir', (tester) async {
+      // docs/21 §3 · REQ-IMG-009: "Ürün kategori ikonuyla gösterilir."
+      // Nötr kutu ikonu, kategorisi belli bir üründe bilgi kaybıdır —
+      // ızgarada hangi rafa ait olduğu ilk bakışta görünmeli.
+      final categoryId = await withServices((container) async {
+        final created = await container
+            .read(categoryServiceProvider)
+            .create(name: 'Soğuk İçecekler', userId: userId);
+        return (created as Ok<int>).value;
+      });
+      await createProduct(name: 'Kola', categoryId: categoryId);
+      await pumpSale(tester);
+
+      final card = find.byKey(const Key('sale_product_1'));
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.byIcon(Icons.local_drink_outlined),
+        ),
+        findsOneWidget,
+        reason: 'İçecek kategorisi bardak ikonuyla gösterilmelidir.',
+      );
+    });
+
+    testWidgets('bilinmeyen kategoride NÖTR ikon kalır', (tester) async {
+      // Yanlış ikon göstermektense nötr ikon göstermek yeğdir; kasadaki
+      // kişi "Kalemler" kategorisinde bardak görürse ekrana güvenmez.
+      await createProduct(name: 'Silgi');
+      await pumpSale(tester);
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('sale_product_1')),
+          matching: find.byIcon(fallbackCategoryIcon),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('sepet satırı ve fiyatı UZAKTAN okunacak boyuttadır', (
