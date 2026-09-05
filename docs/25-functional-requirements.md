@@ -1,11 +1,12 @@
 # 25 — Requirement İndeksi ve İzlenebilirlik
 
-> **Doküman sürümü:** v3 — 9 requirement eklendi (recovery code + kilit kapsamı + ölçek).
+> **Doküman sürümü:** v4 — [OD-030](28-open-decisions.md): yönetici erişim kilidinin kapsamı
+> genişledi; 6 requirement eklendi.
 
 Bu doküman tüm requirement'ların **merkezi indeksidir.** Tam metin ve acceptance criteria
 kaynak dokümanında bulunur; burada özet, öncelik ve faz eşlemesi tutulur.
 
-**Toplam: 285 requirement · 25 modül** (v1: 244 → v2: 276 → v3: 285)
+**Toplam: 291 requirement · 25 modül** (v1: 244 → v2: 276 → v3: 285 → v4: 291)
 
 ## Öncelik tanımları
 
@@ -17,12 +18,26 @@ kaynak dokümanında bulunur; burada özet, öncelik ve faz eşlemesi tutulur.
 
 Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 
+### v4'te eklenen requirement'lar — [OD-030](28-open-decisions.md)
+
+| Grup | Yeni ID'ler | Sebep |
+|---|---|---|
+| AUTH | 029–032 (4) | **Yönetici erişim kilidinin gezinme katmanı**: menü görünürlüğü, rota koruması, kilidi elle kapatma, logout eylemi |
+| UX | 015–016 (2) | Ana ekran görünürlüğü ve çıkış eylemi |
+
+### v4'te anlamı genişleyen requirement'lar
+
+| ID | Değişiklik |
+|---|---|
+| REQ-AUTH-015 | "Dashboard ve Raporlar" → **"Dashboard, Raporlar ve tüm yönetim ekranları"** |
+| REQ-AUTH-021 | Kilit, kullanıcının **elle kapatmasıyla** da sıfırlanır |
+
 ### v3'te eklenen requirement'lar
 
 | Grup | Yeni ID'ler | Sebep |
 |---|---|---|
 | AUTH | 022–028 (7) | **Recovery code** üretimi, saklanması, tek kullanımlık kullanımı, yenilenmesi |
-| REP | 014 (1) | **Raporlar ekranı finansal erişim kilidi ile korunur** |
+| REP | 014 (1) | **Raporlar ekranı yönetici erişim kilidi ile korunur** |
 | PERF | 008 (1) | 10.000 ürünlük katalog hedefi; yapay üst sınır yok |
 
 ### v3'te anlamı genişleyen requirement'lar
@@ -33,7 +48,7 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-AUTH-018 | "mevcut parola" → **"mevcut parola veya recovery code"** |
 | REQ-AUTH-019 | "dashboard verisi" → **"finansal ekranların verisi"** |
 | REQ-AUTH-021 | Kilit her iki ekranı birden kapsar |
-| REQ-DASH-011 | Finansal erişim kilidine referans veriyor |
+| REQ-DASH-011 | Yönetici erişim kilidine referans veriyor |
 
 ### v2'de eklenen requirement'lar
 
@@ -266,7 +281,7 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-DASH-008 | < 1 sn yükleme | 🟡 S | 8 |
 | REQ-DASH-009 | Bağımsız kart yüklemesi | 🟡 S | 8 |
 | REQ-DASH-010 | Karttan düzeltme ekranına geçiş | 🟢 C | 8 |
-| **REQ-DASH-011** | **Finansal erişim kilidi açılmadan erişilemez** | 🔴 M | 3 |
+| **REQ-DASH-011** | **Yönetici erişim kilidi açılmadan erişilemez** | 🔴 M | 3 |
 | **REQ-DASH-012** | **Parola doğrulanmadan veri sorgulanmaz/görünmez** | 🔴 M | 3 |
 | **REQ-DASH-013** | **Kâr KDV hariç, ciro KDV dahil; ayrım ekranda belirtilir** | 🔴 M | 8 |
 
@@ -287,16 +302,16 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-REP-011 | Uzun raporlar iptal edilebilir | 🟢 C | 8 |
 | REQ-REP-012 | Export audit'e | 🟡 S | 8 |
 | **REQ-REP-013** | **Kâr KDV hariç matrahtan; ciro her iki biçimde gösterilir** | 🔴 M | 8 |
-| **REQ-REP-014** | **Raporlar finansal erişim kilidi ile korunur** | 🔴 M | 3 |
+| **REQ-REP-014** | **Raporlar yönetici erişim kilidi ile korunur** | 🔴 M | 3 |
 
-## AUTH — Kimlik, Oturum, **Finansal Erişim Kilidi**, **Recovery Code** · [17](17-authentication.md)
+## AUTH — Kimlik, Oturum, **Yönetici Erişim Kilidi**, **Recovery Code** · [17](17-authentication.md)
 
 | ID | Özet | Ö | Faz |
 |---|---|---|---|
 | REQ-AUTH-001 | Login ekranı | 🔴 M | 3 |
 | REQ-AUTH-002 | Kurulum sihirbazı | 🔴 M | 3 |
 | REQ-AUTH-003 | Kalıcı oturum | 🔴 M | 3 |
-| REQ-AUTH-004 | Logout temizler + dashboard kilidini kapatır | 🔴 M | 3 |
+| REQ-AUTH-004 | Logout temizler + yönetici kilidini kapatır | 🔴 M | 3 |
 | REQ-AUTH-005 | Logout sepeti silmez | 🟡 S | 5 |
 | REQ-AUTH-006 | Geçersiz kullanıcı → oturum iptal | 🟡 S | 3 |
 | REQ-AUTH-007 | Bozuk oturum çökertmez | 🔴 M | 3 |
@@ -307,20 +322,24 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-AUTH-012 | Kullanıcı adı harf duyarsız | 🟡 S | 3 |
 | **REQ-AUTH-013** | **Rol/yetki ayrımı yok; tüm kullanıcılar eşit** | 🔴 M | 3 |
 | **REQ-AUTH-014** | **Parolalar salt'lı SHA-256; düz metin yok** | 🔴 M | 3 |
-| **REQ-AUTH-015** | **Dashboard VE Raporlar ayrı parola gerektirir** | 🔴 M | 3 |
-| **REQ-AUTH-016** | **Dashboard parolası kurulumda zorunlu belirlenir** | 🔴 M | 3 |
-| **REQ-AUTH-017** | **Dashboard parolası salt'lı hash olarak saklanır** | 🔴 M | 3 |
+| **REQ-AUTH-015** | **Dashboard, Raporlar VE tüm yönetim ekranları ayrı parola gerektirir** | 🔴 M | 3 |
+| **REQ-AUTH-016** | **Yönetici parolası kurulumda zorunlu belirlenir** | 🔴 M | 3 |
+| **REQ-AUTH-017** | **Yönetici parolası salt'lı hash olarak saklanır** | 🔴 M | 3 |
 | **REQ-AUTH-018** | **Değiştirmek için mevcut parola veya recovery code gerekir** | 🔴 M | 3 |
 | **REQ-AUTH-019** | **Doğrulanmadan finansal ekran verisi sorgulanmaz** | 🔴 M | 3 |
 | **REQ-AUTH-020** | **Kilit olayları audit'e; parola/kod değeri yazılmaz** | 🟡 S | 3 |
-| **REQ-AUTH-021** | **Kilit logout/kapanışta sıfırlanır** | 🟡 S | 3 |
+| **REQ-AUTH-021** | **Kilit logout/kapanışta ve elle kapatmada sıfırlanır** | 🟡 S | 3 |
 | **REQ-AUTH-022** | **Kurulumda recovery code üretilir ve bir kez gösterilir** | 🔴 M | 3 |
 | **REQ-AUTH-023** | **Recovery code hash olarak saklanır; düz metin yok** | 🔴 M | 3 |
 | **REQ-AUTH-024** | **"Kodu kaydettim" onayı olmadan kurulum ilerlemez** | 🟡 S | 3 |
-| **REQ-AUTH-025** | **Recovery code ile dashboard parolası sıfırlanabilir** | 🔴 M | 3 |
+| **REQ-AUTH-025** | **Recovery code ile yönetici parolası sıfırlanabilir** | 🔴 M | 3 |
 | **REQ-AUTH-026** | **Recovery code tek kullanımlıktır** | 🔴 M | 3 |
 | **REQ-AUTH-027** | **Kullanım sonrası yeni kod üretilir ve gösterilir** | 🔴 M | 3 |
 | **REQ-AUTH-028** | **Kullanıcı parolasıyla yeni kod üretebilir** | 🟢 C | 3 |
+| **REQ-AUTH-029** | **Kilitliyken ana ekran yalnızca satış · satış geçmişi · stok gösterir** | 🔴 M | 3 |
+| **REQ-AUTH-030** | **Kilitliyken yönetim ekranı rota ile de açılamaz; ekran kurulmaz** | 🔴 M | 3 |
+| **REQ-AUTH-031** | **Kilit logout etmeden elle kapatılabilir** | 🟡 S | 3 |
+| **REQ-AUTH-032** | **Kullanıcı logout edebilir; aktif sepet korunur** | 🔴 M | 3 |
 
 ## AUDIT — Denetim · [18](18-audit-log.md)
 
@@ -422,6 +441,8 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | REQ-UX-012 | Renk tek başına anlam taşımaz | 🟡 S | 11 |
 | REQ-UX-013 | 300 ms+ işlemde gösterge | 🟡 S | 11 |
 | REQ-UX-014 | Büyük toplam gösterimi | 🟡 S | 5 |
+| **REQ-UX-015** | **Kilitliyken ana ekran yalnızca üç ekranı listeler** | 🔴 M | 3 |
+| **REQ-UX-016** | **Ana ekranda çıkış yapma eylemi bulunur** | 🔴 M | 3 |
 
 ## PERF / DATA / SEC / COMP · [24](24-non-functional-requirements.md)
 
@@ -462,16 +483,16 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 
 | Öncelik | Adet | Oran |
 |---|---|---|
-| 🔴 Must | 185 | %65 |
-| 🟡 Should | 84 | %29 |
+| 🔴 Must | 190 | %65 |
+| 🟡 Should | 85 | %29 |
 | 🟢 Could | 16 | %6 |
-| **Toplam** | **285** | |
+| **Toplam** | **291** | |
 
 | Faz | Requirement | Not |
 |---|---|---|
 | 1 — Temel | 18 | |
 | 2 — Veritabanı | 21 | Blokajsız |
-| 3 — Ürün, Auth, Finansal erişim + Recovery | **69** | **En yüklü — bölünmeli** |
+| 3 — Ürün, Auth, Yönetici erişimi + Recovery | **75** | **En yüklü — bölünmeli** |
 | 4 — Barkod | 7 | |
 | 5 — Satış | **45** | En kritik |
 | 6 — Stok & Audit | 23 | |
@@ -481,7 +502,8 @@ Faz numaraları [31 — Roadmap](31-roadmap.md) ile eşleşir.
 | 10 — Import/Export | 15 | |
 | 11 — Test & Sağlamlaştırma | 11 | Çapraz kesen UX/PERF/SEC |
 | 12 — Windows Sürüm | 3 | |
-| **Toplam** | **285** | |
+| **Toplam** | **291** | |
 
-> Faz 3'ün yükü v1'e göre 45'ten **69**'a çıkmıştır (finansal erişim kilidi + recovery code + koşullu silme + ürün alanları).
+> Faz 3'ün yükü v1'e göre 45'ten **75**'e çıkmıştır (yönetici erişim kilidi + recovery code +
+> koşullu silme + ürün alanları + [OD-030](28-open-decisions.md) gezinme katmanı).
 > [31 §3](31-roadmap.md)'te önerildiği gibi 3a–3d alt fazlarına bölünmesi tavsiye edilir.

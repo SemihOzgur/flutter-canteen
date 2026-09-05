@@ -1,6 +1,7 @@
 # 27 — Test Stratejisi
 
-> **Doküman sürümü:** v3 — finansal erişim kilidi ve recovery code testleri; 10.000 ürünlük stres verisi.
+> **Doküman sürümü:** v4 — yönetici erişim kilidi (gezinme katmanı dahil) ve recovery code
+> testleri; 10.000 ürünlük stres verisi.
 
 > Bu doküman test **planıdır.** Test kodu bu aşamada yazılmaz.
 
@@ -114,7 +115,7 @@ Bağımlılıksız, hızlı, çok sayıda. Hedef: `domain/` katmanının **%100'
 | Aynı parola + farklı salt → farklı hash |
 | Doğru parola doğrulanır, yanlış parola reddedilir |
 | **Hiçbir kod yolunda düz metin parola saklanmıyor** (kod taraması + DB kontrolü) |
-| Dashboard parolası ile kullanıcı parolası birbirinden bağımsız doğrulanır |
+| Yönetici parolası ile kullanıcı parolası birbirinden bağımsız doğrulanır |
 
 ### 3.7 Diğer
 
@@ -175,14 +176,14 @@ Gerçek veritabanı + servis katmanı. En yüksek değerli testler.
 | Fiyat override → snapshot doğrulaması |
 | 100 satırlık satış |
 
-### 6.1b Finansal erişim kilidi ve recovery code
+### 6.1b Yönetici erişim kilidi ve recovery code
 
 | Senaryo |
 |---|
 | Kilit kapalıyken **Dashboard** rotası açılıyor → parola ekranı gelir |
 | Kilit kapalıyken **Raporlar** rotası açılıyor → parola ekranı gelir |
 | **Parola girilmeden hiçbir dashboard/rapor sorgusunun çalışmadığı doğrulanır** (sorgu sayacı / mock repository ile) |
-| **Kilit dışı ekranlar** (satış, ürün, stok, kategori, iade, ayarlar) parola sormaz |
+| **Kilit dışı ekranlar** (satış, satış geçmişi, stok) parola sormaz |
 | Doğru parola → kilit açılır, sorgular çalışır |
 | Dashboard için açılan kilit **Raporlar için de geçerlidir** (ve tersi) |
 | Yanlış parola 5 kez → bekleme uygulanır, audit kaydı oluşur |
@@ -196,6 +197,20 @@ Gerçek veritabanı + servis katmanı. En yüksek değerli testler.
 | **Recovery:** parola + kod güncellemesi tek transaction; hata → hiçbiri değişmez |
 | **Recovery kodu hiçbir yerde düz metin saklanmıyor** (DB + yedek + log taraması) |
 | Ayarlar'dan yeni kod üretme: mevcut parola doğruysa üretilir, yanlışsa reddedilir |
+
+#### Gezinme katmanı — OD-030 (BR-AUTH-018/019 · REQ-AUTH-029…032)
+
+| Senaryo |
+|---|
+| **Kilit kapalıyken ana ekranda YALNIZCA satış, satış geçmişi ve stok kutuları bulunur** |
+| Kilit açıldığında ana ekranda tüm kutular belirir (aynı oturumda, yeniden giriş olmadan) |
+| **Kilit kapalıyken yönetim rotası doğrudan açılırsa ekran KURULMAZ** — ekranın kendi veri yükleyicisi hiç çağrılmaz (yükleme sayacı ile) |
+| Rota kapısında "Vazgeç" → yönetim ekranı açılmaz, kilit kapalı kalır |
+| Satış ekranında `F3` kilit kapalıyken parola ister; kilit açıkken doğrudan açar |
+| **Kilit kapalıyken bilinmeyen barkod → hızlı ürün ekleme dialogu parola SORMADAN açılır** (BR-AUTH-019) |
+| **Kilidi elle kapatma:** kilit kapanır, oturum ve aktif sepet korunur, ana ekran üç kutuya döner (REQ-AUTH-031) |
+| **Logout:** oturum temizlenir, kilit kapanır, aktif sepet SİLİNMEZ (REQ-AUTH-004/005/032) |
+| Logout'ta sepette ürün varsa kullanıcı bilgilendirilir ve vazgeçebilir |
 
 ### 6.2 İade / iptal
 

@@ -1,15 +1,16 @@
 # 16 — Raporlama
 
-> **Doküman sürümü:** v3 — Raporlar artık **finansal erişim kilidi** ile korunuyor.
+> **Doküman sürümü:** v4 — Raporlar **yönetici erişim kilidi** ile korunuyor
+> ([OD-030](28-open-decisions.md) ile kilidin adı ve kapsamı değişti).
 
-## 0. Erişim — finansal erişim kilidi
+## 0. Erişim — yönetici erişim kilidi
 
 > 🔒 **BR-AUTH-013 — Raporlar ekranı, Dashboard ile aynı kilit tarafından korunur.**
 
 ```text
-F7 (Raporlar) → finansal erişim açık mı?
+F7 (Raporlar) → yönetici erişimi açık mı?
                   ├── Evet → raporlar yüklenir
-                  └── Hayır → dashboard parolası sorulur
+                  └── Hayır → yönetici parolası sorulur
 ```
 
 - Kilit **oturum kapsamlıdır**: Dashboard için bir kez açıldıysa Raporlar için tekrar sorulmaz
@@ -217,7 +218,7 @@ Dışa aktarma audit log'a yazılır (hangi rapor, hangi filtreler, kaç satır)
 | REQ-REP-011 | 2 saniyeden uzun süren raporlar iptal edilebilir ve UI'yi bloklamaz. |
 | REQ-REP-012 | Rapor dışa aktarma işlemleri audit log'a yazılır. |
 | REQ-REP-013 | Kâr metrikleri KDV hariç matrah üzerinden hesaplanır; ciro hem KDV dahil hem KDV hariç gösterilir. |
-| REQ-REP-014 | Raporlar ekranı finansal erişim kilidi ile korunur; parola doğrulanmadan hiçbir rapor sorgusu çalıştırılmaz. |
+| REQ-REP-014 | Raporlar ekranı yönetici erişim kilidi ile korunur; parola doğrulanmadan hiçbir rapor sorgusu çalıştırılmaz. |
 
 ---
 
@@ -225,9 +226,9 @@ Dışa aktarma audit log'a yazılır (hangi rapor, hangi filtreler, kaç satır)
 
 **REQ-REP-014**
 ```text
-Given: Kullanıcı giriş yapmış, finansal erişim kilidi kapalı
+Given: Kullanıcı giriş yapmış, yönetici erişim kilidi kapalı
 When:  F7 ile Raporlar açılmak isteniyor
-Then:  Dashboard parolası sorulur
+Then:  Yönetici parolası sorulur
 And:   Hiçbir rapor sorgusu çalıştırılmaz
 When:  Doğru parola giriliyor
 Then:  Raporlar yüklenir

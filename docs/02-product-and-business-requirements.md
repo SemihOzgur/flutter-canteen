@@ -6,7 +6,7 @@
 > **Tek tanım kuralı:** Bir business rule yalnızca burada tanımlanır. Diğer dokümanlar açıklar,
 > genişletir, ama **yeniden tanımlamaz.**
 
-**Toplam: 115 business rule.** (v3'te +5: finansal erişim kilidi kapsamı ve recovery code)
+**Toplam: 117 business rule.** (v3'te +5: kilit kapsamı ve recovery code · v4'te +2: [OD-030](28-open-decisions.md) — BR-AUTH-018/019)
 
 ---
 
@@ -185,27 +185,29 @@ Detay ve formüller: [08 — VAT Rules](08-vat-rules.md).
 
 ---
 
-## 12. Kimlik doğrulama ve dashboard kilidi
+## 12. Kimlik doğrulama ve yönetici erişim kilidi
 
 | ID | Kural |
 |---|---|
 | BR-AUTH-001 | Uygulama login ekranı ile başlar. |
 | BR-AUTH-002 | Rol/yetki ayrımı yoktur; tüm kullanıcılar aynı yetkilere sahiptir. Birden fazla kullanıcı desteklenir; `userId` izlenebilirlik için kaydedilir. |
 | BR-AUTH-003 | Kullanıcı logout yapmadıkça oturum kalıcıdır; uygulama yeniden açıldığında parola sorulmaz. |
-| BR-AUTH-004 | Logout yapıldığında oturum verisi tamamen temizlenir ve dashboard kilidi kapanır. |
+| BR-AUTH-004 | Logout yapıldığında oturum verisi tamamen temizlenir ve yönetici erişim kilidi kapanır. |
 | BR-AUTH-005 | Logout anında aktif sepet varsa **korunur**; silinmez. |
 | BR-AUTH-006 | Sistemde en az bir aktif kullanıcı bulunmak zorundadır; kullanıcı silinemez, pasifleştirilir. |
 | BR-AUTH-007 | *(BR-AUTH-013'e taşındı — kilit kapsamı genişledi)* |
-| **BR-AUTH-008** | **Dashboard parolası sistem genelinde tektir; kullanıcıya bağlı değildir ve rol anlamı taşımaz.** |
-| **BR-AUTH-009** | **Dashboard parolası salt'lı hash olarak saklanır.** |
-| **BR-AUTH-010** | **Dashboard parolasını değiştirmek için mevcut dashboard parolası veya recovery code girilmelidir.** |
-| **BR-AUTH-011** | **Kullanıcı parolaları, dashboard parolası ve recovery code, kayıt başına rastgele salt ile SHA-256 hash'lenerek saklanır.** |
+| **BR-AUTH-008** | **Yönetici parolası sistem genelinde tektir; kullanıcıya bağlı değildir ve rol anlamı taşımaz.** |
+| **BR-AUTH-009** | **Yönetici parolası salt'lı hash olarak saklanır.** |
+| **BR-AUTH-010** | **Yönetici parolasını değiştirmek için mevcut yönetici parolası veya recovery code girilmelidir.** |
+| **BR-AUTH-011** | **Kullanıcı parolaları, yönetici parolası ve recovery code, kayıt başına rastgele salt ile SHA-256 hash'lenerek saklanır.** |
 | **BR-AUTH-012** | **Parola doğrulanmadan finansal ekranların verisi sorgulanmaz ve gösterilmez.** |
-| **BR-AUTH-013** | **Finansal erişim kilidi Dashboard ve Raporlar ekranlarını kapsar.** |
-| **BR-AUTH-014** | **Satış, ürün, stok, kategori, tedarikçi, satış geçmişi, iade, ayarlar ve yedekleme ekranları kilit kapsamı dışındadır.** |
-| **BR-AUTH-015** | **Dashboard parolası unutulduğunda, kurulumda üretilen tek kullanımlık recovery code ile sıfırlanabilir.** |
-| **BR-AUTH-016** | **Finansal erişim kilidi oturum kapsamlıdır: bir kez açıldığında logout veya uygulama kapanışına kadar açık kalır.** |
+| **BR-AUTH-013** | **Yönetici erişim kilidi Dashboard, Raporlar ve tüm yönetim ekranlarını kapsar: ürün, kategori, tedarikçi, KDV oranı, kullanıcı yönetimi, ayarlar, yedekleme, içe/dışa aktarma, veri tutarlılığı ve barkod tanılama** (OD-030). |
+| **BR-AUTH-014** | **Yalnızca satış ekranı, satış geçmişi (iade ve iptal dahil) ve stok ekranları kilit kapsamı dışındadır** (OD-030). |
+| **BR-AUTH-015** | **Yönetici parolası unutulduğunda, kurulumda üretilen tek kullanımlık recovery code ile sıfırlanabilir.** |
+| **BR-AUTH-016** | **Yönetici erişim kilidi oturum kapsamlıdır: bir kez açıldığında logout, uygulama kapanışı veya kullanıcının kilidi elle kapatması dışında açık kalır.** |
 | **BR-AUTH-017** | **Recovery code kullanıldığında otomatik olarak yeni bir kod üretilir ve kullanıcıya bir kez gösterilir.** |
+| **BR-AUTH-018** | **Kilit kapalıyken kapsam içindeki ekranlar menüde GÖRÜNMEZ ve doğrudan rota ile de açılamaz; ekran hiç kurulmaz** (OD-030). |
+| **BR-AUTH-019** | **Satış ekranındaki "bilinmeyen barkod → hızlı ürün ekleme" akışı kilit kapsamı DIŞINDADIR; kilit yalnızca Ürünler ekranını kapatır** ([11 §4.2](11-barcode-system.md) · OD-030). |
 
 ---
 
@@ -228,7 +230,7 @@ Aşağıdakiler proje sahibi tarafından **V1 kapsamı dışında** bırakılmı
 |---|---|
 | Kasa açılışı, vardiya, kasa sayımı, kasa kapanışı, beklenen nakit, kasa farkı | V1'in satış sistemini bloklamamalıdır |
 | Tartılı / ondalık miktarlı satış | BR-SALE-011 |
-| Rol ve yetki sistemi | BR-AUTH-002 |
+| Rol ve yetki sistemi | BR-AUTH-002 — OD-030'daki yönetici erişim kilidi bir rol sistemi **değildir**: parola sistemde tektir, kullanıcıya bağlı değildir |
 | Backend, web panel, cloud sync, cloud backup | — |
 | Online ödeme, POS terminali, banka entegrasyonu, termal yazıcı | — |
 | Mobil uygulama, multi-store senkronizasyonu | — |
@@ -257,7 +259,7 @@ Aşağıdakiler proje sahibi tarafından **V1 kapsamı dışında** bırakılmı
 | 15 | Dashboard'ın ayrıca korunması gereksinimi yoktu | BR-AUTH-008…017 — **yeni gereksinim eklendi** |
 | 16 | v1 dokümantasyonu kasa/vardiya kapanışını kapsama eklemeyi öneriyordu | **Reddedildi** — V1 dışı, [30](30-future-scope.md) |
 | 17 | v1 dokümantasyonu 800 px görsel sınırını business rule yapmıştı | **Geri alındı** — yapılandırılabilir teknik politika ([OD-016](28-open-decisions.md)) |
-| 18 | v2'de dashboard parolası unutulursa kurtarma yolu yoktu | **Recovery code eklendi** — BR-AUTH-015, BR-AUTH-017 |
+| 18 | v2'de yönetici parolası unutulursa kurtarma yolu yoktu | **Recovery code eklendi** — BR-AUTH-015, BR-AUTH-017 |
 | 19 | v2'de Raporlar ekranı korumasızdı ve kilidin amacını zayıflatıyordu | **Kilit kapsamı genişletildi** — BR-AUTH-013 |
 
 ---

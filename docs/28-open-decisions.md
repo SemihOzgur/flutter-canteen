@@ -1,6 +1,6 @@
 # 28 — Karar Kaydı (Decision Log)
 
-> **Doküman sürümü:** v5 (revizyon: 2026-08-19)
+> **Doküman sürümü:** v6 (revizyon: 2026-09-05 — OD-030)
 >
 > ## ✅ AÇIK KARAR KALMAMIŞTIR.
 >
@@ -36,6 +36,7 @@
 | **OD-019** | **Pasif KDV oranı varsayılan olabilir mi** | **Hayır — reddedilir** | **v4** |
 | **OD-020** | **Kategori/tedarikçi/KDV yeniden aktifleştirme** | **Desteklenir** | **v4** |
 | **OD-021** | **Barkod tamponu zaman aşımına uğradığında** | **Girdi "zehirlenir"; sonraki `Enter`'a kadar barkod üretilmez** | **v5** |
+| **OD-030** | **Yönetici erişim kilidinin kapsamı** | **Kilit kapalıyken yalnızca Satış · Satış Geçmişi · Stok görünür** | **v6** |
 
 **Ek olarak v3'te kesinleşen iki yeni gereksinim** (açık karar olarak hiç durmadılar):
 
@@ -583,6 +584,7 @@ Faz 9  →  ZIP yedek; restore işareti veritabanı dışında (OD-027)
 Faz 10 →  CSV birincil + Excel abstraction
 Faz 12 →  Inno Setup
 v1.1   →  Kategori ikonu; şema v2 (OD-029)
+Sonrası →  Yönetici erişim kilidi kapsamı genişledi (OD-030)
 ```
 
 ### OD-029 — Kategoriye **ikon alanı** eklenir (`categories.icon_key`, şema v2)
@@ -646,11 +648,108 @@ mevcut `Category` bir alan kazanır.
 
 ---
 
+### OD-030 — Yönetici erişim kilidi: kapsam **yönetim ekranlarına** genişletilir
+
+**Karar:** Bugüne kadar yalnızca Dashboard ve Raporlar'ı koruyan **finansal erişim kilidi**,
+**yönetici erişim kilidi** olarak genişletilir. Kilit kapalıyken uygulama yalnızca üç ekranı
+gösterir:
+
+```text
+🔓 Kilit kapalıyken görünen        🔒 Kilit arkasında
+──────────────────────────         ──────────────────────────
+Satış ekranı                       Dashboard · Raporlar
+Satış geçmişi (iade + iptal)       Ürün · Kategori · Tedarikçi · KDV yönetimi
+Stok (giriş, hareket, sayım)       Kullanıcı yönetimi · Ayarlar
+                                   Yedekleme · İçe/Dışa aktarma
+                                   Veri tutarlılığı · Barkod tanılama
+```
+
+Kilidi açan parola **aynı tek paroladır** (BR-AUTH-008); yeni bir parola, yeni bir kullanıcı
+alanı veya yeni bir tablo **oluşturulmaz.**
+
+**Talep:** Proje sahibi (2026-09-05): *"Satış ekranı, satış geçmişi, stok — harici kullanıcılar
+sadece bunu görsün; yönetici dışındakiler sadece bunu görsün."*
+
+**Neden bir karar kaydı gerekti:** Talep, doğrudan [BR-AUTH-013/014]'ün kapsamını ve
+[17 §7](17-authentication.md)'nin *"kilit dışında"* tablosunu değiştirir. Ayrıca ilk okunuşta
+bir **rol sistemi** talebidir; rol sistemi ise BR-AUTH-002 ile açıkça yasaklanmıştır
+([30 §2](30-future-scope.md) · [RSK-004](29-risks.md)).
+
+**Options:**
+
+| | Yaklaşım | Sonuç |
+|---|---|---|
+| **A** | Değişiklik yapılmaz; mevcut finansal kilit yeterli sayılır | Doküman değişmez. Ancak ürün yönetimi, ayarlar ve yedekleme herkese açık kalır — talep karşılanmaz. |
+| **B** | **Mevcut tek kilidin kapsamı genişletilir** | Talebin tamamı karşılanır. `users` tablosu, şema ve migration **değişmez**; rol/yetki kavramı doğmaz (BR-AUTH-002 korunur). Ayrım kişiye değil **parolayı bilmeye** dayanır. |
+| **C** | Gerçek rol sistemi: `users.role` + yetki matrisi | Kişi bazlı gerçek ayrım sağlar. Ancak BR-AUTH-002 iptal edilir, şema v3 + migration gerekir, "en az bir yönetici" gibi yeni invariant'lar doğar ve [02](02-product-and-business-requirements.md), [04](04-domain-model.md), [05](05-database-architecture.md), [06](06-database-migrations.md), [17](17-authentication.md), [29](29-risks.md), [30](30-future-scope.md) yeniden yazılır. |
+
+**Recommendation: B** — proje sahibi tarafından **onaylandı (2026-09-05).**
+
+- Talep edilen davranışın tamamını karşılar: parolayı bilmeyen kullanıcı üç ekran görür.
+- **Rol sistemi değildir** ve BR-AUTH-002'yi ihlal etmez: parola sistemde tektir, kullanıcıya
+  bağlı değildir, `users` satırında yetki alanı yoktur ve iki kullanıcı arasında bir fark
+  oluşmaz. Ayrım kullanıcıya değil **parolayı bilmeye** dayanır.
+- Mevcut altyapı (`FinancialAccessService`, recovery code, bekleme sayacı, audit) aynen
+  kullanılır; yeni servis, yeni tablo ve migration gerekmez.
+
+**Kabul edilen sınır — C'nin sağladığı, B'nin sağlamadığı:** Parolayı bir kez öğrenen harici
+kullanıcı yöneticiyle **aynı** yetkiye sahiptir. Bu, [RSK-004](29-risks.md)'ün zaten kabul
+edilmiş kalan riskidir; B onu **büyütmez**, aksine bugünkü durumdan daha dar hâle getirir.
+
+### OD-030 kapsamındaki alt kararlar
+
+| # | Konu | Karar | Gerekçe |
+|---|---|---|---|
+| 1 | Satış geçmişi, iade ve iptal | **Kilit dışında** | [17 §7](17-authentication.md)'nin mevcut gerekçesi aynen geçerlidir: yanlış satışı iptal etmek günlük kasa işidir. Proje sahibinin listesi de satış geçmişini açıkça sayar. |
+| 2 | Satış ekranındaki **bilinmeyen barkod → hızlı ürün ekleme** | **Kilit dışında** | [11 §4.2](11-barcode-system.md) akışı korunur ([rules/02 §10](../.claude/rules/02-business-invariants.md) *"korunmalıdır"*). Kilit **Ürünler ekranını** kapatır, satış içindeki hızlı ekleme dialogunu değil; aksi hâlde barkodsuz ürün satışı dururdu. |
+| 3 | `app_settings` anahtarları ve audit action adları | **Değişmez** (`dashboard_password_hash`, `dashboardUnlocked` …) | Yeniden adlandırma bir migration gerektirir, mevcut yedekleri ve denetim geçmişini kırardı. Kavram adı değişir, saklama anahtarı değişmez. |
+| 4 | Kullanıcıya görünen ad | **"Yönetici erişimi" / "Yönetici parolası"** | Kilit artık yalnızca finansal ekranları korumuyor; "dashboard parolası" adı kullanıcıyı yanıltırdı. |
+| 5 | Kilidi elle kapatma | **Eklenir** ([REQ-AUTH-031]) | Yönetici işini bitirip makineyi kasadaki kişiye bırakırken **logout etmeden** kilidi kapatabilmelidir. Bu olmadan tek yol logout'tur ve kilit oturum kapsamlı olduğu için (BR-AUTH-016) açık kalırdı. |
+| 6 | Kilit süresi | **Değişmez** — oturum kapsamlı (OD-015 · BR-AUTH-016) | Bu karar kilidin **kapsamını** genişletir, **süresini** değil. |
+
+**BR-AUTH-012 iki katmanlı hâle gelir — karıştırılmamalıdır:**
+
+```text
+Katman 1 — SERVİS (değişmedi)   Dashboard/Rapor SORGULARI kilit açılmadan çalışmaz.
+                                FinancialAccessService.guard / FinancialGate.
+                                BR-AUTH-012 · REQ-AUTH-019
+
+Katman 2 — GEZİNME (yeni)       Yönetim EKRANLARI kilit açılmadan kurulmaz;
+                                menüde de görünmez. BR-AUTH-018 · REQ-AUTH-029/030
+```
+
+Katman 2, Katman 1'in yerini **almaz**: finansal sorgular kilit açıldıktan sonra bile
+servis kapısından geçmeye devam eder.
+
+**Impact:**
+
+| Doküman | Değişiklik |
+|---|---|
+| [02 §12](02-product-and-business-requirements.md) | BR-AUTH-013/014 yeniden yazıldı; **BR-AUTH-018/019** eklendi |
+| [17 §1, §7, §8, §10](17-authentication.md) | Kapsam tablosu, kural tablosu, "etkinin sınırı" paragrafı, terminoloji; **REQ-AUTH-029/030/031** |
+| [23 §2, §6](23-ux-requirements.md) | `F3` ve `Ctrl+,` kısayolları kilide tabidir; ana ekran görünürlük kuralı |
+| [25](25-functional-requirements.md) | REQ-AUTH-015 metni + REQ-AUTH-029/030/031 satırları |
+| [26 §10b](26-edge-cases.md) | EC-DASH-014 yeniden yazıldı; **EC-DASH-015…018** eklendi |
+| [27 §6.1b](27-testing-strategy.md) | Gezinme katmanı testleri (menü görünürlüğü, rota koruması, hızlı ürün ekleme) |
+| [29](29-risks.md) | RSK-004 azaltma listesi genişledi; **RSK-016 etkisi büyüdü** |
+| [24 §6](24-non-functional-requirements.md) | Güvenlik tablosunda kilit kapsamı |
+| [03 §6, §9](03-architecture.md) | Gezinme katmanı kapısı (Katman 2) |
+| [15 §0](15-dashboard.md) · [16](16-reporting.md) | Kilit adı ve kapsam referansı |
+| [22](22-user-flows.md) | F9 akışı + logout akışı |
+| [32](32-manual-test-backlog.md) | Yeni manuel test satırları |
+| [rules/04 §4](../.claude/rules/04-security-and-access.md) · [rules/05 §3](../.claude/rules/05-ux-and-platform.md) | Kapsam tabloları |
+
+**Kapsam etkisi:** v1 mimarisi genişlemez. **Yeni tablo, yeni kolon, yeni migration, yeni
+servis ve rol kavramı yoktur**; mevcut kilidin kapsamı genişler ve gezinme katmanına bir kapı
+eklenir.
+
+---
+
 ## 4. Yeni karar gerekirse
 
 Geliştirme sırasında kararlaştırılmamış bir konu ortaya çıkarsa:
 
-1. Bu dokümana `OD-030`'dan başlayarak yeni bir kayıt açılır.
+1. Bu dokümana `OD-031`'den başlayarak yeni bir kayıt açılır.
 2. `Decision / Options / Recommendation / Impact` formatı kullanılır.
 3. Karar kapanmadan ilgili kod yazılmaz.
 4. Kapandığında bu dokümandaki karar kaydına ve ilgili business rule'a dönüştürülür.

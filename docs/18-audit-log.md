@@ -189,7 +189,7 @@ yazılır ve ana işlem devam eder. Bu, "denetim uğruna satış kaybetme" durum
 | REQ-AUDIT-009 | Audit kayıtları insan-okunur cümleler halinde gösterilir. |
 | REQ-AUDIT-010 | Audit kayıtları CSV olarak dışa aktarılabilir. |
 | REQ-AUDIT-011 | 2 yıldan eski kayıtlar kullanıcı onayıyla arşivlenebilir. |
-| REQ-AUDIT-012 | Finansal erişim kilidi açılışları, başarısız denemeler, parola değişiklikleri ve recovery code kullanımı/yenilenmesi audit log'a yazılır; parola ve kod değerleri yazılmaz. |
+| REQ-AUDIT-012 | Yönetici erişim kilidi açılışları, başarısız denemeler, parola değişiklikleri ve recovery code kullanımı/yenilenmesi audit log'a yazılır; parola ve kod değerleri yazılmaz. *(Audit action adları `dashboardUnlocked` … olarak kalır — [OD-030](28-open-decisions.md) alt karar 3.)* |
 | REQ-AUDIT-013 | Kalıcı ürün ve kategori silme işlemleri audit log'a yazılır. |
 
 ---

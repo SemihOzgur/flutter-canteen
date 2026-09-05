@@ -13,7 +13,7 @@ Değerlendirme: **Olasılık × Etki**. Etki, veri kaybı ve finansal doğruluk 
 | [RSK-003](#rsk-003) | Aynı DB'ye iki uygulama örneği | Orta | Yüksek | 🔴 |
 | [RSK-005](#rsk-005) | Tek kopya veri — disk arızası | Orta | **Kritik** | 🔴 |
 | [RSK-011](#rsk-011) | Migration hatası | Düşük | **Kritik** | 🔴 |
-| [RSK-016](#rsk-016) | Dashboard parolası **ve** recovery code'un birlikte kaybedilmesi | Düşük | Düşük | 🟢 |
+| [RSK-016](#rsk-016) | Yönetici parolası **ve** recovery code'un birlikte kaybedilmesi | Düşük | **Yüksek** | 🟡 |
 | [RSK-004](#rsk-004) | Rol/yetki sisteminin olmaması | Yüksek | Orta | 🟡 |
 | [RSK-006](#rsk-006) | Klavye düzeni barkod uyumsuzluğu | Orta | Orta | 🟡 |
 | [RSK-007](#rsk-007) | macOS'ta çalışanın Windows'ta çalışmaması | Yüksek | Orta | 🟡 |
@@ -31,7 +31,7 @@ Değerlendirme: **Olasılık × Etki**. Etki, veri kaybı ve finansal doğruluk 
 |---|---|---|
 | ~~RSK-001~~ | Yedek dosyasında düz metin parola | ✅ **BR-SEC-001 + BR-AUTH-011** — parolalar salt'lı SHA-256 olarak saklanır; hiçbir yerde düz metin bulunmaz |
 | ~~RSK-009~~ | KDV kararının geç verilmesi | ✅ **BR-VAT-003** — KDV dahil kararı kesinleşti; geriye dönük fiyat dönüşümü riski ortadan kalktı |
-| ~~RSK-017~~ | Dashboard kilidinin Raporlar'ı kapsamaması | ✅ **BR-AUTH-013** — kilit kapsamı Dashboard + Raporlar olarak genişletildi |
+| ~~RSK-017~~ | Dashboard kilidinin Raporlar'ı kapsamaması | ✅ **BR-AUTH-013** — kilit kapsamı Dashboard + Raporlar, [OD-030](28-open-decisions.md) ile tüm yönetim ekranları olarak genişletildi |
 
 ---
 
@@ -89,13 +89,15 @@ Değerlendirme: **Olasılık × Etki**. Etki, veri kaybı ve finansal doğruluk 
 ---
 
 ## RSK-016
-### Dashboard parolası ve recovery code'un birlikte kaybedilmesi
+### Yönetici parolası ve recovery code'un birlikte kaybedilmesi
 
-> **v3'te büyük ölçüde azaltıldı.** Önceki sürümde kurtarma yolu hiç yoktu (🟡 Orta);
-> recovery code ile artık yalnızca **her ikisinin birden** kaybedilmesi durumu kalmıştır (🟢 Düşük).
+> **v3'te büyük ölçüde azaltıldı** (kurtarma yolu hiç yoktu → recovery code eklendi).
+> **[OD-030](28-open-decisions.md) ile ETKİSİ BÜYÜDÜ:** kilit artık yönetim ekranlarını da
+> kapsadığı için kayıp yalnızca raporları değil, **ürün yönetimi ve yedeklemeyi de**
+> erişilemez kılar. Olasılık düşük kalır, etki `Düşük` → `Yüksek`'e çıkar (🟢 → 🟡).
 
-**Risk:** Kullanıcı hem dashboard parolasını unutur hem de kurulumda verilen recovery code'u
-kaybederse finansal erişim kurtarılamaz.
+**Risk:** Kullanıcı hem yönetici parolasını unutur hem de kurulumda verilen recovery code'u
+kaybederse yönetici erişimi kurtarılamaz.
 
 **Azaltma (uygulanmış):**
 - Kurulumda recovery code üretilir ve kullanıcı **"kaydettim" onayı vermeden kurulum ilerlemez** (REQ-AUTH-024)
@@ -103,11 +105,16 @@ kaybederse finansal erişim kurtarılamaz.
 - Recovery code kullanıldığında **otomatik olarak yenisi üretilir** (BR-AUTH-017) — kurtarma yeteneği süreklidir
 - Kullanıcı, parolasını bildiği sürece Ayarlar'dan istediği zaman yeni bir kod üretebilir (REQ-AUTH-028)
 
-**Kalan etkinin sınırı:** Bu durumda bile **satış, ürün yönetimi, stok, iade, yedekleme ve
-import/export dahil tüm operasyonel işlevler çalışmaya devam eder.** Yalnızca Dashboard ve
-Raporlar erişilemez olur. Veri kaybı yaşanmaz.
+**Kalan etkinin sınırı — OD-030 sonrası:** **Satış, satış geçmişi (iade/iptal) ve stok
+çalışmaya devam eder**; kasa durmaz ve veri kaybı yaşanmaz. Ancak Dashboard, Raporlar,
+**ürün yönetimi, ayarlar, yedekleme ve içe/dışa aktarma** erişilemez olur.
 
-**Son çare:** Dashboard parolasının bilindiği bir tarihe ait yedeğin geri yüklenmesi
+> ⚠️ **Yedeklemenin de kilit arkasında olması bu riski [RSK-005](#rsk-005) ile birleştirir:**
+> parolasını kaybeden kullanıcı yeni yedek de alamaz. Bu yüzden kurulumdaki recovery code
+> adımı (REQ-AUTH-022/024) ve otomatik yedek hatırlatması (REQ-BKUP-016) birlikte kritik
+> önemdedir.
+
+**Son çare:** Yönetici parolasının bilindiği bir tarihe ait yedeğin geri yüklenmesi
 (o tarihten sonraki veriyi kaybettirir — pratikte önerilmez).
 
 ---
@@ -123,9 +130,13 @@ Raporlar erişilemez olur. Veri kaybı yaşanmaz.
 - Audit log her kritik işlemi `user_id` ile kaydeder ([18](18-audit-log.md)) — **tespit edilebilir, engellenemez**
 - Yıkıcı işlemler (restore) yazarak onay ister
 - Satış ve stok hareketleri silinemez
-- Finansal erişim kilidi, Dashboard ve Raporlar için ayrı bir sınır oluşturur (BR-AUTH-013)
+- **[OD-030](28-open-decisions.md) ile azaldı:** yönetici erişim kilidi artık yalnızca finansal
+  ekranları değil, **ürün yönetimi, ayarlar, yedekleme ve içe/dışa aktarmayı da** kapsar
+  (BR-AUTH-013). Parolayı bilmeyen kullanıcı bu ekranları göremez.
 
-**Kalan risk:** Kabul edilmiştir. Rol ihtiyacı doğarsa `users.role` kolonu eklemek düşük maliyetli bir migration'dır ([30 §3.2](30-future-scope.md)).
+**Kalan risk:** Kabul edilmiştir ve **daralmıştır.** OD-030 kişi bazlı bir ayrım getirmez:
+parolayı öğrenen kullanıcı yöneticiyle aynı yetkiye sahiptir. Gerçek rol ihtiyacı doğarsa
+`users.role` kolonu eklemek düşük maliyetli bir migration'dır ([30 §3.2](30-future-scope.md)).
 
 ---
 
@@ -172,7 +183,7 @@ Raporlar erişilemez olur. Veri kaybı yaşanmaz.
 ## RSK-012
 ### Kapsam büyümesi
 
-**Risk:** 285 requirement'lık bir kapsam var. "Bu da olsa iyi olur" eklemeleri v1'in hiç bitmemesine yol açar.
+**Risk:** 291 requirement'lık bir kapsam var. "Bu da olsa iyi olur" eklemeleri v1'in hiç bitmemesine yol açar.
 
 **Azaltma:**
 - MoSCoW önceliklendirmesi ([25](25-functional-requirements.md))

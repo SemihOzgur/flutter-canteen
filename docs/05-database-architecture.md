@@ -302,7 +302,7 @@ Kritik anahtarlar (tam liste: [04 §3.13](04-domain-model.md)):
 | Anahtar | İçerik |
 |---|---|
 | `session` | `{ userId, loginAt }` |
-| `dashboard_password_hash` / `dashboard_password_salt` | **Dashboard parolası** — salt'lı SHA-256 (BR-AUTH-009). Düz metin saklanmaz. |
+| `dashboard_password_hash` / `dashboard_password_salt` | **Yönetici parolası** — salt'lı SHA-256 (BR-AUTH-009). Düz metin saklanmaz. Anahtar adı tarihseldir ([OD-030](28-open-decisions.md)). |
 | `dashboard_recovery_hash` / `dashboard_recovery_salt` | **Recovery code** — salt'lı SHA-256 (BR-AUTH-015). Düz metin saklanmaz. |
 | `dashboard_recovery_used_at` | Recovery code tek kullanımlık kontrolü (BR-AUTH-015) |
 | `sale_counter_<yıl>` | Satış numarası sayacı |

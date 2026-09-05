@@ -75,7 +75,7 @@ düşük maliyetli bir genişleme yolu tanımlanmıştır.
       └──────────────┘        └──────────┘
 
       ┌────────────┐
-      │ AppSetting │  (bağımsız: oturum, dashboard parolası + recovery code, sayaçlar, tercihler)
+      │ AppSetting │  (bağımsız: oturum, yönetici parolası + recovery code, sayaçlar, tercihler)
       └────────────┘
 ```
 
@@ -311,8 +311,8 @@ Kullanılan anahtarlar:
 | Anahtar | İçerik |
 |---|---|
 | `session` | `{ userId, loginAt }` — oturum ([17 §6](17-authentication.md)) |
-| `dashboard_password_hash` | Dashboard parolası hash'i (BR-AUTH-009) |
-| `dashboard_password_salt` | Dashboard parolası salt'ı |
+| `dashboard_password_hash` | **Yönetici parolası** hash'i (BR-AUTH-009). Anahtar adı tarihseldir; [OD-030](28-open-decisions.md) yeniden adlandırmaz — migration gerektirirdi |
+| `dashboard_password_salt` | Yönetici parolası salt'ı |
 | `dashboard_recovery_hash` | **Recovery code hash'i** (BR-AUTH-015) |
 | `dashboard_recovery_salt` | Recovery code salt'ı |
 | `dashboard_recovery_used_at` | Recovery code kullanıldıysa zaman damgası, yoksa `NULL` |
@@ -324,7 +324,7 @@ Kullanılan anahtarlar:
 | `window_state`, `dashboard_range`, `sound_enabled`, `stock_warning_enabled` | UI tercihleri |
 | `last_image_scan_at` | Görsel bakım taraması ([21 §4](21-image-storage.md)) |
 
-> Dashboard parolası ve recovery code `users` tablosunda değil `app_settings`'tedir — çünkü
+> Yönetici parolası ve recovery code `users` tablosunda değil `app_settings`'tedir — çünkü
 > kullanıcıya değil, **sisteme** aittir (BR-AUTH-008). Hiçbiri düz metin saklanmaz (BR-SEC-001).
 
 ---

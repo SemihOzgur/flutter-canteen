@@ -14,7 +14,7 @@
 | Satış miktarı | **Tam sayı** (tartılı satış V1 dışı) |
 | Maliyet | **Son alış fiyatı** + SaleItem snapshot'ı |
 | Parola saklama | **Salt'lı SHA-256** — düz metin hiçbir yerde yok |
-| **Finansal erişim** | **Dashboard + Raporlar**, ayrı dashboard parolası ile korunur |
+| **Yönetici erişimi** | **Dashboard + Raporlar + tüm yönetim ekranları**, ayrı yönetici parolası ile korunur ([OD-030](28-open-decisions.md)) |
 | **Kurtarma** | **Tek kullanımlık recovery code** (`XXXX-XXXX-XXXX-XXXX`) |
 | İndirim / nakit yuvarlama | **V1'de yok** |
 | Kasa / vardiya | **V1 kapsamı dışı** |
@@ -92,9 +92,9 @@ Projeye yeni başlayan biri için önerilen sıra:
 | [12-sales-system.md](12-sales-system.md) | Satış ekranı, sepet, aktif sepet kalıcılığı, nakit |
 | [13-stock-system.md](13-stock-system.md) | Stok hareket defteri, negatif stok |
 | [14-returns-and-cancellation.md](14-returns-and-cancellation.md) | Satış iptali, tam/kısmi iade |
-| [15-dashboard.md](15-dashboard.md) | Finansal erişim kilidi, KPI'lar, grafikler, tarih aralıkları |
+| [15-dashboard.md](15-dashboard.md) | Yönetici erişim kilidi, KPI'lar, grafikler, tarih aralıkları |
 | [16-reporting.md](16-reporting.md) | Rapor kataloğu, filtreler, çıktı formatları (kilit arkasında) |
-| [17-authentication.md](17-authentication.md) | Login, oturum, kullanıcı yönetimi, **finansal erişim kilidi**, **recovery code** |
+| [17-authentication.md](17-authentication.md) | Login, oturum, kullanıcı yönetimi, **yönetici erişim kilidi**, **recovery code** |
 | [18-audit-log.md](18-audit-log.md) | Denetim kaydı kapsamı ve şeması |
 | [19-backup-restore.md](19-backup-restore.md) | Backup container formatı, restore protokolü |
 | [20-import-export.md](20-import-export.md) | CSV (birincil) / Excel import validasyonu, export kapsamı |
@@ -126,7 +126,7 @@ Bu dokümantasyonda dört ayrı numaralandırma kullanılır:
 
 | Önek | Anlamı | Nerede tanımlı |
 |---|---|---|
-| `REQ-<MODÜL>-NNN` | Functional requirement (285 adet) | [25-functional-requirements.md](25-functional-requirements.md) |
+| `REQ-<MODÜL>-NNN` | Functional requirement (291 adet) | [25-functional-requirements.md](25-functional-requirements.md) |
 | `BR-<MODÜL>-NNN` | Business rule (115 adet) | [02-product-and-business-requirements.md](02-product-and-business-requirements.md) |
 | `EC-<MODÜL>-NNN` | Edge case | [26-edge-cases.md](26-edge-cases.md) |
 | `OD-NNN` | Karar kaydı (tümü kapalı) | [28-open-decisions.md](28-open-decisions.md) |

@@ -94,7 +94,7 @@ Aşağıdakiler proje sahibinin kesinleştirdiği kararlardır. Bunları değiş
 | 6 | **Negatif stok satışı engellemez** — kullanıcı uyarılır, "Devam Et" ile satar |
 | 7 | **Satış ve iade atomiktir** — yarım satış/iade oluşamaz |
 | 8 | **Satış kayıtları silinmez** — yalnızca durum değişir |
-| 9 | **Finansal erişim kilidi** — Dashboard + Raporlar ayrı parola ister |
+| 9 | **Yönetici erişim kilidi** — Dashboard, Raporlar ve yönetim ekranları ayrı parola ister (OD-030) |
 | 10 | **Recovery code tek kullanımlıktır** ve hash olarak saklanır |
 | 11 | **Düz metin parola/kurtarma kodu hiçbir yerde bulunamaz** |
 | 12 | **Yedek tek dosyadır** (`.canteenbackup`) ve restore öncesi doğrulanır |
@@ -116,7 +116,7 @@ Bu listeden birine dokunman gerektiğini düşünüyorsan → **§5 DUR koşulla
 | Katman, klasör, soyutlama, paket ekleme | [`.claude/rules/01-architecture.md`](.claude/rules/01-architecture.md) |
 | Para, KDV, kâr, stok, satış, iade, ürün, barkod | [`.claude/rules/02-business-invariants.md`](.claude/rules/02-business-invariants.md) |
 | Veritabanı, migration, yedek, import/export, görsel, audit | [`.claude/rules/03-data-and-persistence.md`](.claude/rules/03-data-and-persistence.md) |
-| Login, oturum, dashboard parolası, recovery code | [`.claude/rules/04-security-and-access.md`](.claude/rules/04-security-and-access.md) |
+| Login, oturum, yönetici parolası, recovery code | [`.claude/rules/04-security-and-access.md`](.claude/rules/04-security-and-access.md) |
 | Ekran, kısayol, dashboard, rapor, Windows/macOS farkı | [`.claude/rules/05-ux-and-platform.md`](.claude/rules/05-ux-and-platform.md) |
 | Test yazma, **branch açma/kapsamı/merge**, feature tamamlama | [`.claude/rules/06-workflow-and-quality.md`](.claude/rules/06-workflow-and-quality.md) |
 

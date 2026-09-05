@@ -235,7 +235,7 @@ Sistem durumu inceler:
 | Konu | İşlem |
 |---|---|
 | Oturum | **Sonlandırılır** — geri yüklenen veritabanındaki kullanıcı listesi farklı olabilir |
-| **Dashboard kilidi** | **Kapatılır.** Dashboard parolası `app_settings` içinde olduğu için geri yüklenen yedeğin parolası geçerli olur — kullanıcı bu konuda restore özetinde uyarılır |
+| **Yönetici kilidi** | **Kapatılır.** Yönetici parolası `app_settings` içinde olduğu için geri yüklenen yedeğin parolası geçerli olur — kullanıcı bu konuda restore özetinde uyarılır |
 | Kullanıcı parolaları | Geri yüklenen yedeğin parolaları geçerli olur; mevcut parolalar geçersizleşir (özet ekranında belirtilir) |
 | Aktif sepet | Geri yüklenen veritabanındaki sepet geçerlidir; mevcut sepet kaybolur (özet ekranında belirtilir) |
 | Satış numarası sayacı | `MAX(sale_number)` okunarak `app_settings` sayacı düzeltilir — aksi halde numara çakışması olur |
@@ -268,7 +268,7 @@ Sistem durumu inceler:
 | REQ-BKUP-017 | Yedekleme ve geri yükleme işlemleri audit log'a yazılır. |
 | REQ-BKUP-018 | Bozuk veya eksik görsel içeren yedek, geri yüklemeyi engellemez; kullanıcı uyarılır. |
 | REQ-BKUP-019 | Yedek dosyası hiçbir dosyasında düz metin parola içermez. |
-| REQ-BKUP-020 | Geri yükleme sonrası dashboard kilidi kapatılır ve kullanıcı, parolaların yedekteki değerlerle değiştiği konusunda bilgilendirilir. |
+| REQ-BKUP-020 | Geri yükleme sonrası yönetici kilidi kapatılır ve kullanıcı, parolaların yedekteki değerlerle değiştiği konusunda bilgilendirilir. |
 
 ---
 
@@ -314,7 +314,7 @@ And:   Kullanıcı login ekranına yönlendirilir
 
 **REQ-BKUP-019**
 ```text
-Given: Sistemde kullanıcı hesapları ve dashboard parolası tanımlı
+Given: Sistemde kullanıcı hesapları ve yönetici parolası tanımlı
 When:  Yedek oluşturuluyor ve arşiv açılıp içeriği inceleniyor
 Then:  database.sqlite içinde yalnızca hash ve salt değerleri bulunur
 And:   metadata.json içinde parola bilgisi bulunmaz

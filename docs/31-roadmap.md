@@ -1,7 +1,8 @@
 # 31 — Roadmap
 
-> **Doküman sürümü:** v3 — **tüm kararlar kapandı, hiçbir faz bloke değil.**
-> Recovery code ve genişletilmiş finansal erişim kilidi Faz 3'e eklendi.
+> **Doküman sürümü:** v4 — **tüm kararlar kapandı, hiçbir faz bloke değil.**
+> Recovery code ve yönetici erişim kilidi Faz 3'tedir; kilidin kapsamı
+> [OD-030](28-open-decisions.md) ile yönetim ekranlarını da içerecek şekilde genişletildi.
 
 ## 1. Planlama ilkeleri
 
@@ -22,7 +23,7 @@ Faz 1 (Temel) ──────────┐
    ↓                    │
 Faz 2 (Veritabanı)      │   ← hiçbir faz açık karar tarafından bloke DEĞİL
    ↓                    │
-Faz 3 (Ürün + Auth + Finansal erişim + Recovery) ─┤
+Faz 3 (Ürün + Auth + Yönetici erişimi + Recovery) ┤
    ↓                    │
 Faz 4 (Barkod) ─────────┤
    ↓                    │
@@ -90,16 +91,16 @@ Türkçe + merkezî metin · ZIP yedek · Inno Setup · fl_chart · oturum kapsa
 
 ---
 
-### Faz 3 — Ürün yönetimi, kimlik doğrulama ve finansal erişim
+### Faz 3 — Ürün yönetimi, kimlik doğrulama ve yönetici erişimi
 
 | | |
 |---|---|
 | **Amaç** | Satılacak veriyi girebilmek + erişim korumaları |
-| **Kapsam** | Login + kurulum sihirbazı + oturum + kullanıcı yönetimi<br>**Parola hash'leme (salt'lı SHA-256)**<br>**Finansal erişim kilidi: belirleme, doğrulama, değiştirme, `FinancialAccessService`**<br>**Recovery code: üretim, gösterim, doğrulama, tek kullanımlık geçersizleştirme, yenileme**<br>Kategori CRUD (+ koşullu kalıcı silme)<br>Tedarikçi CRUD<br>KDV oranları yönetimi<br>**Ürün CRUD** (KDV dahil fiyat etiketi, satış birimi, net ağırlık)<br>Ürün silme/pasifleştirme ayrımı<br>Ürün listesi + arama + sayfalama<br>Barkod yönetimi (ürün formunda, çoklu barkod)<br>Görsel yükleme + optimizasyon<br>Favoriler |
+| **Kapsam** | Login + kurulum sihirbazı + oturum + kullanıcı yönetimi<br>**Parola hash'leme (salt'lı SHA-256)**<br>**Yönetici erişim kilidi: belirleme, doğrulama, değiştirme, `FinancialAccessService`**<br>**Kilidin gezinme katmanı: ana ekran görünürlüğü + rota kapısı + logout ([OD-030](28-open-decisions.md))**<br>**Recovery code: üretim, gösterim, doğrulama, tek kullanımlık geçersizleştirme, yenileme**<br>Kategori CRUD (+ koşullu kalıcı silme)<br>Tedarikçi CRUD<br>KDV oranları yönetimi<br>**Ürün CRUD** (KDV dahil fiyat etiketi, satış birimi, net ağırlık)<br>Ürün silme/pasifleştirme ayrımı<br>Ürün listesi + arama + sayfalama<br>Barkod yönetimi (ürün formunda, çoklu barkod)<br>Görsel yükleme + optimizasyon<br>Favoriler |
 | **Requirement** | AUTH-001…028, PROD-001…015, CAT-001…006, SUP-001…005, VAT-001/002/005, IMG-001…006/009/011, SEC-001/002, PERF-006, FIN-006, DASH-011/012, REP-014 |
 | **Blokaj** | ✅ Yok |
 | **Çıkış kriteri** | Kullanıcı giriş yapıp elle 50 ürün girebiliyor; barkodlar benzersiz; **veritabanında düz metin parola yok**; **parola olmadan Dashboard VE Raporlar rotaları açılmıyor**; **recovery code ile parola sıfırlanabiliyor ve kod tek kullanımlık**; görseller optimize ediliyor |
-| **Not** | **En yüklü faz.** Alt fazlara bölünmesi önerilir: **3a** Auth + parola hash + finansal erişim kilidi + recovery code · **3b** Kategori/Tedarikçi/KDV · **3c** Ürün CRUD + barkod · **3d** Görsel + favori |
+| **Not** | **En yüklü faz.** Alt fazlara bölünmesi önerilir: **3a** Auth + parola hash + yönetici erişim kilidi (+ [OD-030](28-open-decisions.md) gezinme katmanı, logout) + recovery code · **3b** Kategori/Tedarikçi/KDV · **3c** Ürün CRUD + barkod · **3d** Görsel + favori |
 
 ---
 
@@ -157,7 +158,7 @@ Türkçe + merkezî metin · ZIP yedek · Inno Setup · fl_chart · oturum kapsa
 | | |
 |---|---|
 | **Amaç** | Verinin karara dönüşmesi |
-| **Kapsam** | **Finansal erişim kapısının Dashboard ve Raporlar'a bağlanması** (servis Faz 3'te hazır)<br>Dashboard (KPI, grafikler, tarih aralıkları)<br>12 rapor<br>CSV dışa aktarma<br>Rapor altyapısı (filtre, sıralama, sayfalama) |
+| **Kapsam** | **Yönetici erişim kapısının Dashboard ve Raporlar'a bağlanması** (servis Faz 3'te hazır)<br>Dashboard (KPI, grafikler, tarih aralıkları)<br>12 rapor<br>CSV dışa aktarma<br>Rapor altyapısı (filtre, sıralama, sayfalama) |
 | **Requirement** | DASH-001…013, REP-001…013, RET-009/011, VAT-006, AUDIT-008…010, PERF-004/007, SEC-005, IMEX-014 |
 | **Blokaj** | ✅ Yok |
 | **Çıkış kriteri** | Dashboard 100k satırlık veriyle < 1 sn; **parola girilmeden hiçbir dashboard/rapor sorgusu çalışmıyor**; net ciro iptal/iadeleri doğru düşüyor; kâr KDV hariç matrahtan hesaplanıyor; CSV Türkçe Excel'de doğru açılıyor |
