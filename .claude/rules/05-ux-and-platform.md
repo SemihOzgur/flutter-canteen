@@ -53,10 +53,27 @@ Barkod okutulduğunda ürün **ara onay olmadan** sepete eklenir — akışı ke
 
 ### Erişim
 
-> **Her ikisi de finansal erişim kilidi arkasındadır.**
+> **Her ikisi de yönetici erişim kilidi arkasındadır.**
 > Bkz. [`04-security-and-access.md §4`](04-security-and-access.md).
 
 Parola doğrulanmadan **hiçbir sorgu çalıştırılmaz.**
+
+### Ana ekran görünürlüğü — OD-030
+
+> **Kilit kapalıyken ana ekranda YALNIZCA üç ekran listelenir:**
+> **Satış · Satış Geçmişi · Stok** (BR-AUTH-018 · REQ-UX-015).
+
+| Kural | |
+|---|---|
+| Kilitli ekranlar | Menüde **hiç görünmez** — pasif/gri kutu olarak da durmaz |
+| "Yetkiniz yok" mesajı | ❌ **Gösterilmez** — yetki kavramı yoktur (`04 §2`) |
+| Kilidi açma | Ana ekranda tek bir **Yönetici Erişimi** eylemi bulunur |
+| Kilidi kapatma | Kilit açıkken **Yönetici Erişimini Kapat** eylemi bulunur (REQ-AUTH-031) |
+| Çıkış | Ana ekranda **Çıkış Yap** eylemi bulunur (REQ-UX-016 · REQ-AUTH-032) |
+| Kilitli kısayol (`F3`, `F6`, `F7`, `Ctrl+,`) | Önce parola sorar; vazgeçilirse ekran **kurulmaz** |
+
+Kilitli bir rota doğrudan açılırsa ekran **kurulmaz** — kapı gezinme katmanındadır ve
+görsel bir perde değildir (REQ-AUTH-030).
 
 ### Hesaplama kuralı — mutlak
 

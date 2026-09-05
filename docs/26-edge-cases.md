@@ -188,24 +188,29 @@ Her edge case: **durum → beklenen davranış**. Bu liste test senaryolarının
 | EC-AUTH-007 | Restore sonrası oturum | Sonlandırılır; login ekranı |
 | EC-AUTH-008 | Hiç kullanıcı yok (yeni kurulum) | Kurulum sihirbazı |
 
-## 10b. Finansal erişim kilidi
+## 10b. Yönetici erişim kilidi
 
 | ID | Durum | Beklenen davranış |
 |---|---|---|
 | EC-DASH-001 | Kilit kapalıyken Dashboard açılmak isteniyor | Parola sorulur; **hiçbir sorgu çalıştırılmaz**, hiçbir rakam görünmez |
-| EC-DASH-002 | Yanlış dashboard parolası | Hata; 5 denemede 30 sn bekleme; audit'e yazılır |
+| EC-DASH-002 | Yanlış yönetici parolası | Hata; 5 denemede 30 sn bekleme; audit'e yazılır |
 | EC-DASH-003 | Parola ekranında "Vazgeç" | Önceki ekrana dönülür; kilit kapalı kalır |
 | EC-DASH-004 | Kilit açıkken başka ekrana gidip Dashboard'a dönülüyor | Parola tekrar sorulmaz (oturum kapsamlı) |
-| EC-DASH-005 | Logout sonrası tekrar giriş yapılıyor | Dashboard parolası **tekrar sorulur** |
-| EC-DASH-006 | Uygulama kapatılıp açılıyor | Dashboard kilidi kapalı başlar |
-| EC-DASH-007 | Dashboard parolası unutuldu | **Recovery code ile sıfırlanabilir** ([17 §8](17-authentication.md)) |
+| EC-DASH-005 | Logout sonrası tekrar giriş yapılıyor | Yönetici parolası **tekrar sorulur** |
+| EC-DASH-006 | Uygulama kapatılıp açılıyor | Yönetici kilidi kapalı başlar |
+| EC-DASH-007 | Yönetici parolası unutuldu | **Recovery code ile sıfırlanabilir** ([17 §8](17-authentication.md)) |
 | EC-DASH-008 | Parola değiştirilirken mevcut parola yanlış | Değişiklik reddedilir |
-| EC-DASH-009 | Dashboard parolası kullanıcı parolasıyla aynı giriliyor | İzin verilir; uyarı gösterilir |
-| EC-DASH-010 | Restore sonrası dashboard parolası | Yedekteki parola geçerli olur; kilit kapatılır; kullanıcı uyarılır (REQ-BKUP-020) |
-| EC-DASH-011 | Kurulum sihirbazında dashboard parolası boş bırakılıyor | Kurulum ilerlemez — zorunlu alan (REQ-AUTH-016) |
+| EC-DASH-009 | Yönetici parolası kullanıcı parolasıyla aynı giriliyor | İzin verilir; uyarı gösterilir |
+| EC-DASH-010 | Restore sonrası yönetici parolası | Yedekteki parola geçerli olur; kilit kapatılır; kullanıcı uyarılır (REQ-BKUP-020) |
+| EC-DASH-011 | Kurulum sihirbazında yönetici parolası boş bırakılıyor | Kurulum ilerlemez — zorunlu alan (REQ-AUTH-016) |
 | EC-DASH-012 | Kilit kapalıyken **Raporlar** açılmak isteniyor | Parola sorulur; hiçbir rapor sorgusu çalışmaz (BR-AUTH-013) |
 | EC-DASH-013 | Dashboard için kilit açıldı, sonra Raporlar açılıyor | Parola tekrar sorulmaz — tek kilit her ikisini kapsar |
-| EC-DASH-014 | Kilit kapalıyken satış / ürün / stok ekranı açılıyor | Parola sorulmaz (BR-AUTH-014) |
+| EC-DASH-014 | Kilit kapalıyken **satış / satış geçmişi / stok** ekranı açılıyor | Parola sorulmaz (BR-AUTH-014) |
+| **EC-DASH-015** | **Kilit kapalıyken ana ekran açılıyor** | **Yalnızca satış, satış geçmişi ve stok listelenir; diğer ekranlar görünmez — "yetkiniz yok" mesajı da yoktur** (BR-AUTH-018) |
+| **EC-DASH-016** | **Kilit kapalıyken `F3` / `Ctrl+,` gibi bir kısayolla yönetim ekranı açılmak isteniyor** | **Parola sorulur; vazgeçilirse ekran kurulmaz** (REQ-AUTH-030) |
+| **EC-DASH-017** | **Kilit kapalıyken satışta bilinmeyen barkod okutuluyor** | **Hızlı ürün ekleme dialogu açılır; parola SORULMAZ** (BR-AUTH-019) |
+| **EC-DASH-018** | **Kullanıcı kilidi elle kapatıyor** | **Kilit kapanır, ana ekran üç ekrana döner; oturum ve aktif sepet korunur** (REQ-AUTH-031) |
+| **EC-DASH-019** | **Kilit elle kapatıldıktan sonra aynı yönetim ekranı yeniden açılmak isteniyor** | **Parola yeniden sorulur — kilidi kapatmak açmayı geri alır** (REQ-AUTH-031 · BR-AUTH-016) |
 
 ## 10c. Recovery code
 
@@ -217,7 +222,7 @@ Her edge case: **durum → beklenen davranış**. Bu liste test senaryolarının
 | EC-REC-004 | Recovery başarılı | Parola güncellenir + eski kod geçersizleşir + **yeni kod üretilir**, tek transaction |
 | EC-REC-005 | Yeni parola kaydedilirken hata oluşuyor | Tam rollback; eski parola ve eski kod geçerli kalır |
 | EC-REC-006 | Recovery sonrası yeni kod ekranı kapatılıyor (kaydetmeden) | "Kodu kaydettim" onayı olmadan ekran kapanmaz |
-| EC-REC-007 | Kullanıcı hem parolayı hem kodu kaybetmiş | Finansal erişim kurtarılamaz; **diğer tüm işlevler çalışır** ([RSK-016](29-risks.md)) |
+| EC-REC-007 | Kullanıcı hem parolayı hem kodu kaybetmiş | Yönetici erişimi kurtarılamaz; **satış, satış geçmişi ve stok çalışmaya devam eder**, diğer ekranlar erişilemez ([RSK-016](29-risks.md)) |
 | EC-REC-008 | Ayarlar'dan yeni kod üretiliyor, mevcut parola yanlış | Reddedilir; eski kod geçerli kalır |
 | EC-REC-009 | Ayarlar'dan yeni kod üretiliyor, parola doğru | Yeni kod üretilir, eski geçersizleşir, bir kez gösterilir |
 | EC-REC-010 | Restore sonrası recovery code | Yedekteki kod geçerli olur; mevcut kod geçersizleşir; kullanıcı uyarılır |

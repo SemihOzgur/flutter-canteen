@@ -1,6 +1,6 @@
 # 24 — Fonksiyonel Olmayan Gereksinimler
 
-> **Doküman sürümü:** v3 — ölçek 10.000+ ürüne çıkarıldı; finansal erişim kilidi kapsamı güncellendi.
+> **Doküman sürümü:** v4 — ölçek 10.000+ ürün; yönetici erişim kilidi kapsamı [OD-030](28-open-decisions.md) ile genişletildi.
 
 Performans, veri bütünlüğü, güvenlik ve platform uyumluluğu bu dokümanda toplanmıştır.
 
@@ -141,12 +141,12 @@ Tehdit modeli buna göre dardır. Güvenlik gereksinimleri gereksiz büyütülme
 | Yedek dosyasının sızması | 🟡 | Taşınabilir dosya; **artık parola içermiyor** (BR-SEC-001) — kalan risk yalnızca ticari veridir |
 | Kötü niyetli import dosyası | 🟡 | Zip-slip, aşırı büyük dosya, formül enjeksiyonu |
 | Yetkisiz işlem (rol yok) | ✅ | [RSK-004](29-risks.md) — audit log tespit eder, engellemez |
-| Finansal veriye yetkisiz bakış | 🟡 | **Finansal erişim kilidi** Dashboard ve Raporlar'ı kapsar (BR-AUTH-013) |
+| Finansal veriye yetkisiz bakış | 🟡 | **Yönetici erişim kilidi** Dashboard, Raporlar **ve tüm yönetim ekranlarını** kapsar (BR-AUTH-013 · [OD-030](28-open-decisions.md)) |
 | Veri kaybı | ✅ | En büyük gerçek risk — §3'te ele alındı |
 
 **Kapsam dışı bırakılan güvenlik konuları** (proje sahibi kararı): OAuth, JWT, MFA,
 **kullanıcı parolası** kurtarma akışı, sunucu tarafı kimlik doğrulama, veritabanı şifreleme.
-*(Dashboard parolası için recovery code **vardır** — [17 §8](17-authentication.md).)*
+*(Yönetici parolası için recovery code **vardır** — [17 §8](17-authentication.md).)*
 Güvenlik karmaşıklığı bu tehdit modelinin ötesine büyütülmez.
 
 ### 4.2 Alınan önlemler
@@ -154,8 +154,8 @@ Güvenlik karmaşıklığı bu tehdit modelinin ötesine büyütülmez.
 | Konu | Önlem |
 |---|---|
 | **Parola saklama** | ✅ **SHA-256 + rastgele salt — karar kapandı** (BR-AUTH-011, [17 §5](17-authentication.md)). Düz metin parola hiçbir yerde bulunmaz (BR-SEC-001) |
-| **Finansal erişim** | Dashboard **ve Raporlar**, ayrı bir dashboard parolası ile korunur (BR-AUTH-013). Rol sistemi değildir |
-| **Dashboard parolası kurtarma** | Tek kullanımlık recovery code; hash saklanır, kullanıldığında yenisi üretilir (BR-AUTH-015/017) |
+| **Yönetici erişimi** | Dashboard, Raporlar **ve yönetim ekranları**, ayrı bir yönetici parolası ile korunur (BR-AUTH-013). Parola sistemde tektir — **rol sistemi değildir** |
+| **Yönetici parolası kurtarma** | Tek kullanımlık recovery code; hash saklanır, kullanıldığında yenisi üretilir (BR-AUTH-015/017) |
 | Parola/kod log/audit | Parola, recovery code, hash veya salt hiçbir yere yazılmaz (REQ-AUDIT-004) |
 | Veritabanı şifreleme | ❌ Yapılmaz — anahtar aynı makinede duracağı için gerçek koruma sağlamaz, ama backup/kurtarmayı zorlaştırır |
 | Yedek dosyası şifreleme | ❌ v1'de yok; kullanıcıya "yedeği güvenli yerde saklayın" uyarısı verilir. İhtiyaç doğarsa parolalı ZIP eklenebilir ([30](30-future-scope.md)) |
@@ -252,7 +252,7 @@ Installer/paketleme kararı: [OD-013](28-open-decisions.md).
 | REQ-DATA-006 | Veri tutarlılığını denetleyen bir kontrol işlevi bulunur ve sapmaları raporlar. |
 | REQ-DATA-007 | Tutarsızlıklar otomatik değil, kullanıcı onayıyla ve stok hareketi oluşturularak düzeltilir. |
 | REQ-DATA-008 | Kullanıcı verisi kurulum dizininde tutulmaz; güncelleme veriyi etkilemez. |
-| REQ-SEC-001 | Kullanıcı parolaları ve dashboard parolası salt'lı SHA-256 hash olarak saklanır. |
+| REQ-SEC-001 | Kullanıcı parolaları ve yönetici parolası salt'lı SHA-256 hash olarak saklanır. |
 | REQ-SEC-002 | Parola, hash ve salt değerleri log, audit, yedek veya export dosyalarına yazılmaz. |
 | REQ-SEC-003 | Arşivden dosya çıkarırken hedef dizin dışına yazma engellenir. |
 | REQ-SEC-004 | Aşırı büyük sıkıştırılmış arşivler açılmadan reddedilir. |

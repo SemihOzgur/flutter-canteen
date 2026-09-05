@@ -1,6 +1,7 @@
 # 22 — Kullanıcı Akışları
 
-> **Doküman sürümü:** v3 — finansal erişim (F9) ve recovery code (F10) akışları; 15 akış.
+> **Doküman sürümü:** v4 — yönetici erişimi (F9) genişledi, logout akışı (F16) eklendi;
+> 16 akış ([OD-030](28-open-decisions.md)).
 
 Bu doküman uçtan uca akışları tek yerde toplar. Detaylar ilgili modül dokümanlarındadır.
 
@@ -24,7 +25,7 @@ Kurulum sihirbazı
    ├─ Adım 4: KDV oranları                                     [atlanabilir]
    └─ Adım 5: Kategoriler                                      [atlanabilir]
       ▼
-Otomatik giriş → Satış ekranı  (finansal erişim kilidi KAPALI başlar)
+Otomatik giriş → Satış ekranı  (yönetici erişim kilidi KAPALI başlar)
       ▼
 "Henüz ürününüz yok" boş durum ekranı:
    [Ürün Ekle]   [Excel'den İçe Aktar]
@@ -47,7 +48,7 @@ Oturum var mı?
    ├─ Hayır → Login
    └─ Evet  → Satış ekranı
       ▼
-Finansal erişim kilidi KAPALI olarak başlar (her açılışta)
+Yönetici erişim kilidi KAPALI olarak başlar (her açılışta)
       ▼
 Aktif sepet restore → varsa "Yarım kalan satış geri yüklendi" bilgisi
       ▼
@@ -176,34 +177,45 @@ Tek ürün için: Ürün detayı → Stok → [Düzelt] → yeni miktar + sebep.
 
 ---
 
-## F9 — Finansal erişim (Dashboard / Raporlar kilidi)
+## F9 — Yönetici erişimi (yönetim ekranları kilidi)
 
 ```text
-Herhangi bir ekran → F6 (Dashboard)  veya  F7 (Raporlar)
+Ana ekran — kilit KAPALIYKEN yalnızca üç kutu vardır:
+   🛒 Satış        🔁 Satış Geçmişi        📦 Stok        🔒 Yönetici Erişimi
       ▼
-Finansal erişim bu oturumda açıldı mı?
+Kullanıcı [🔒 Yönetici Erişimi] diyor  —  veya kilitli bir kısayola basıyor
+(F3 Ürünler · F6 Dashboard · F7 Raporlar · Ctrl+, Ayarlar)
+      ▼
+Yönetici erişimi bu oturumda açıldı mı?
    ├─ Evet → ekran doğrudan yüklenir
    └─ Hayır
         ▼
-   🔒 Dashboard parolası sorulur
-        ├─ Vazgeç          → önceki ekrana dönülür, hiçbir veri yüklenmez
+   🔒 Yönetici parolası sorulur
+        ├─ Vazgeç          → hiçbir ekran açılmaz, hiçbir veri yüklenmez
         ├─ Yanlış          → hata; 5 denemede 30 sn bekleme; audit log
         ├─ Şifremi unuttum → F10 (recovery akışı)
         └─ Doğru           → kilit açılır (oturum boyunca) → audit log
-                             → sorgular ÇALIŞTIRILIR → veri gösterilir
+                             → ana ekranda TÜM kutular belirir
+      ▼
+İş bitince: [Yönetici Erişimini Kapat]  → kilit kapanır, üç kutuya dönülür
+                                          (oturum ve sepet korunur — REQ-AUTH-031)
 ```
 
-> Kapsam: **Dashboard + Raporlar.** Satış, ürün, stok, kategori, iade ve ayarlar kilit dışıdır.
-> Parola doğrulanmadan **hiçbir finansal sorgu çalıştırılmaz** (BR-AUTH-012).
-> Kilit oturum kapsamlıdır; Dashboard ↔ Raporlar geçişinde tekrar sorulmaz.
-> Logout veya uygulama kapanışında sıfırlanır.
+> Kapsam: **Dashboard, Raporlar ve tüm yönetim ekranları** ([17 §7](17-authentication.md)).
+> Kilit dışında yalnızca **satış, satış geçmişi (iade/iptal) ve stok** vardır.
+> Parola doğrulanmadan **hiçbir finansal sorgu çalıştırılmaz** (BR-AUTH-012) ve kilitli
+> ekranlar **hiç kurulmaz** (BR-AUTH-018).
+> **İstisna:** satıştaki bilinmeyen barkod → hızlı ürün ekleme akışı (F4) kilit dışıdır
+> (BR-AUTH-019).
+> Kilit oturum kapsamlıdır; ekranlar arası geçişte tekrar sorulmaz.
+> Logout, uygulama kapanışı veya elle kapatma ile sıfırlanır.
 
 ---
 
-## F10 — Dashboard parolası kurtarma (recovery code)
+## F10 — Yönetici parolası kurtarma (recovery code)
 
 ```text
-Finansal erişim ekranı → [Şifremi unuttum]
+Yönetici erişim ekranı → [Şifremi unuttum]
       ▼
 Kurtarma kodu girilir:  [____]-[____]-[____]-[____]
       ▼
@@ -211,10 +223,10 @@ Kurtarma kodu girilir:  [____]-[____]-[____]-[____]
    ├─ Kod yanlış → hata; 5 denemede 30 sn bekleme; audit log
    └─ Kod doğru
         ▼
-   Yeni dashboard parolası belirlenir (iki kez)
+   Yeni yönetici parolası belirlenir (iki kez)
         ▼
    TEK TRANSACTION:
-     dashboard parolası güncellenir
+     yönetici parolası güncellenir
      + eski recovery code geçersizleşir (used_at = now)
      + YENİ recovery code üretilir
      + audit log (kod değeri YAZILMAZ)
@@ -222,11 +234,12 @@ Kurtarma kodu girilir:  [____]-[____]-[____]-[____]
    🔑 Yeni kurtarma kodu bir kez gösterilir
       ☐ "Kodu kaydettim" onayı
         ▼
-   Finansal erişim kilidi AÇILIR
+   Yönetici erişim kilidi AÇILIR
 ```
 
-> Hem parola hem recovery code kaybedilirse finansal erişim kurtarılamaz;
-> ancak **satış dahil tüm operasyonel işlevler çalışmaya devam eder** ([RSK-016](29-risks.md)).
+> Hem parola hem recovery code kaybedilirse yönetici erişimi kurtarılamaz; **satış, satış
+> geçmişi ve stok çalışmaya devam eder**, ancak ürün yönetimi, ayarlar ve **yedekleme**
+> erişilemez olur ([RSK-016](29-risks.md)).
 
 ---
 
@@ -235,7 +248,7 @@ Kurtarma kodu girilir:  [____]-[____]-[____]-[____]
 > Bu akış bir özellik değil, **kullanıcı rutinidir.** Uygulama bunu desteklemeli ama dayatmamalıdır.
 
 ```text
-Dashboard (finansal erişim açılır) → "Bugün"
+Dashboard (yönetici erişimi açılır) → "Bugün"
       ▼
 Net ciro, satış adedi, kâr kontrol edilir
       ▼
@@ -280,7 +293,7 @@ Karşılaştırmalı özet ekranı (yedekteki vs mevcut kayıt sayıları)
       ▼
 Güvenlik yedeği → dosya değişimi → doğrulama → (gerekirse migration) → sayaç düzeltme
       ▼
-Oturum sonlandırılır + finansal erişim kilidi kapatılır → Login ekranı
+Oturum sonlandırılır + yönetici erişim kilidi kapatılır → Login ekranı
       ▼
 ⚠ "Parolalar yedekteki değerlerle değişti" bilgisi
 ```
@@ -337,3 +350,28 @@ Sonuç raporu + [Atlanan satırları indir]
 | F13 | REQ-BKUP-006…015, REQ-BKUP-020 |
 | F14 | REQ-IMEX-001…011 |
 | F15 | REQ-MIG-006, REQ-BKUP-012, REQ-AUTH-007, REQ-DATA-* |
+
+---
+
+## F16 — Çıkış (logout)
+
+```text
+Ana ekran → [Çıkış Yap]
+      ▼
+Aktif sepette ürün var mı?
+   ├─ Hayır → doğrudan çıkılır
+   └─ Evet
+        ▼
+   "Sepetinizde N ürün var. Çıkış yaparsanız sepet korunur ve bir sonraki
+    girişte geri yüklenir."
+        [Vazgeç]   [Sepeti Temizle ve Çık]   [Çıkış Yap]
+      ▼
+app_settings['session'] silinir
+YÖNETİCİ ERİŞİM KİLİDİ KAPATILIR
+      ▼
+Login ekranı
+```
+
+> **BR-AUTH-005 · REQ-AUTH-005 — logout aktif sepeti SİLMEZ.** "Sepeti Temizle ve Çık"
+> kullanıcının **açık** tercihidir; varsayılan davranış sepeti korumaktır.
+> Ayrıntı: [17 §10](17-authentication.md).

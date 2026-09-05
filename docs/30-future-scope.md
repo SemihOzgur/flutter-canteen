@@ -28,7 +28,7 @@ Proje sahibi tarafından açıkça V1 dışında bırakılmıştır.
 | Multi-store / şube senkronizasyonu | Tek kantin |
 | Cloud authentication | Local auth yeterli |
 | **OAuth / JWT / MFA / parola kurtarma** | Güvenlik karmaşıklığı gereksiz büyütülmeyecek (BR-SEC-001 dışında) |
-| Rol / yetki sistemi | Açıkça kapsam dışı (BR-AUTH-002, [RSK-004](29-risks.md)) |
+| Rol / yetki sistemi | Açıkça kapsam dışı (BR-AUTH-002, [RSK-004](29-risks.md)). **[OD-030](28-open-decisions.md)'un yönetici erişim kilidi bir rol sistemi değildir**: parola sistemde tektir, kullanıcıya bağlı değildir |
 | **Kasa açılışı, vardiya, kasa sayımı, kasa kapanışı, beklenen nakit, kasa farkı** | **V1'in satış sistemini bloklamamalıdır** — §3.1 |
 | **Tartılı / ondalık miktarlı satış** | BR-SALE-011: miktar tam sayıdır — §3.2 |
 | Müşteri / cari hesap / veresiye takibi | İstenmedi |

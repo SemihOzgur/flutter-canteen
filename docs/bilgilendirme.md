@@ -38,15 +38,17 @@ C:\Users\<kullanıcı>\AppData\Roaming\CanteenApp\
 | Adım | Ne yapılır |
 |---|---|
 | 1 | Kullanıcı adı ve **parola** belirlenir |
-| 2 | **Dashboard parolası** belirlenir — ciro/kâr ekranlarını korur |
+| 2 | **Yönetici parolası** belirlenir — yönetim ve ciro/kâr ekranlarını korur |
 | 3 | **Kurtarma kodu** gösterilir |
 
 > ⚠️ **Kurtarma kodu bir kez gösterilir.** Kopyalayın veya dosyaya kaydedin.
-> Dashboard parolasını unutursanız finansal ekranlara girmenin **tek yolu**
+> Yönetici parolasını unutursanız yönetim ekranlarına girmenin **tek yolu**
 > budur. Kod tek kullanımlıktır; kullanınca yenisi verilir, onu da saklayın.
 >
-> Hem parolayı hem kodu kaybederseniz **finansal ekranlar kalıcı olarak
-> kapanır** — ancak satış, stok ve ürün işlemleri normal çalışmaya devam eder.
+> Hem parolayı hem kodu kaybederseniz **yönetim ekranlarının tamamı kalıcı
+> olarak kapanır** — ürün yönetimi, ayarlar ve **yedekleme** dahil. Satış,
+> satış geçmişi ve stok normal çalışmaya devam eder, ama bu ciddi bir kayıptır:
+> kodu mutlaka saklayın.
 
 ---
 
@@ -154,13 +156,28 @@ Bu kasıtlıdır: defter değişirse geçmiş güvenilirliğini kaybeder.
 
 ---
 
-## 7. Dashboard ve Raporlar — ayrı parola
+## 7. Yönetici parolası — kim neyi görür
 
-Bu iki ekran **dashboard parolası** ister. Uygulamaya girmiş olmanız yetmez.
+Uygulamaya giriş yapmak **yönetim ekranlarını açmaya yetmez**; ayrıca **yönetici
+parolası** istenir.
 
+| Parola girilmeden görünen | Yönetici parolası isteyen |
+|---|---|
+| 🛒 Satış ekranı | 📊 Dashboard · 📈 Raporlar |
+| 🔁 Satış geçmişi (iade ve iptal dahil) | 📦 Ürünler · 🏷️ Kategori · Tedarikçi · KDV |
+| 📦 Stok (mal kabul, fire, sayım, hareketler) | 👥 Kullanıcılar · ⚙️ Ayarlar |
+| | 💾 Yedekleme · 🔄 İçe/Dışa aktarma |
+
+- Kilit kapalıyken diğer ekranlar ana ekranda **hiç görünmez.**
 - Parola girilene kadar **hiçbir ciro/kâr sorgusu çalışmaz.**
 - Bir kez girdikten sonra oturum boyunca tekrar sorulmaz.
+- İşiniz bitince **Yönetici Erişimini Kapat** deyin — çıkış yapmadan kilit
+  geri gelir ve tezgâhtaki kişi yalnızca üç ekranı görür.
 - **Çıkış yapınca** kilit yeniden devreye girer.
+
+> **Barkodu tanınmayan ürün istisnası:** kilit kapalıyken bile, satışta
+> okutulan yeni bir barkod için hızlı ürün ekleme penceresi açılır. Yeni gelen
+> bir ürün yönetici gelene kadar satılamaz durumda kalmaz.
 
 | Rakam | Nasıl okunur |
 |---|---|
@@ -217,11 +234,11 @@ kaydedip geri yükleyin.
 
 | Durum | Ne yapmalı |
 |---|---|
-| Barkod okuyucu çalışmıyor gibi | Ana ekran → **Barkod Tanılama**'dan okutmayı deneyin |
+| Barkod okuyucu çalışmıyor gibi | Yönetici erişimini açın → **Barkod Tanılama**'dan okutmayı deneyin |
 | "Uygulama zaten çalışıyor" | Aynı anda tek örnek açılabilir; açık pencereyi kullanın |
-| Dashboard parolası unutuldu | Finansal erişim ekranı → **Şifremi unuttum** → kurtarma kodu |
+| Yönetici parolası unutuldu | Yönetici erişim ekranı → **Şifremi unuttum** → kurtarma kodu |
 | Kullanıcı parolası unutuldu | Kurtarma **yoktur**. Başka bir kullanıcıyla girin |
-| Stok sayımla tutmuyor | Ana ekran → **Tutarlılık Kontrolü** |
+| Stok sayımla tutmuyor | Yönetici erişimini açın → **Tutarlılık Kontrolü** |
 | Pencere küçük, ekranlar sıkışık | Uygulama 1366×768 ve üzeri için tasarlandı |
 
 ---
@@ -232,5 +249,5 @@ kaydedip geri yükleyin.
 |---|---|
 | `AppData\Roaming\CanteenApp` içindeki dosyaları elle taşımak/silmek | Veritabanı bozulur; yedekten dönmek gerekir |
 | Yedeği yalnızca aynı diskte tutmak | Disk bozulduğunda yedek de gider |
-| Kurtarma kodunu saklamamak | Dashboard parolası unutulursa geri dönüşü yoktur |
+| Kurtarma kodunu saklamamak | Yönetici parolası unutulursa yönetim ekranlarına geri dönüş yoktur |
 | Uygulama açıkken kurulum yapmak | Dosyalar kilitlidir; kurulum yarım kalır |

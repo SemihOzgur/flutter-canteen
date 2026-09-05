@@ -127,7 +127,7 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 
 ## 6b. Faz 8 — Dashboard
 
-> Ana ekran → **Dashboard** (finansal erişim parolası sorulur)
+> Ana ekran → **Dashboard** (yönetici erişim parolası sorulur)
 
 | # | Senaryo | Beklenen | Kural |
 |---|---|---|---|
@@ -146,6 +146,26 @@ faresiz, 10 saniyeden kısa"* hedefini oluşturur ve ancak elle ölçülebilir.
 > **G9 elle ölçülmelidir.** Otomatik testlerde 10.000 ürünle veri yolu ölçüldü
 > (16 ms) ama dashboard'un 100k satırlık gerçek yükü ve ekran boyaması
 > ölçülmedi.
+
+---
+
+## 6c. Yönetici erişim kilidi — kapsam genişlemesi ([OD-030](28-open-decisions.md))
+
+> Kilit **kapalı** durumda başlanır (uygulamayı yeniden aç veya çıkış yapıp gir).
+
+| # | Senaryo | Beklenen | Kural |
+|---|---|---|---|
+| Y1 | ⬜ Kilit kapalıyken ana ekranı incele | **Yalnızca** Satış, Satış Geçmişi, Stok ve Yönetici Erişimi kutuları görünür | REQ-AUTH-029 |
+| Y2 | ⬜ Satış ekranında `F3`'e bas | Yönetici parolası sorulur; **Vazgeç** → Ürünler açılmaz | REQ-AUTH-030 · EC-DASH-016 |
+| Y3 | ⬜ Kilit kapalıyken **bilinmeyen barkod** okut | Hızlı ürün ekleme dialogu **parola sormadan** açılır, ürün sepete girer | BR-AUTH-019 · EC-DASH-017 |
+| Y4 | ⬜ Yönetici Erişimi → doğru parola | Ana ekranda **tüm** kutular belirir | REQ-AUTH-029 |
+| Y5 | ⬜ Ürünler'i aç, ana ekrana dön, **Yönetici Erişimini Kapat** | Ana ekran üç kutuya döner; **oturum kapanmaz**, sepet korunur | REQ-AUTH-031 · EC-DASH-018 |
+| Y6 | ⬜ Kilidi kapattıktan sonra `F3`'e bas | Parola **yeniden** sorulur | BR-AUTH-016 |
+| Y7 | ⬜ Sepete 3 ürün ekle → **Çıkış Yap** | Sepet uyarısı çıkar; çıkıştan sonra tekrar girince **sepet aynen durur** | REQ-AUTH-005/032 |
+| Y8 | ⬜ Çıkış → tekrar giriş → ana ekran | Kilit **kapalı** başlar (üç kutu) | REQ-AUTH-004/021 |
+| Y9 | ⬜ Kilit kapalıyken kasada tam bir satış yap | Satış akışının hiçbir adımında parola sorulmaz | BR-AUTH-014 |
+| Y10 | ⬜ Kilit kapalıyken stok girişi (mal kabul) yap | Parola sorulmaz | BR-AUTH-014 |
+| Y11 | ⬜ Kilit kapalıyken satış geçmişinden **iade** ve **iptal** yap | Parola sorulmaz | BR-AUTH-014 |
 
 ---
 

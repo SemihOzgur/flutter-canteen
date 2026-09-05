@@ -1,6 +1,7 @@
 # 23 — UX Gereksinimleri
 
-> **Doküman sürümü:** v3 — finansal erişim kilidi kısayol davranışı güncellendi.
+> **Doküman sürümü:** v4 — [OD-030](28-open-decisions.md): yönetici erişim kilidi kapsamı
+> genişledi; ana ekran görünürlüğü ve kilitli kısayollar eklendi.
 
 ## 1. Tasarım ilkeleri
 
@@ -24,13 +25,17 @@
 |---|---|
 | `F1` | Yardım / kısayol listesi |
 | `F2` | Satış ekranı |
-| `F3` | Ürünler |
+| `F3` | Ürünler — 🔒 **yönetici erişim kilidi kapalıysa parola sorulur** (BR-AUTH-013 · OD-030) |
 | `F5` | Stok |
-| `F6` | Dashboard — **finansal erişim kilidi kapalıysa parola sorulur** ([15 §0](15-dashboard.md)) |
-| `F7` | Raporlar — **aynı kilit geçerlidir** (BR-AUTH-013) |
+| `F6` | Dashboard — 🔒 **aynı kilit** ([15 §0](15-dashboard.md)) |
+| `F7` | Raporlar — 🔒 **aynı kilit** (BR-AUTH-013) |
 | `F8` | Satış geçmişi |
-| `Ctrl+,` | Ayarlar |
+| `Ctrl+,` | Ayarlar — 🔒 **aynı kilit** (OD-030) |
 | `Esc` | Geri / dialog kapat |
+
+> 🔒 işaretli kısayollar kilit kapalıyken **ekranı açmaz**: önce parola sorulur, vazgeçilirse
+> ekran hiç kurulmaz (BR-AUTH-018 · REQ-AUTH-030). Kilitsiz kısayollar (`F2`, `F5`, `F8`)
+> her zaman çalışır.
 
 ### Satış ekranı
 
@@ -189,6 +194,8 @@ Her liste ekranının anlamlı bir boş durumu olmalıdır:
 | REQ-UX-012 | Renkle iletilen her durum ikon veya metinle de ifade edilir. |
 | REQ-UX-013 | 300 ms'den uzun süren işlemler ilerleme göstergesi gösterir. |
 | REQ-UX-014 | Satış ekranında toplam tutar uzaktan okunabilecek boyutta gösterilir. |
+| **REQ-UX-015** | **Ana ekran, yönetici erişim kilidi kapalıyken yalnızca satış, satış geçmişi ve stok ekranlarını listeler; kilit arkasındaki ekranlar için "yetkiniz yok" gibi bir mesaj gösterilmez** (BR-AUTH-018 · OD-030). |
+| **REQ-UX-016** | **Ana ekranda çıkış yapma (logout) eylemi bulunur** (REQ-AUTH-032). |
 
 ---
 

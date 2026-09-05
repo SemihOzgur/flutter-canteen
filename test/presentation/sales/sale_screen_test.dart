@@ -48,6 +48,7 @@ import 'package:canteen/data/db/canteen_database.dart'
     hide Cart, Category, Product, Sale, SaleItem, StockMovement;
 import 'package:canteen/data/db/providers.dart';
 import 'package:canteen/presentation/sales/cart_panel.dart';
+import 'package:canteen/presentation/auth/financial_access_dialog.dart';
 import 'package:canteen/presentation/sales/product_picker.dart';
 import 'package:canteen/presentation/sales/sale_screen.dart';
 import 'package:drift/drift.dart' show Value;
@@ -393,6 +394,58 @@ void main() {
       expect(products.single.name, 'Yeni Gofret');
       final barcodes = await db.select(db.productBarcodes).get();
       expect(barcodes.single.barcode, '8690000000009');
+    });
+
+    testWidgets(
+      'BR-AUTH-019 · EC-DASH-017 — kilit KAPALIYKEN de parola SORULMADAN '
+      'açılır',
+      (tester) async {
+        // OD-030: yönetici kilidi *Ürünler ekranını* kapatır, satış içindeki
+        // hızlı ekleme dialogunu değil. Aksi hâlde yeni gelen bir ürün
+        // yönetici gelene kadar satılamazdı (docs/11 §4.2).
+        await pumpSale(tester);
+
+        await scan(tester, '8690000000009');
+
+        expect(
+          find.byType(FinancialAccessDialog),
+          findsNothing,
+          reason:
+              'Satış akışının içindeki hızlı ekleme kilit kapsamı dışındadır '
+              '(BR-AUTH-019).',
+        );
+        expect(
+          find.byKey(const Key('sale_quick_product_dialog')),
+          findsOneWidget,
+        );
+
+        await tester.enterText(
+          find.byKey(const Key('sale_quick_name_field')),
+          'Yeni Gofret',
+        );
+        await tester.enterText(
+          find.byKey(const Key('sale_quick_price_field')),
+          '12,50',
+        );
+        await tester.tap(find.byKey(const Key('sale_quick_submit')));
+        await tester.pumpAndSettle();
+
+        expect(await cartLineCount(), 1);
+      },
+    );
+
+    testWidgets('BR-AUTH-018 — kilit kapalıyken Ürünler DÜĞMESİ gösterilmez', (
+      tester,
+    ) async {
+      await pumpSale(tester);
+
+      expect(
+        find.byKey(SaleScreen.productsButtonKey),
+        findsNothing,
+        reason:
+            'Yönetim ekranına giden düğme kilitliyken görünmez; `F3` yine '
+            'çalışır ve kapıda parola sorar (docs/23 §2).',
+      );
     });
 
     testWidgets('İPTAL edilirse ürün oluşmaz, sepete bir şey eklenmez', (

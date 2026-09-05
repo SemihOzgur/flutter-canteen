@@ -175,7 +175,7 @@ Alternatifler: `provider` (daha basit ama DI zayıf), `bloc` (bu ölçek için t
 7. Seed kontrolü (Genel kategorisi, varsayılan KDV, ilk kullanıcı)
 8. Orphan görsel taraması (arka planda)
 9. Session yükle                    ── varsa satış ekranı, yoksa login
-10. Finansal erişim kilidi KAPALI olarak başlatılır (bellekte)  [BR-AUTH-013]
+10. Yönetici erişim kilidi KAPALI olarak başlatılır (bellekte)   [BR-AUTH-013]
 11. Aktif sepet restore
 ```
 
@@ -212,10 +212,18 @@ Bu sıra [26 — Edge Cases](26-edge-cases.md) senaryolarının çoğunun karş�
 | REQ-ARCH-006 | Uzun süren işlemler UI thread'ini bloklamaz. |
 | REQ-ARCH-007 | Kullanıcı verisi kurulum dizininden bağımsız bir veri dizininde tutulur. |
 
-> **Finansal erişim kilidi mimarisi:** `FinancialAccessService` bellekte bir bayrak tutar ve
-> **hem Dashboard hem Raporlar** rotasının önünde bir kapı (route guard) olarak çalışır
-> (BR-AUTH-013). Kilit açılmadan bu ekranların **hiçbir sorgusu tetiklenmez** (BR-AUTH-012) —
-> bu kural servis katmanında zorlanır, yalnızca UI'da değil.
+> **Yönetici erişim kilidi mimarisi:** `FinancialAccessService` bellekte bir bayrak tutar.
+> Kilit **iki ayrı katmanda** zorlanır ([17 §7](17-authentication.md) · [OD-030](28-open-decisions.md)):
+>
+> | Katman | Nerede | Neyi engeller |
+> |---|---|---|
+> | **Servis** | `guard` / `FinancialGate` | Dashboard ve rapor **sorgularının çalışmasını** (BR-AUTH-012) |
+> | **Gezinme** | ana ekran menüsü + rota kapısı | Yönetim **ekranlarının kurulmasını** (BR-AUTH-018) |
+>
+> Gezinme katmanı servis katmanının yerini **almaz**: finansal sorgular kilit açıldıktan sonra
+> da servis kapısından geçer. Gezinme kapısı ekranı hiç kurmadığı için o ekranın veri
+> yükleyicisi de hiç başlamaz — presentation katmanında iş kuralı **tutulmaz**, yalnızca
+> servisin bayrağı okunur (rules/05 §8).
 >
 > `RecoveryCodeService` kod üretimi, hash doğrulaması ve tek kullanımlık geçersizleştirmeyi yönetir;
 > parola sıfırlama + kod geçersizleştirme + yeni kod üretimi **tek transaction**'dır (BR-AUTH-015/017).

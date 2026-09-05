@@ -13,7 +13,7 @@
 ```text
 ┌────────────────────────────────────────────────────────────┐
 │ 1. docs/02-product-and-business-requirements.md            │
-│    Business Rules (BR-*) — 115 kural                       │  EN YÜKSEK
+│    Business Rules (BR-*) — 117 kural                       │  EN YÜKSEK
 ├────────────────────────────────────────────────────────────┤
 │ 2. docs/04-domain-model.md                                 │
 │    Entity'ler, alanlar, invariant'lar, durum makineleri    │
@@ -22,7 +22,7 @@
 │    15 tablo, kısıtlar, index'ler                           │
 ├────────────────────────────────────────────────────────────┤
 │ 4. docs/25-functional-requirements.md                      │
-│    REQ-* (285 adet) + acceptance criteria                  │
+│    REQ-* (291 adet) + acceptance criteria                  │
 ├────────────────────────────────────────────────────────────┤
 │ 5. docs/03-architecture.md                                 │
 │    Katmanlar, soyutlama ve bağımlılık sınırları            │
@@ -105,7 +105,7 @@ Bunları değiştiren kod, "iyileştirme" veya "düzeltme" gerekçesiyle bile ya
 | 6 | Negatif stok satışı engellemez, uyarır | BR-STOCK-006 |
 | 7 | Satış ve iade atomik | BR-SALE-005, REQ-RET-010 |
 | 8 | Satış kayıtları silinmez | BR-GEN-002, BR-SALE-006 |
-| 9 | Finansal erişim kilidi: Dashboard + Raporlar | BR-AUTH-013 · `docs/17 §7` |
+| 9 | Yönetici erişim kilidi: Dashboard + Raporlar + **yönetim ekranları** | BR-AUTH-013 · `docs/17 §7` · OD-030 |
 | 10 | Recovery code tek kullanımlık, hash saklanır | BR-AUTH-015/017 · `docs/17 §8` |
 | 11 | Düz metin parola/kod hiçbir yerde bulunamaz | BR-SEC-001 |
 | 12 | Yedek tek dosya, restore öncesi doğrulanır | BR-DATA-002/003 · `docs/19` |

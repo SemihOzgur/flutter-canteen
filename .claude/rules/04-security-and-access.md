@@ -1,6 +1,6 @@
-# 04 — Kimlik Doğrulama, Finansal Erişim ve Güvenlik
+# 04 — Kimlik Doğrulama, Yönetici Erişimi ve Güvenlik
 
-> Kaynak: `docs/17-authentication.md` · `docs/24 §4`
+> Kaynak: `docs/17-authentication.md` · `docs/24 §4` · `docs/28` → **OD-030**
 >
 > Bu alandaki her kural bir **business invariant**'tır. Değişiklik için
 > [`00-source-of-truth.md §3`](00-source-of-truth.md) protokolü işletilir.
@@ -9,11 +9,11 @@
 
 ## 1. İki ayrı koruma katmanı
 
-| | **Kullanıcı parolası** | **Dashboard parolası** |
+| | **Kullanıcı parolası** | **Yönetici parolası** |
 |---|---|---|
-| Neyi korur | Uygulamaya giriş | **Dashboard + Raporlar** |
+| Neyi korur | Uygulamaya giriş | **Dashboard + Raporlar + yönetim ekranları** (§4) |
 | Kaç tane | Kullanıcı başına bir | Sistemde **tek** |
-| Nerede | `users.password_hash` + `salt` | `app_settings` (hash + salt) |
+| Nerede | `users.password_hash` + `salt` | `app_settings` (hash + salt) — anahtar adı tarihsel olarak `dashboard_*` |
 | Kime ait | Kişiye | **Uygulamaya** |
 | Kurtarma | ❌ Yok | ✅ **Recovery code** |
 
@@ -47,28 +47,48 @@
 - **Token üretilmez** — yerel uygulamada yanlış güvenlik hissi verir.
 - Oturum zaman aşımı **yoktur.**
 - Bozuk oturum verisi uygulamayı çökertmez; sessizce temizlenir → login.
-- Logout: oturum temizlenir **+ finansal erişim kilidi kapanır** **+ aktif sepet KORUNUR.**
+- Logout: oturum temizlenir **+ yönetici erişim kilidi kapanır** **+ aktif sepet KORUNUR.**
 
 ---
 
-## 4. Finansal erişim kilidi
+## 4. Yönetici erişim kilidi
 
-> **BR-AUTH-013 — Dashboard ve Raporlar ekranları dashboard parolası gerektirir.**
+> **BR-AUTH-013 — Dashboard, Raporlar ve tüm yönetim ekranları yönetici parolası gerektirir**
+> (`docs/28` → **OD-030**).
 
 ### Kapsam
 
 | 🔒 Kilit **arkasında** | 🔓 Kilit **dışında** |
 |---|---|
-| **Dashboard** | Satış ekranı |
-| **Raporlar** (tümü) | Ürün yönetimi |
-| | Stok işlemleri (giriş, fire, düzeltme, sayım) |
-| | Kategori / tedarikçi / KDV yönetimi |
-| | Satış geçmişi, iade, iptal |
-| | Ayarlar, yedekleme, import/export |
+| **Dashboard** | **Satış ekranı** |
+| **Raporlar** (tümü) | **Satış geçmişi, iade, iptal** |
+| **Ürün yönetimi** | **Stok** (giriş, fire, düzeltme, sayım, hareketler) |
+| **Kategori / tedarikçi / KDV yönetimi** | |
+| **Kullanıcı yönetimi** | |
+| **Ayarlar** (yönetici erişim ayarları dahil) | |
+| **Yedekleme / geri yükleme** | |
+| **İçe / dışa aktarma** | |
+| **Veri tutarlılığı · barkod tanılama** | |
 
 **Normal login bu ekranlara otomatik erişim sağlamaz.**
 
-### Kritik davranış
+> **Bu bir rol sistemi DEĞİLDİR** (§2). Parola sistemde tektir, kullanıcıya bağlı değildir ve
+> `users` satırında bir yetki alanı yoktur. "Yönetici" bir kullanıcı tipi değil, **parolayı
+> bilen kişidir.**
+
+### İki istisna — sessizce genişletilemez
+
+| İstisna | Kural |
+|---|---|
+| Satış içindeki **bilinmeyen barkod → hızlı ürün ekleme** | **BR-AUTH-019** — kilit dışıdır. Kilit *Ürünler ekranını* kapatır, satıştaki dialogu değil (`docs/11 §4.2`) |
+| **Satış geçmişi** (iade/iptal dahil) | **BR-AUTH-014** — günlük kasa işidir; kilide alınamaz |
+
+### Kritik davranış — kilit İKİ katmanda zorlanır
+
+| Katman | Kural | Nerede | Neyi engeller |
+|---|---|---|---|
+| **1 — servis** | BR-AUTH-012 | `FinancialAccessService.guard` / `FinancialGate` | Dashboard/rapor **sorgularının çalışmasını** |
+| **2 — gezinme** | BR-AUTH-018 | ana ekran menüsü **+ rota kapısı** | Yönetim **ekranlarının kurulmasını** |
 
 > **BR-AUTH-012 — Parola doğrulanmadan finansal ekranların verisi SORGULANMAZ.**
 
@@ -78,22 +98,28 @@ Kilit görsel bir perde değildir:
 - Grafik verileri **hesaplanmaz**
 - Ekranda hiçbir ciro/kâr/maliyet rakamı — bulanık veya kısmen bile — **görünmez**
 
-> Bu kural **servis katmanında** zorlanır (`FinancialAccessService` route guard),
-> yalnızca UI'da gizleme ile değil.
+> Katman 1 **servis katmanında** zorlanır, yalnızca UI'da gizleme ile değil.
+> Katman 2 gezinme katmanındadır ve Katman 1'in **yerine geçmez**: kilit açıldıktan sonra
+> finansal sorgular yine servis kapısından geçer.
+
+> **BR-AUTH-018 — kilitli ekran menüde GÖRÜNMEZ.** "Yetkiniz yok" mesajı gösterilmez;
+> gösterilecek bir yetki kavramı yoktur (§2). Kapı, ekranı **hiç kurmaz** — böylece o ekranın
+> veri yükleyicisi de hiç başlamaz.
 
 ### Kilidin süresi
 
 | | |
 |---|---|
 | Başarılı girişten sonra | **Oturum boyunca** geçerli |
-| Dashboard ↔ Raporlar geçişi | Parola **tekrar sorulmaz** |
+| Ekranlar arası geçiş | Parola **tekrar sorulmaz** |
 | Logout | Kilit **yeniden devreye girer** |
 | Uygulama kapanışı | Kilit **kapalı** başlar |
+| **Elle kapatma** | Kullanıcı logout etmeden kilidi kapatabilir (REQ-AUTH-031) |
 | Saklama | Yalnızca **bellekte** — veritabanına yazılmaz |
 
 ### Parola değiştirme
 
-Mevcut dashboard parolası **veya** recovery code gerekir. Audit log'a yazılır — **parola değeri yazılmaz.**
+Mevcut yönetici parolası **veya** recovery code gerekir. Audit log'a yazılır — **parola değeri yazılmaz.**
 
 ---
 
@@ -124,7 +150,7 @@ XXXX-XXXX-XXXX-XXXX        örn.  A7K2-M9QX-4RTB-8ZWD
 ### Kullanım akışı
 
 ```text
-Finansal erişim ekranı → [Şifremi unuttum]
+Yönetici erişim ekranı → [Şifremi unuttum]
       ▼
 Recovery code girilir
       ▼
@@ -132,17 +158,17 @@ Recovery code girilir
 ├── Yanlış → hata; 5 denemede 30 sn bekleme; audit log
 └── Doğru
       ▼
-Yeni dashboard parolası belirlenir
+Yeni yönetici parolası belirlenir
       ▼
 TEK TRANSACTION:
-  1. dashboard parolası güncellenir
+  1. yönetici parolası güncellenir
   2. kullanılan recovery code GEÇERSİZLEŞİR (used_at = now)
   3. YENİ recovery code üretilir
   4. audit log (kod değeri YAZILMAZ)
       ▼
 Yeni kod bir kez gösterilir → "kaydettim" onayı
       ▼
-Finansal erişim kilidi AÇILIR
+Yönetici erişim kilidi AÇILIR
 ```
 
 ### Değişmez kurallar
@@ -168,7 +194,7 @@ Finansal erişim kilidi AÇILIR
 | | |
 |---|---|
 | Yöntem | **SHA-256 + kayıt başına rastgele salt** |
-| Kapsam | Kullanıcı parolaları · dashboard parolası · recovery code |
+| Kapsam | Kullanıcı parolaları · yönetici parolası · recovery code |
 | Düz metin alanı | Hiçbir tabloda **yoktur** |
 
 ### V1 kapsamı dışı — eklenmeyecek
@@ -179,7 +205,7 @@ Finansal erişim kilidi AÇILIR
 | JWT | Sunucu yok |
 | MFA | Tehdit modeli gerektirmiyor |
 | Parola sunucusu / cloud auth | Local-first |
-| Kullanıcı parolası kurtarma akışı | Yalnızca dashboard parolası için recovery code var |
+| Kullanıcı parolası kurtarma akışı | Yalnızca yönetici parolası için recovery code var |
 | bcrypt / Argon2 | Uzaktan saldırı yüzeyi yok |
 | Veritabanı şifreleme | Anahtar aynı makinede — gerçek koruma sağlamaz, kurtarmayı zorlaştırır |
 

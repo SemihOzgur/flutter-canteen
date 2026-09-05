@@ -1,28 +1,29 @@
 # 15 — Dashboard
 
-> **Doküman sürümü:** v3 — kilit **Raporlar'ı da** kapsıyor; recovery code eklendi.
+> **Doküman sürümü:** v4 — kilit **yönetici erişim kilidi** olarak yeniden adlandırıldı
+> ve tüm yönetim ekranlarını kapsıyor ([OD-030](28-open-decisions.md)).
 
-## 0. Finansal erişim kilidi
+## 0. Yönetici erişim kilidi
 
-> **BR-AUTH-013 — Dashboard ve Raporlar ekranları, kullanıcı oturumundan ayrı bir
-> dashboard parolası gerektirir.**
+> **BR-AUTH-013 — Dashboard, Raporlar ve tüm yönetim ekranları, kullanıcı oturumundan ayrı
+> bir yönetici parolası gerektirir** ([OD-030](28-open-decisions.md)).
 
-Bu bir rol sistemi değildir (BR-AUTH-008) — sistemde tek bir dashboard parolası vardır ve
+Bu bir rol sistemi değildir (BR-AUTH-008) — sistemde tek bir yönetici parolası vardır ve
 kullanıcıya değil, **ekrana** bağlıdır.
 
 ```text
-Login  →  Ana uygulama (satış / ürünler / stok / kategori / ayarlar)  ← kilit YOK
+Login  →  Ana uygulama (satış / satış geçmişi / stok)  ← kilit YOK
                       │
                       │ F6 (Dashboard) veya F7 (Raporlar)
                       ▼
-            Finansal erişim açık mı?
+            Yönetici erişimi açık mı?
               ├── Evet → ekran yüklenir
               └── Hayır
                     ▼
             ┌──────────────────────────────────┐
-            │  🔒 Finansal Erişim              │
-            │  Dashboard ve Raporlar için      │
-            │  parola gerekiyor.               │
+            │  🔒 Yönetici Erişimi             │
+            │  Yönetim ekranları için parola   │
+            │  gerekiyor.                      │
             │  Parola: [__________________]    │  ← odak
             │  [Şifremi unuttum]               │
             │       [Vazgeç]   [Aç]            │
@@ -221,7 +222,7 @@ Dashboard, veri büyüdükçe en çok yavaşlayacak ekrandır. Hedef: **< 1 sani
 | REQ-DASH-008 | Dashboard, 100.000 satış satırı içeren veritabanında 1 saniye içinde yüklenir. |
 | REQ-DASH-009 | Kartlar bağımsız yüklenir; bir sorgunun yavaşlığı diğerlerini engellemez. |
 | REQ-DASH-010 | Negatif ve kritik stok kartlarından ilgili düzeltme ekranına geçilebilir. |
-| REQ-DASH-011 | Dashboard'a erişim, finansal erişim kilidi açılmadan mümkün değildir (bkz. REQ-AUTH-015…028). |
+| REQ-DASH-011 | Dashboard'a erişim, yönetici erişim kilidi açılmadan mümkün değildir (bkz. REQ-AUTH-015…032). |
 | REQ-DASH-012 | Dashboard verileri, parola doğrulanmadan sorgulanmaz ve ekranda hiçbir biçimde görünmez. |
 | REQ-DASH-013 | Kâr metrikleri KDV hariç matrah üzerinden hesaplanır; ciro metrikleri KDV dahil gösterilir ve bu ayrım ekranda belirtilir. |
 
@@ -257,9 +258,9 @@ Then:  Tüm kartlar ve grafikler 1 saniye içinde dolar
 
 **REQ-DASH-011 / REQ-DASH-012**
 ```text
-Given: Kullanıcı giriş yapmış, finansal erişim kilidi kapalı
+Given: Kullanıcı giriş yapmış, yönetici erişim kilidi kapalı
 When:  F6 ile Dashboard açılmak isteniyor
-Then:  Finansal erişim parolası ekranı gösterilir
+Then:  Yönetici erişim parolası ekranı gösterilir
 And:   Hiçbir dashboard sorgusu veritabanında çalıştırılmaz
 And:   Ekranda hiçbir ciro, kâr veya satış rakamı görünmez
 When:  Yanlış parola 5 kez giriliyor

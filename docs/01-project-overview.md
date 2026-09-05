@@ -137,7 +137,7 @@ bölümündeki transaction ve WAL kararlarının temel gerekçesidir.
 | **Snapshot** | Kayıt anındaki değerin kopyalanarak saklanması; kaynak değişse bile değişmez. |
 | **Stock Movement** | Stoğu değiştiren her olayın defter kaydı (giriş, satış, iade, fire, düzeltme). |
 | **Minor unit (kuruş)** | Paranın tam sayı olarak saklandığı en küçük birim. ₺25,50 → `2550`. |
-| **Dashboard parolası** | Dashboard ekranına erişimi koruyan, kullanıcı parolasından **ayrı** ve sistem genelinde **tek** olan parola. Rol sistemi değildir. |
+| **Yönetici parolası** | Dashboard, Raporlar ve yönetim ekranlarına erişimi koruyan, kullanıcı parolasından **ayrı** ve sistem genelinde **tek** olan parola ([OD-030](28-open-decisions.md)). Rol sistemi değildir. *(Veritabanındaki anahtar adı tarihsel nedenle `dashboard_password_hash` olarak kalmıştır.)* |
 | **Matrah** | KDV hariç tutar. Satış fiyatı KDV dahil olduğu için matrah, fiyattan KDV çıkarılarak bulunur. |
 | **Net ağırlık / gramaj** | Ambalajdaki miktar (150 g). Yalnızca açıklayıcıdır; hesaba girmez. |
 | **Satış birimi** | Ürünün nasıl satıldığı (adet, paket). V1'de miktar daima tam sayıdır. |

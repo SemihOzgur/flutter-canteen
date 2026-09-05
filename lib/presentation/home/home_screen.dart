@@ -1,29 +1,49 @@
-/// Ana ekran (Faz 1 iskeleti + Faz 3a gezinme bağlantıları).
+/// Ana ekran — **OD-030 · BR-AUTH-013/014/018 · REQ-AUTH-029/031/032 ·
+/// REQ-UX-015/016**
 ///
-/// Satış ekranı Faz 5'te, Dashboard ve Raporlar Faz 8'de gelir. Bu ekran
-/// bugün yalnızca Faz 3a'da yazılan ekranlara giriş noktası sağlar:
+/// ## Ekranın iki hâli vardır
 ///
-/// | Bağlantı | Kilit | Kaynak |
-/// |---|---|---|
-/// | Kullanıcı Yönetimi | 🔓 kilit dışında | BR-AUTH-014 · docs/17 §11 |
-/// | Finansal Erişim (Ayarlar) | 🔓 kilit dışında | BR-AUTH-014 · EC-DASH-014 |
-/// | Kategoriler | 🔓 kilit dışında | rules/04 §4 · docs/10 §1 |
-/// | Tedarikçiler | 🔓 kilit dışında | rules/04 §4 · docs/10 §2 |
-/// | KDV Oranları | 🔓 kilit dışında | rules/04 §4 · docs/08 §4 |
-/// | Satış geçmişi | 🔓 kilit dışında | rules/04 §4 |
-/// | Stok | 🔓 kilit dışında | rules/04 §4 |
-/// | Yedekleme | 🔓 kilit dışında | rules/04 §4 |
-/// | Dashboard | 🔒 **kilit arkasında** | BR-AUTH-013 · docs/22 F9 |
+/// ```text
+/// KİLİT KAPALI (harici kullanıcı)     KİLİT AÇIK (yönetici parolası girilmiş)
+/// ────────────────────────────────    ──────────────────────────────────────
+/// 🛒 Satış                            🛒 Satış
+/// 🔁 Satış Geçmişi                    🔁 Satış Geçmişi · 📦 Stok
+/// 📦 Stok                             📦 Ürünler · Kategoriler · Tedarikçiler
+/// 🔒 Yönetici Erişimi                    KDV · Kullanıcılar
+///                                     💾 Yedekleme · İçe/Dışa · Tutarlılık
+///                                        Barkod Tanılama
+///                                     📊 Dashboard · Raporlar · Erişim Ayarları
+///                                     🔓 Erişimi Kapat
+/// ```
 ///
-/// ## Dashboard kapısı
+/// Kilitli ekranlar **hiç listelenmez** (BR-AUTH-018). Pasif/gri kutu olarak da
+/// durmaz ve "yetkiniz yok" **denmez**: bu projede yetki kavramı yoktur
+/// (`rules/04 §2`), yalnızca parolayı bilip bilmemek vardır.
 ///
-/// docs/22 F9: kilit **ekran açılmadan önce** sorulur. Kullanıcı vazgeçerse
-/// Dashboard hiç kurulmaz ve tek sorgu çalışmaz.
+/// ## Kutu gizlemek TEK BAŞINA bir koruma değildir
 ///
-/// **BR-AUTH-012:** kilit açılmadan hiçbir finansal sorgu çalıştırılmaz —
-/// bu ekranda zaten hiçbir sorgu, hesaplama veya veri kaynağı yoktur
-/// (rules/05 §8).
+/// Asıl kapı rota tanımının içindedir (`AppRoutes.routes` → `AdminGate`):
+/// kilitli bir rota kısayolla veya doğrudan `pushNamed` ile açılmaya
+/// çalışılırsa ekran **kurulmaz** (REQ-AUTH-030). Buradaki gizleme bir
+/// görünürlük kararıdır, güvencenin kendisi değildir.
+///
+/// ## Kilit durumu neden `setState` ile tazeleniyor
+///
+/// Kilit `FinancialAccessService` içinde **bellekte** yaşar (BR-AUTH-016) ve
+/// dinlenebilir bir durum değildir. Kilit bu ekranın dışında da açılabilir
+/// (satış ekranında `F3` → `AdminGate`), bu yüzden her `pushNamed` dönüşünde
+/// durum yeniden okunur — `stock_overview_screen`'deki `.then((_) => _load())`
+/// deseninin aynısı. Kilidi ikinci bir yerde (provider) tutmak iki doğruluk
+/// kaynağı yaratırdı.
+///
+/// ## Bu ekranda sorgu yoktur
+///
+/// `rules/05 §8`: burada veri kaynağı, hesaplama veya iş kuralı bulunmaz.
+/// Tek istisna çıkış akışının **okuma** çağrısıdır (`CartService.activeSummary`,
+/// docs/17 §10) — kullanıcıya sepetinin korunacağını söyleyebilmek için.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,10 +51,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/l10n/app_strings_tr.dart';
 import '../../app/router.dart';
 import '../../app/theme/app_palette.dart';
+import '../../application/auth/providers.dart';
+import '../../application/sales/providers.dart';
 import '../../core/version/app_version.dart';
 import '../auth/financial_access_dialog.dart';
 
-class HomeScreen extends ConsumerWidget {
+/// docs/17 §10 — çıkış onayında kullanıcının üç seçeneği vardır.
+enum _LogoutChoice { cancel, keepCart, clearCart }
+
+class HomeScreen extends ConsumerStatefulWidget {
   /// Test için sabit anahtarlar.
   static const Key usersButtonKey = Key('home_users_button');
   static const Key financialAccessSettingsButtonKey = Key(
@@ -56,42 +81,155 @@ class HomeScreen extends ConsumerWidget {
   static const Key suppliersButtonKey = Key('home_suppliers_button');
   static const Key vatRatesButtonKey = Key('home_vat_rates_button');
 
+  /// OD-030 — kilidi açan / kapatan ve oturumu kapatan eylemler.
+  static const Key adminUnlockButtonKey = Key('home_admin_unlock_button');
+  static const Key adminLockButtonKey = Key('home_admin_lock_button');
+  static const Key logoutButtonKey = Key('home_logout_button');
+  static const Key logoutConfirmButtonKey = Key('home_logout_confirm');
+  static const Key logoutClearCartButtonKey = Key('home_logout_clear_cart');
+
   const HomeScreen({super.key});
 
-  /// docs/22 F9 — Dashboard açılmadan önce kilit sorulur.
-  ///
-  /// EC-DASH-003: kullanıcı vazgeçerse hiçbir şey açılmaz ve kilit kapalı
-  /// kalır.
-  Future<void> _openDashboard(BuildContext context, WidgetRef ref) async {
-    if (!await ensureFinancialAccess(context, ref)) return;
-    if (!context.mounted) return;
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
 
-    // Faz 8 — kapı açıldı, ekran geldi. Kilit yine de ekranın İÇİNDE de
-    // duruyor: rota koruması bir gezinme ayrıntısıdır ve unutulabilir,
-    // `DashboardService`'in kapısı unutulamaz (BR-AUTH-012).
-    await Navigator.of(context).pushNamed(AppRoutes.dashboard);
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// BR-AUTH-016 — tek doğruluk kaynağı servisin bellekteki bayrağıdır.
+  bool get _unlocked => ref.read(financialAccessProvider).isUnlocked;
+
+  /// Kilit dışı bir ekrana gider ve dönüşte kilit durumunu yeniden okur.
+  Future<void> _open(String route) async {
+    await Navigator.of(context).pushNamed(route);
+    if (!mounted) return;
+    // Kilit başka bir ekranda açılmış olabilir (örn. satışta `F3`).
+    setState(() {});
   }
 
-  /// docs/22 F9 — Raporlar **aynı** kilidin arkasındadır (BR-AUTH-013).
+  /// Kilit arkasındaki bir ekrana gider — docs/22 F9.
   ///
-  /// Kilit oturum kapsamlı olduğu için Dashboard açılmışsa parola tekrar
-  /// sorulmaz (BR-AUTH-016).
-  Future<void> _openReports(BuildContext context, WidgetRef ref) async {
-    if (!await ensureFinancialAccess(context, ref)) return;
-    if (!context.mounted) return;
-    await Navigator.of(context).pushNamed(AppRoutes.reports);
+  /// Parola **ekran açılmadan önce** sorulur: kullanıcı vazgeçerse rota hiç
+  /// push edilmez (EC-DASH-003 — "ekran hiç açılmaz"). Rotanın kendi kapısı
+  /// (`AdminGate`) yine yerindedir; bu, akışı kesmeden aynı sonucu verir.
+  Future<void> _openAdmin(String route) async {
+    assert(
+      AppRoutes.adminOnly.contains(route),
+      'Kilit dışı rota için _openAdmin kullanılmaz: $route',
+    );
+    if (!await ensureFinancialAccess(context, ref)) {
+      if (mounted) setState(() {});
+      return;
+    }
+    if (!mounted) return;
+    await _open(route);
+  }
+
+  /// REQ-AUTH-029 — kilidi açar; ana ekran yönetim kutularını gösterir.
+  Future<void> _unlockAdmin() async {
+    final unlocked = await ensureFinancialAccess(context, ref);
+    if (!mounted) return;
+    setState(() {});
+    if (unlocked) _notify(AppStringsTr.adminAccessUnlocked);
+  }
+
+  /// REQ-AUTH-031 — kilidi **logout etmeden** kapatır.
+  ///
+  /// Oturum ve aktif sepet korunur; yalnızca bellekteki bayrak düşer
+  /// (BR-AUTH-016). Yönetici makineyi kasadaki kişiye bu şekilde bırakır.
+  void _lockAdmin() {
+    ref.read(financialAccessProvider).lock();
+    setState(() {});
+    _notify(AppStringsTr.adminAccessLocked);
+  }
+
+  /// docs/17 §10 · REQ-AUTH-032 — çıkış.
+  ///
+  /// **BR-AUTH-005: aktif sepet SİLİNMEZ.** Sepette ürün varsa kullanıcıya bu
+  /// açıkça söylenir; "Sepeti Temizle ve Çık" onun **açık** tercihidir. Sepet
+  /// boşsa onay sorulmaz (docs/17 §10 — "Hayır → doğrudan"): geri alınabilir
+  /// bir işlem için gereksiz onay istenmez (`rules/05 §5`).
+  Future<void> _logout() async {
+    final cart = await ref.read(cartServiceProvider).activeSummary();
+    if (!mounted) return;
+
+    final lineCount = cart?.lineCount ?? 0;
+    final choice = lineCount == 0
+        ? _LogoutChoice.keepCart
+        : await _askLogout(lineCount);
+    if (!mounted || choice == null || choice == _LogoutChoice.cancel) return;
+
+    if (choice == _LogoutChoice.clearCart && cart != null) {
+      await ref
+          .read(cartServiceProvider)
+          .clear(cartId: cart.id, userId: cart.userId);
+      if (!mounted) return;
+    }
+
+    // REQ-AUTH-004: oturum temizlenir **ve** yönetici erişim kilidi kapanır.
+    await ref.read(authServiceProvider).logout();
+    if (!mounted) return;
+
+    await Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+  }
+
+  Future<_LogoutChoice?> _askLogout(int lineCount) => showDialog<_LogoutChoice>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text(AppStringsTr.logoutTitle),
+      content: Text(AppStringsTr.logoutDescriptionWithCart(lineCount)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_LogoutChoice.cancel),
+          child: const Text(AppStringsTr.cancelAction),
+        ),
+        TextButton(
+          key: HomeScreen.logoutClearCartButtonKey,
+          onPressed: () => Navigator.of(context).pop(_LogoutChoice.clearCart),
+          child: const Text(AppStringsTr.logoutClearCartAction),
+        ),
+        FilledButton(
+          key: HomeScreen.logoutConfirmButtonKey,
+          onPressed: () => Navigator.of(context).pop(_LogoutChoice.keepCart),
+          child: const Text(AppStringsTr.logoutConfirmAction),
+        ),
+      ],
+    ),
+  );
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
+      );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // REQ-AUTH-029 — ekranın iki hâlini belirleyen tek koşul.
+    final unlocked = _unlocked;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStringsTr.appTitle),
         actions: [
+          // REQ-UX-016 — çıkış her iki hâlde de erişilebilirdir.
+          Tooltip(
+            message: AppStringsTr.homeHintLogout,
+            child: TextButton.icon(
+              key: HomeScreen.logoutButtonKey,
+              onPressed: () => unawaited(_logout()),
+              icon: const Icon(Icons.logout),
+              label: const Text(AppStringsTr.homeLogoutAction),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(left: 12, right: 16),
             child: Center(
               child: Text(
                 appVersionLabel,
@@ -126,17 +264,19 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Satış uygulamanın asıl işidir; kendi başına ve büyük durur
-              // (docs/12 · docs/22). Diğer 14 eylemle aynı boyutta olsaydı
+              // (docs/12 · docs/22). Diğer kutularla aynı boyutta olsaydı
               // kasadaki kişi her açılışta onu arardı.
               _PrimaryTile(
                 tileKey: HomeScreen.salesButtonKey,
                 icon: Icons.point_of_sale,
                 label: AppStringsTr.homeSaleAction,
                 hint: AppStringsTr.homeHintSale,
-                onTap: () => Navigator.of(context).pushNamed(AppRoutes.sales),
+                onTap: () => unawaited(_open(AppRoutes.sales)),
               ),
               const SizedBox(height: 28),
 
+              // BR-AUTH-014 — kilit dışı üçlü. Kilit kapalıyken ana ekranda
+              // görünen tek grup budur.
               _Section(
                 title: AppStringsTr.homeSectionDaily,
                 tiles: [
@@ -146,8 +286,7 @@ class HomeScreen extends ConsumerWidget {
                     label: AppStringsTr.homeSaleHistoryAction,
                     hint: AppStringsTr.homeHintSaleHistory,
                     accent: AppPalette.tiles[0],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.saleHistory),
+                    onTap: () => unawaited(_open(AppRoutes.saleHistory)),
                   ),
                   _Tile(
                     tileKey: HomeScreen.stockButtonKey,
@@ -155,142 +294,172 @@ class HomeScreen extends ConsumerWidget {
                     label: AppStringsTr.homeStockAction,
                     hint: AppStringsTr.homeHintStock,
                     accent: AppPalette.tiles[1],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.stock),
+                    onTap: () => unawaited(_open(AppRoutes.stock)),
                   ),
                 ],
               ),
 
-              _Section(
-                title: AppStringsTr.homeSectionCatalog,
-                tiles: [
-                  _Tile(
-                    tileKey: HomeScreen.productsButtonKey,
-                    icon: Icons.inventory_2_outlined,
-                    label: AppStringsTr.homeProductsAction,
-                    hint: AppStringsTr.homeHintProducts,
-                    accent: AppPalette.tiles[2],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.products),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.categoriesButtonKey,
-                    icon: Icons.folder_outlined,
-                    label: AppStringsTr.homeCategoriesAction,
-                    hint: AppStringsTr.homeHintCategories,
-                    accent: AppPalette.tiles[3],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.categories),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.suppliersButtonKey,
-                    icon: Icons.local_shipping_outlined,
-                    label: AppStringsTr.homeSuppliersAction,
-                    hint: AppStringsTr.homeHintSuppliers,
-                    accent: AppPalette.tiles[4],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.suppliers),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.vatRatesButtonKey,
-                    icon: Icons.percent_outlined,
-                    label: AppStringsTr.homeVatRatesAction,
-                    hint: AppStringsTr.homeHintVatRates,
-                    accent: AppPalette.tiles[6],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.vatRates),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.usersButtonKey,
-                    icon: Icons.group_outlined,
-                    label: AppStringsTr.homeUsersAction,
-                    hint: AppStringsTr.homeHintUsers,
-                    accent: AppPalette.tiles[7],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.users),
-                  ),
-                ],
-              ),
+              // BR-AUTH-018 — kilitliyken yönetim kutuları AĞAÇTA BULUNMAZ.
+              // `Visibility`/`Opacity` ile gizlemek yetmezdi: kutu ağaçta
+              // kalsaydı `Tab` ile odaklanılabilir ve testte "görünüyor"
+              // sayılırdı.
+              if (!unlocked)
+                _Section(
+                  title: AppStringsTr.homeAdminSectionTitle,
+                  tiles: [
+                    _Tile(
+                      tileKey: HomeScreen.adminUnlockButtonKey,
+                      // Kutunun kendi simgesi kilit rozetiyle aynı olamaz:
+                      // rozet (`locked: true`) sağ üstte ayrıca durur.
+                      icon: Icons.admin_panel_settings_outlined,
+                      label: AppStringsTr.homeAdminUnlockAction,
+                      hint: AppStringsTr.homeHintAdminUnlock,
+                      accent: AppPalette.tiles[3],
+                      locked: true,
+                      onTap: () => unawaited(_unlockAdmin()),
+                    ),
+                  ],
+                ),
 
-              _Section(
-                title: AppStringsTr.homeSectionData,
-                tiles: [
-                  _Tile(
-                    tileKey: HomeScreen.backupButtonKey,
-                    icon: Icons.save_outlined,
-                    label: AppStringsTr.homeBackupAction,
-                    hint: AppStringsTr.homeHintBackup,
-                    accent: AppPalette.tiles[1],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.backup),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.importExportButtonKey,
-                    icon: Icons.swap_vert,
-                    label: AppStringsTr.homeImportExportAction,
-                    hint: AppStringsTr.homeHintImportExport,
-                    accent: AppPalette.tiles[4],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.importExport),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.consistencyButtonKey,
-                    icon: Icons.fact_check_outlined,
-                    label: AppStringsTr.consistencyTitle,
-                    hint: AppStringsTr.homeHintConsistency,
-                    accent: AppPalette.tiles[2],
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(AppRoutes.consistency),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.barcodeDiagnosticsButtonKey,
-                    icon: Icons.qr_code_scanner_outlined,
-                    label: AppStringsTr.homeBarcodeDiagnosticsAction,
-                    hint: AppStringsTr.homeHintBarcodeDiagnostics,
-                    accent: AppPalette.tiles[0],
-                    onTap: () => Navigator.of(
-                      context,
-                    ).pushNamed(AppRoutes.barcodeDiagnostics),
-                  ),
-                ],
-              ),
+              if (unlocked) ...[
+                _Section(
+                  title: AppStringsTr.homeSectionCatalog,
+                  tiles: [
+                    _Tile(
+                      tileKey: HomeScreen.productsButtonKey,
+                      icon: Icons.inventory_2_outlined,
+                      label: AppStringsTr.homeProductsAction,
+                      hint: AppStringsTr.homeHintProducts,
+                      accent: AppPalette.tiles[2],
+                      onTap: () => unawaited(_openAdmin(AppRoutes.products)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.categoriesButtonKey,
+                      icon: Icons.folder_outlined,
+                      label: AppStringsTr.homeCategoriesAction,
+                      hint: AppStringsTr.homeHintCategories,
+                      accent: AppPalette.tiles[3],
+                      onTap: () => unawaited(_openAdmin(AppRoutes.categories)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.suppliersButtonKey,
+                      icon: Icons.local_shipping_outlined,
+                      label: AppStringsTr.homeSuppliersAction,
+                      hint: AppStringsTr.homeHintSuppliers,
+                      accent: AppPalette.tiles[4],
+                      onTap: () => unawaited(_openAdmin(AppRoutes.suppliers)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.vatRatesButtonKey,
+                      icon: Icons.percent_outlined,
+                      label: AppStringsTr.homeVatRatesAction,
+                      hint: AppStringsTr.homeHintVatRates,
+                      accent: AppPalette.tiles[6],
+                      onTap: () => unawaited(_openAdmin(AppRoutes.vatRates)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.usersButtonKey,
+                      icon: Icons.group_outlined,
+                      label: AppStringsTr.homeUsersAction,
+                      hint: AppStringsTr.homeHintUsers,
+                      accent: AppPalette.tiles[7],
+                      onTap: () => unawaited(_openAdmin(AppRoutes.users)),
+                    ),
+                  ],
+                ),
 
-              // BR-AUTH-013 — bu üçlü ayrı bir bölümdedir ve kilit simgesi
-              // taşır. Kullanıcı parolanın neden sorulduğunu tıklamadan
-              // ÖNCE anlamalıdır.
-              _Section(
-                title: AppStringsTr.homeSectionFinancial,
-                tiles: [
-                  _Tile(
-                    tileKey: HomeScreen.dashboardButtonKey,
-                    icon: Icons.dashboard_outlined,
-                    label: AppStringsTr.homeDashboardAction,
-                    hint: AppStringsTr.homeHintDashboard,
-                    accent: AppPalette.tiles[3],
-                    locked: true,
-                    onTap: () => _openDashboard(context, ref),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.reportsButtonKey,
-                    icon: Icons.assessment_outlined,
-                    label: AppStringsTr.reportsTitle,
-                    hint: AppStringsTr.homeHintReports,
-                    accent: AppPalette.tiles[5],
-                    locked: true,
-                    onTap: () => _openReports(context, ref),
-                  ),
-                  _Tile(
-                    tileKey: HomeScreen.financialAccessSettingsButtonKey,
-                    icon: Icons.tune_outlined,
-                    label: AppStringsTr.homeFinancialAccessAction,
-                    hint: AppStringsTr.homeHintFinancialAccess,
-                    accent: AppPalette.tiles[7],
-                    onTap: () => Navigator.of(
-                      context,
-                    ).pushNamed(AppRoutes.financialAccessSettings),
-                  ),
-                ],
-              ),
+                _Section(
+                  title: AppStringsTr.homeSectionData,
+                  tiles: [
+                    _Tile(
+                      tileKey: HomeScreen.backupButtonKey,
+                      icon: Icons.save_outlined,
+                      label: AppStringsTr.homeBackupAction,
+                      hint: AppStringsTr.homeHintBackup,
+                      accent: AppPalette.tiles[1],
+                      onTap: () => unawaited(_openAdmin(AppRoutes.backup)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.importExportButtonKey,
+                      icon: Icons.swap_vert,
+                      label: AppStringsTr.homeImportExportAction,
+                      hint: AppStringsTr.homeHintImportExport,
+                      accent: AppPalette.tiles[4],
+                      onTap: () =>
+                          unawaited(_openAdmin(AppRoutes.importExport)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.consistencyButtonKey,
+                      icon: Icons.fact_check_outlined,
+                      label: AppStringsTr.consistencyTitle,
+                      hint: AppStringsTr.homeHintConsistency,
+                      accent: AppPalette.tiles[2],
+                      onTap: () => unawaited(_openAdmin(AppRoutes.consistency)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.barcodeDiagnosticsButtonKey,
+                      icon: Icons.qr_code_scanner_outlined,
+                      label: AppStringsTr.homeBarcodeDiagnosticsAction,
+                      hint: AppStringsTr.homeHintBarcodeDiagnostics,
+                      accent: AppPalette.tiles[0],
+                      onTap: () =>
+                          unawaited(_openAdmin(AppRoutes.barcodeDiagnostics)),
+                    ),
+                  ],
+                ),
+
+                // BR-AUTH-012 — bu üçlü kilit AÇIKKEN bile ayrı durur: finansal
+                // sorgular ayrıca servis kapısından geçer (Katman 1).
+                _Section(
+                  title: AppStringsTr.homeSectionFinancial,
+                  tiles: [
+                    _Tile(
+                      tileKey: HomeScreen.dashboardButtonKey,
+                      icon: Icons.dashboard_outlined,
+                      label: AppStringsTr.homeDashboardAction,
+                      hint: AppStringsTr.homeHintDashboard,
+                      accent: AppPalette.tiles[3],
+                      locked: true,
+                      onTap: () => unawaited(_openAdmin(AppRoutes.dashboard)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.reportsButtonKey,
+                      icon: Icons.assessment_outlined,
+                      label: AppStringsTr.reportsTitle,
+                      hint: AppStringsTr.homeHintReports,
+                      accent: AppPalette.tiles[5],
+                      locked: true,
+                      onTap: () => unawaited(_openAdmin(AppRoutes.reports)),
+                    ),
+                    _Tile(
+                      tileKey: HomeScreen.financialAccessSettingsButtonKey,
+                      icon: Icons.tune_outlined,
+                      label: AppStringsTr.homeFinancialAccessAction,
+                      hint: AppStringsTr.homeHintFinancialAccess,
+                      accent: AppPalette.tiles[7],
+                      onTap: () => unawaited(
+                        _openAdmin(AppRoutes.financialAccessSettings),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // REQ-AUTH-031 — yönetici makineyi bırakırken kilidi geri
+                // kapatır; oturumu kapatmak zorunda değildir.
+                _Section(
+                  title: AppStringsTr.homeAdminSectionTitle,
+                  tiles: [
+                    _Tile(
+                      tileKey: HomeScreen.adminLockButtonKey,
+                      icon: Icons.lock_open_outlined,
+                      label: AppStringsTr.homeAdminLockAction,
+                      hint: AppStringsTr.homeHintAdminLock,
+                      accent: AppPalette.tiles[5],
+                      onTap: _lockAdmin,
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
