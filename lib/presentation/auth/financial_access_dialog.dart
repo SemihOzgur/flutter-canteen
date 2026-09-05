@@ -1,16 +1,27 @@
-/// Finansal erişim kapısı — **docs/17 §7 · docs/22 F9 · BR-AUTH-012/013/016 ·
-/// REQ-AUTH-015/019/021 · EC-DASH-001…004/012/013**
+/// Yönetici erişim kapısı — **docs/17 §7 · docs/22 F9 · BR-AUTH-012/013/016/018 ·
+/// REQ-AUTH-015/019/021/030 · EC-DASH-001…004/012/013/016 · OD-030**
 ///
 /// ```text
 /// ┌──────────────────────────────────┐
-/// │  🔒 Finansal Erişim              │
-/// │  Dashboard ve Raporlar için      │
-/// │  parola gerekiyor.               │
+/// │  🔒 Yönetici Erişimi             │
+/// │  Yönetim ekranları için parola   │
+/// │  gerekiyor.                      │
 /// │  Parola: [________________]      │  ← odak
 /// │  [Şifremi unuttum]               │
 /// │        [Vazgeç]  [Aç]            │
 /// └──────────────────────────────────┘
 /// ```
+///
+/// ## Sınıf adları neden `Financial*` kaldı
+///
+/// [OD-030] kilidin **kapsamını** genişletti; kilidin sahibi hâlâ
+/// `FinancialAccessService`'tir ve BR-AUTH-012 kapısı (finansal sorgular) o
+/// servistedir. Kullanıcıya görünen ad "Yönetici Erişimi" olarak değişti;
+/// sınıf, `app_settings` anahtarı ve audit action adları **değişmedi**
+/// (OD-030 alt karar 3 — yeniden adlandırma migration ve denetim geçmişi
+/// kırılması demekti).
+///
+/// Gezinme katmanının kapısı ayrı bir dosyadadır: `admin_gate.dart`.
 ///
 /// ## Dialog kilidi AÇMAKTAN başka bir şey yapmaz — BR-AUTH-012
 ///

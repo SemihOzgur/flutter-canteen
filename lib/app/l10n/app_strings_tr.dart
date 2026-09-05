@@ -32,7 +32,14 @@ class AppStringsTr {
   static const String homeSectionDaily = 'Günlük İş';
   static const String homeSectionCatalog = 'Ürün ve Katalog';
   static const String homeSectionData = 'Veri ve Bakım';
-  static const String homeSectionFinancial = 'Finansal — parola ister';
+  static const String homeSectionFinancial = 'Finansal';
+
+  /// OD-030 · REQ-AUTH-029 — kilit kapalıyken ana ekranda görünen tek
+  /// yönetim eylemi.
+  static const String homeAdminSectionTitle = 'Yönetim';
+  static const String homeAdminUnlockAction = 'Yönetici Erişimi';
+  static const String homeAdminLockAction = 'Erişimi Kapat';
+  static const String homeLogoutAction = 'Çıkış Yap';
 
   /// Kutuların üzerine gelince çıkan açıklamalar.
   ///
@@ -63,15 +70,47 @@ class AppStringsTr {
   static const String homeHintBarcodeDiagnostics =
       'Barkod okuyucunun okuduğunu görün; "neden çalışmıyor?" burada çözülür.';
   static const String homeHintDashboard =
-      'Ciro, kâr ve grafikler. Dashboard parolası ister.';
+      'Ciro, kâr ve grafikler. Yönetici parolası ister.';
   static const String homeHintReports =
-      'Ayrıntılı raporlar ve CSV dışa aktarma. Dashboard parolası ister.';
+      'Ayrıntılı raporlar ve CSV dışa aktarma. Yönetici parolası ister.';
   static const String homeHintFinancialAccess =
-      'Dashboard parolasını değiştirin, yeni kurtarma kodu üretin.';
+      'Yönetici parolasını değiştirin, yeni kurtarma kodu üretin.';
+  static const String homeHintAdminUnlock =
+      'Yönetim ekranlarını açmak için yönetici parolasını girin.';
+  static const String homeHintAdminLock =
+      'Yönetim ekranlarını gizler. Oturumunuz ve sepetiniz açık kalır.';
+  static const String homeHintLogout =
+      'Oturumu kapatır. Sepetiniz korunur ve sonraki girişte geri gelir.';
 
   static const String homeDescription =
       'Satışa başlamak için Satış Ekranı\'nı açın. Kısayolların tamamı '
       'satış ekranında F1 ile listelenir.';
+
+  /// OD-030 — kilit açıldığında verilen geri bildirim.
+  static const String adminAccessUnlocked = 'Yönetim ekranları açıldı.';
+  static const String adminAccessLocked =
+      'Yönetim ekranları kapatıldı. Oturumunuz açık.';
+
+  // ── OD-030 — kilitli rota kapısı (BR-AUTH-018 · REQ-AUTH-030) ───────────
+  static const String adminGateTitle = 'Yönetici erişimi gerekli';
+  static const String adminGateDescription =
+      'Bu ekran yönetici parolası ile korunuyor. Parolayı girerek açabilir '
+      'veya geri dönebilirsiniz.';
+  static const String adminGateUnlockAction = 'Parolayı Gir';
+  static const String adminGateBackAction = 'Geri Dön';
+
+  // ── OD-030 / docs/17 §10 — çıkış (REQ-AUTH-032) ─────────────────────────
+  static const String logoutTitle = 'Çıkış yapılsın mı?';
+  static const String logoutDescriptionEmptyCart =
+      'Oturumunuz kapatılacak ve giriş ekranına döneceksiniz.';
+
+  /// BR-AUTH-005 — sepetin korunacağı **açıkça** söylenir; kullanıcı
+  /// "sepetim silinir mi?" diye tereddüt etmemelidir.
+  static String logoutDescriptionWithCart(int lineCount) =>
+      'Sepetinizde \$lineCount ürün var. Çıkış yaparsanız sepet korunur ve '
+      'bir sonraki girişte geri yüklenir.';
+  static const String logoutClearCartAction = 'Sepeti Temizle ve Çık';
+  static const String logoutConfirmAction = 'Çıkış Yap';
 
   // ── Single instance (BR-GEN-005) ─────────────────────────────────────────
   static const String alreadyRunningTitle = 'Uygulama zaten çalışıyor';
@@ -151,9 +190,12 @@ class AppStringsTr {
   static const String displayNameLabel = 'Görünen ad';
   static const String passwordLabel = 'Parola';
   static const String passwordConfirmLabel = 'Parola (tekrar)';
-  static const String dashboardPasswordLabel = 'Dashboard parolası';
+  // OD-030: kavramın kullanıcıya görünen adı **yönetici parolası**dır.
+  // Dart sabit adları ve `app_settings` anahtarları tarihsel olarak
+  // `dashboard*` kalır (OD-030 alt karar 3) — yalnızca metinler değişti.
+  static const String dashboardPasswordLabel = 'Yönetici parolası';
   static const String dashboardPasswordConfirmLabel =
-      'Dashboard parolası (tekrar)';
+      'Yönetici parolası (tekrar)';
 
   static const String continueAction = 'Devam';
   static const String retryAction = 'Yeniden dene';
@@ -167,7 +209,7 @@ class AppStringsTr {
   static const String displayNameRequired = 'Görünen ad boş olamaz.';
   static const String passwordRequired = 'Parola boş olamaz.';
   static const String dashboardPasswordRequired =
-      'Dashboard parolası boş olamaz.';
+      'Yönetici parolası boş olamaz.';
   static const String passwordMismatch =
       'Parolalar aynı değil. İki alana da aynı parolayı yazın.';
 
@@ -178,10 +220,11 @@ class AppStringsTr {
   static const String addAction = 'Ekle';
   static const String editAction = 'Düzenle';
 
-  // ── Faz 3a — finansal erişim kilidi (docs/17 §7 · docs/22 F9) ────────────
-  static const String financialAccessTitle = 'Finansal Erişim';
+  // ── Faz 3a — yönetici erişim kilidi (docs/17 §7 · docs/22 F9 · OD-030) ───
+  static const String financialAccessTitle = 'Yönetici Erişimi';
   static const String financialAccessDescription =
-      'Dashboard ve Raporlar için parola gerekiyor.';
+      'Yönetim ekranları için parola gerekiyor. Satış, satış geçmişi ve '
+      'stok bu parola olmadan da kullanılabilir.';
   static const String financialAccessUnlockAction = 'Aç';
   static const String financialAccessForgotAction = 'Şifremi unuttum';
 
@@ -197,29 +240,29 @@ class AppStringsTr {
   static const String recoveryCodeLabel = 'Kurtarma kodu';
   static const String recoveryCodeHint = 'XXXX-XXXX-XXXX-XXXX';
   static const String recoveryCodeRequired = 'Kurtarma kodu boş olamaz.';
-  static const String recoveryPasswordStepTitle = 'Yeni dashboard parolası';
+  static const String recoveryPasswordStepTitle = 'Yeni yönetici parolası';
   static const String recoveryPasswordStepDescription =
-      'Kurtarma kodu bu adımda doğrulanır. Doğruysa dashboard parolanız '
+      'Kurtarma kodu bu adımda doğrulanır. Doğruysa yönetici parolanız '
       'yenisiyle değiştirilir ve size yeni bir kurtarma kodu verilir.';
-  static const String newDashboardPasswordLabel = 'Yeni dashboard parolası';
+  static const String newDashboardPasswordLabel = 'Yeni yönetici parolası';
   static const String newDashboardPasswordConfirmLabel =
-      'Yeni dashboard parolası (tekrar)';
+      'Yeni yönetici parolası (tekrar)';
   static const String recoveryNewCodeStepTitle =
-      'Dashboard parolanız değiştirildi';
+      'Yönetici parolanız değiştirildi';
   static const String recoveryNewCodeStepDescription =
       'Eski kurtarma kodunuz artık geçersiz. Aşağıdaki YENİ kodu saklayın.';
 
-  // ── Faz 3a — Ayarlar → Finansal Erişim (docs/17 §8, §9) ──────────────────
+  // ── Faz 3a — Ayarlar → Yönetici Erişimi (docs/17 §8, §9) ─────────────────
   static const String financialAccessSettingsDescription =
-      'Dashboard parolanızı değiştirebilir veya yeni bir kurtarma kodu '
+      'Yönetici parolanızı değiştirebilir veya yeni bir kurtarma kodu '
       'üretebilirsiniz.';
   static const String changeDashboardPasswordTitle =
-      'Dashboard parolasını değiştir';
+      'Yönetici parolasını değiştir';
   static const String currentDashboardPasswordLabel =
-      'Mevcut dashboard parolası';
+      'Mevcut yönetici parolası';
   static const String changeDashboardPasswordAction = 'Parolayı Değiştir';
   static const String dashboardPasswordChanged =
-      'Dashboard parolası değiştirildi.';
+      'Yönetici parolası değiştirildi.';
   static const String regenerateRecoveryCodeTitle = 'Yeni kurtarma kodu üret';
   static const String regenerateRecoveryCodeDescription =
       'Mevcut kodunuz bir daha gösterilemez. Yeni kod ürettiğinizde eski kod '

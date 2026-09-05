@@ -121,6 +121,25 @@ class CartService {
     return (id: active.first.id, userId: active.first.userId);
   }
 
+  /// Aktif sepetin **yan etkisiz** özeti — docs/17 §10 · REQ-AUTH-032.
+  ///
+  /// [ensureActive]'in aksine sepet **oluşturmaz** ve bozuk durumu (birden çok
+  /// aktif sepet) düzeltmez: çıkış onayı bir okuma işidir ve kullanıcı
+  /// vazgeçerse hiçbir şey değişmemiş olmalıdır. Aktif sepet yoksa `null`.
+  ///
+  /// Çıkış akışı sepette ürün olup olmadığını bilmek zorundadır (BR-AUTH-005:
+  /// sepet korunur, ama kullanıcıya söylenir).
+  Future<({int id, int userId, int lineCount})?> activeSummary() async {
+    final active = await _carts.listActive();
+    if (active.isEmpty) return null;
+
+    // listActive() `updated_at` azalan sıradadır — ilki en yenisidir
+    // (EC-CART-009 ile aynı seçim, ama burada yazma yapılmaz).
+    final newest = active.first;
+    final lines = await _cartItems.rowsOfCart(newest.id);
+    return (id: newest.id, userId: newest.userId, lineCount: lines.length);
+  }
+
   /// Sepeti satırlarıyla birlikte okur.
   Future<Cart> load(int cartId, int userId) => _load(cartId, userId);
 

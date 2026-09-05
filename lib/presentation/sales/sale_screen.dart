@@ -36,6 +36,7 @@ import '../../app/l10n/app_strings_tr.dart';
 import '../../app/router.dart';
 import '../../application/product/product_draft.dart';
 import '../../application/product/product_service.dart';
+import '../../application/auth/providers.dart';
 import '../../application/product/providers.dart';
 import '../../application/reference/providers.dart';
 import '../../application/sales/providers.dart';
@@ -594,11 +595,22 @@ class _SaleScreenState extends ConsumerState<SaleScreen> {
   }
 
   /// Ürün yönetimine gider ve dönüşte odağı geri alır (docs/23 §3).
+  ///
+  /// 🔒 **OD-030 · REQ-AUTH-030:** Ürünler ekranı kilit arkasındadır. Parolayı
+  /// bu ekran **sormaz**; rotanın kendi kapısı (`AdminGate`) sorar ve
+  /// vazgeçilirse ekran kurulmadan geri dönülür. Kapı tek yerde durduğu için
+  /// `F3`, AppBar düğmesi ve boş durum bağlantısı aynı davranışı paylaşır.
+  ///
+  /// **BR-AUTH-019 ile karıştırılmamalıdır:** bilinmeyen barkod okutulduğunda
+  /// açılan hızlı ürün ekleme dialogu ([_onScan]) bu yoldan geçmez ve kilit
+  /// kapalıyken de çalışır.
   Future<void> _openProducts() async {
     await Navigator.of(context).pushNamed(AppRoutes.products);
     if (!mounted) return;
     _focusSearch();
     await _reloadCatalog();
+    // Kilit kapıda açılmış olabilir; AppBar düğmesi buna göre görünür.
+    if (mounted) setState(() {});
   }
 
   /// `Enter` — aramadaki ilk ürünü ekler (docs/23 §2).
@@ -651,12 +663,16 @@ class _SaleScreenState extends ConsumerState<SaleScreen> {
                   showShortcutsDialog(context).then((_) => _focusSearch()),
                 ),
               ),
-              IconButton(
-                key: SaleScreen.productsButtonKey,
-                tooltip: 'F3 ${AppStringsTr.homeProductsAction}',
-                icon: const Icon(Icons.inventory_2_outlined),
-                onPressed: () => unawaited(_openProducts()),
-              ),
+              // BR-AUTH-018 — kilit kapalıyken yönetim ekranına giden bir
+              // düğme **gösterilmez** (ana ekrandaki kuralın aynısı). `F3`
+              // yine çalışır ve kapıda parola sorar (docs/23 §2).
+              if (ref.read(financialAccessProvider).isUnlocked)
+                IconButton(
+                  key: SaleScreen.productsButtonKey,
+                  tooltip: 'F3 ${AppStringsTr.homeProductsAction}',
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  onPressed: () => unawaited(_openProducts()),
+                ),
             ],
           ),
           body: _loading || cart == null

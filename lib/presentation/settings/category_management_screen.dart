@@ -26,10 +26,12 @@
 /// (rules/05 §5 · REQ-UX-009) ve reddi kullanıcıya gösterir; aynı kontrolü
 /// burada tekrarlamak iş kuralını iki yere kopyalardı (rules/01 §2).
 ///
-/// ## Bu ekran finansal kilit dışındadır
+/// ## Bu ekran yönetici kilidinin ARKASINDADIR (OD-030)
 ///
-/// rules/04 §4: kilit yalnızca Dashboard ve Raporlar içindir; kategori yönetimi
-/// kilit kapsamında **değildir** — `ensureFinancialAccess` çağrılmaz.
+/// rules/04 §4: kilit kapsamı Dashboard ve Raporlar'dan **tüm yönetim
+/// ekranlarına** genişledi; kategori yönetimi de kapsamdadır. Kapı bu dosyada
+/// **değil**, rota tanımındadır (`AppRoutes.routes` → `AdminGate`): ekran
+/// kilitliyken hiç kurulmaz, dolayısıyla burada bir kilit kontrolü bulunmaz.
 ///
 /// ## Katman sınırı — rules/01 §1 · rules/05 §8
 ///

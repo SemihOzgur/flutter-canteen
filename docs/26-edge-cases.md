@@ -210,8 +210,7 @@ Her edge case: **durum → beklenen davranış**. Bu liste test senaryolarının
 | **EC-DASH-016** | **Kilit kapalıyken `F3` / `Ctrl+,` gibi bir kısayolla yönetim ekranı açılmak isteniyor** | **Parola sorulur; vazgeçilirse ekran kurulmaz** (REQ-AUTH-030) |
 | **EC-DASH-017** | **Kilit kapalıyken satışta bilinmeyen barkod okutuluyor** | **Hızlı ürün ekleme dialogu açılır; parola SORULMAZ** (BR-AUTH-019) |
 | **EC-DASH-018** | **Kullanıcı kilidi elle kapatıyor** | **Kilit kapanır, ana ekran üç ekrana döner; oturum ve aktif sepet korunur** (REQ-AUTH-031) |
-| **EC-DASH-019** | **Kilit açıkken yönetim ekranındayken kilit elle kapatılıyor** | **Açık ekran kapanmaz; ana ekrana dönüldüğünde kilitli görünüm gelir ve ekran yeniden açılamaz** |
-| **EC-DASH-020** | **Hem parola hem recovery code kayıp** | **Satış, satış geçmişi ve stok çalışmaya devam eder; yönetim ekranlarının tamamı erişilemez** ([RSK-016](29-risks.md)) |
+| **EC-DASH-019** | **Kilit elle kapatıldıktan sonra aynı yönetim ekranı yeniden açılmak isteniyor** | **Parola yeniden sorulur — kilidi kapatmak açmayı geri alır** (REQ-AUTH-031 · BR-AUTH-016) |
 
 ## 10c. Recovery code
 
